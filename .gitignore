@@ -1,6 +1,3 @@
-
-.idea/workspace.xml
-backend/runtime/logs/
-console/runtime/cache/
-vendor/ezyang/htmlpurifier/plugins/phorum/htmlpurifier/
-vendor/yiisoft/yii2/console/runtime/
+.*
+key
+key.pub
