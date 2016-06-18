@@ -46,11 +46,4 @@ return [
         */
     ],
     'params' => $params,
-    'modules' => [
-        'gii' => [
-            'class' => 'yii\gii\Module',
-            'allowedIPs' => ['127.0.0.1', '::1', '202.38.64.173'],
-            'password' => 'abc,123'
-        ],
-    ],
 ];

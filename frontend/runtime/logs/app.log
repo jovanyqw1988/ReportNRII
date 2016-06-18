@@ -9157,3 +9157,151 @@ $_SERVER = [
     'REQUEST_TIME_FLOAT' => 1466221807.2526
     'REQUEST_TIME' => 1466221807
 ]
+2016-06-18 04:01:08 [::1][-][-][error][yii\base\InvalidConfigException] yii\base\InvalidConfigException: The directory does not exist: E:/Project/php/ReportNRII/frontend/web/assets in E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\AssetManager.php:211
+Stack trace:
+#0 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Object.php(107): yii\web\AssetManager->init()
+#1 [internal function]: yii\base\Object->__construct(Array)
+#2 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\Container.php(368): ReflectionClass->newInstanceArgs(Array)
+#3 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\Container.php(153): yii\di\Container->build('yii\\web\\AssetMa...', Array, Array)
+#4 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\BaseYii.php(344): yii\di\Container->get('yii\\web\\AssetMa...', Array, Array)
+#5 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\ServiceLocator.php(133): yii\BaseYii::createObject(Array)
+#6 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Application.php(600): yii\di\ServiceLocator->get('assetManager')
+#7 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\View.php(223): yii\base\Application->getAssetManager()
+#8 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\View.php(283): yii\web\View->getAssetManager()
+#9 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\AssetBundle.php(123): yii\web\View->registerAssetBundle('backend\\assets\\...')
+#10 E:\Project\php\ReportNRII\vendor\dmstr\yii2-adminlte-asset\example-views\yiisoft\yii2-app\layouts\main.php(20): yii\web\AssetBundle::register(Object(yii\web\View))
+#11 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\View.php(325): require('E:\\Project\\php\\...')
+#12 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\View.php(247): yii\base\View->renderPhpFile('E:\\Project\\php\\...', Array)
+#13 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Controller.php(393): yii\base\View->renderFile('E:\\Project\\php\\...', Array, Object(frontend\controllers\SiteController))
+#14 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Controller.php(379): yii\base\Controller->renderContent('<div class="sit...')
+#15 E:\Project\php\ReportNRII\frontend\controllers\SiteController.php(75): yii\base\Controller->render('index')
+#16 [internal function]: frontend\controllers\SiteController->actionIndex()
+#17 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\InlineAction.php(55): call_user_func_array(Array, Array)
+#18 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Controller.php(154): yii\base\InlineAction->runWithParams(Array)
+#19 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Module.php(454): yii\base\Controller->runAction('', Array)
+#20 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\Application.php(84): yii\base\Module->runAction('', Array)
+#21 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Application.php(375): yii\web\Application->handleRequest(Object(yii\web\Request))
+#22 E:\Project\php\ReportNRII\frontend\web\index.php(18): yii\base\Application->run()
+#23 {main}
+2016-06-18 04:01:08 [::1][-][-][info][application] $_COOKIE = [
+    'PHPSESSID' => 'vaik8sng6bsd1ai6ft9oj00hu3'
+    '_csrf' => 'f943b852c268019dbe2a479407f4720daf3593af7154524383e54c0038cc543ba:2:{i:0;s:5:\"_csrf\";i:1;s:32:\"gjeYPGKK5CmzS5L6iREPCEQp1cuxs869\";}'
+    '_identity' => 'b88c5fb99829c661b8336e5c1391fdd3b03e93ad4d5349128221c5334487457fa:2:{i:0;s:9:\"_identity\";i:1;s:46:\"[1,\"qPyyCb5EPyLQWRMFt-E0X4YCzu1QPmfH\",2592000]\";}'
+]
+
+$_SERVER = [
+    'PATH' => 'C:\\ProgramData\\Oracle\\Java\\javapath;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows7Master;C:\\Program Files (x86)\\MySQL\\MySQL Fabric 1.5 & MySQL Utilities 1.5\\;C:\\Program Files (x86)\\MySQL\\MySQL Fabric 1.5 & MySQL Utilities 1.5\\Doctrine extensions for PHP\\;C:\\Windows\\system32\\config\\systemprofile\\.dnx\\bin;C:\\Program Files\\Microsoft DNX\\Dnvm\\;C:\\Program Files\\Microsoft SQL Server\\130\\Tools\\Binn\\;C:\\Program Files\\Git\\cmd;D:\\workspaces\\php-7.0.7-Win32-VC14-x64;C:\\ProgramData\\ComposerSetup\\bin;'
+    'SYSTEMROOT' => 'C:\\Windows'
+    'COMSPEC' => 'C:\\Windows\\system32\\cmd.exe'
+    'PATHEXT' => '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC'
+    'WINDIR' => 'C:\\Windows'
+    'PHP_FCGI_MAX_REQUESTS' => '1000'
+    'PHPRC' => 'D:/workspaces/php-7.0.7-Win32-VC14-x64'
+    '_FCGI_SHUTDOWN_EVENT_' => '924'
+    'SCRIPT_NAME' => '/ReportNRII/frontend/web/index.php'
+    'REQUEST_URI' => '/ReportNRII/frontend/web/'
+    'QUERY_STRING' => ''
+    'REQUEST_METHOD' => 'GET'
+    'SERVER_PROTOCOL' => 'HTTP/1.1'
+    'GATEWAY_INTERFACE' => 'CGI/1.1'
+    'REMOTE_PORT' => '50788'
+    'SCRIPT_FILENAME' => 'E:/Project/php/ReportNRII/frontend/web/index.php'
+    'SERVER_ADMIN' => 'admin@example.com'
+    'CONTEXT_DOCUMENT_ROOT' => 'E:/Project/php'
+    'CONTEXT_PREFIX' => ''
+    'REQUEST_SCHEME' => 'http'
+    'DOCUMENT_ROOT' => 'E:/Project/php'
+    'REMOTE_ADDR' => '::1'
+    'SERVER_PORT' => '80'
+    'SERVER_ADDR' => '::1'
+    'SERVER_NAME' => 'localhost'
+    'SERVER_SOFTWARE' => 'Apache/2.4.20 (Win64) mod_fcgid/2.3.9'
+    'SERVER_SIGNATURE' => ''
+    'SystemRoot' => 'C:\\Windows'
+    'HTTP_COOKIE' => 'PHPSESSID=vaik8sng6bsd1ai6ft9oj00hu3; _csrf=f943b852c268019dbe2a479407f4720daf3593af7154524383e54c0038cc543ba%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22gjeYPGKK5CmzS5L6iREPCEQp1cuxs869%22%3B%7D; _identity=b88c5fb99829c661b8336e5c1391fdd3b03e93ad4d5349128221c5334487457fa%3A2%3A%7Bi%3A0%3Bs%3A9%3A%22_identity%22%3Bi%3A1%3Bs%3A46%3A%22%5B1%2C%22qPyyCb5EPyLQWRMFt-E0X4YCzu1QPmfH%22%2C2592000%5D%22%3B%7D'
+    'HTTP_ACCEPT_LANGUAGE' => 'zh-CN,zh;q=0.8'
+    'HTTP_ACCEPT_ENCODING' => 'gzip, deflate, sdch'
+    'HTTP_REFERER' => 'http://localhost/ReportNRII/frontend/'
+    'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36'
+    'HTTP_UPGRADE_INSECURE_REQUESTS' => '1'
+    'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    'HTTP_CACHE_CONTROL' => 'max-age=0'
+    'HTTP_CONNECTION' => 'close'
+    'HTTP_HOST' => 'localhost'
+    'FCGI_ROLE' => 'RESPONDER'
+    'PHP_SELF' => '/ReportNRII/frontend/web/index.php'
+    'REQUEST_TIME_FLOAT' => 1466222468.5774
+    'REQUEST_TIME' => 1466222468
+]
+2016-06-18 04:01:08 [::1][-][-][warning][yii\log\Dispatcher::dispatch] Unable to send log via yii\debug\LogTarget: Exception (Invalid Configuration) 'yii\base\InvalidConfigException' with message 'The directory does not exist: E:/Project/php/ReportNRII/frontend/web/assets' 
+
+in E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\AssetManager.php:211
+
+Stack trace:
+#0 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Object.php(107): yii\web\AssetManager->init()
+#1 [internal function]: yii\base\Object->__construct(Array)
+#2 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\Container.php(368): ReflectionClass->newInstanceArgs(Array)
+#3 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\Container.php(153): yii\di\Container->build('yii\\web\\AssetMa...', Array, Array)
+#4 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\BaseYii.php(344): yii\di\Container->get('yii\\web\\AssetMa...', Array, Array)
+#5 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\di\ServiceLocator.php(133): yii\BaseYii::createObject(Array)
+#6 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Application.php(600): yii\di\ServiceLocator->get('assetManager')
+#7 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\web\View.php(223): yii\base\Application->getAssetManager()
+#8 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\Component.php(130): yii\web\View->getAssetManager()
+#9 E:\Project\php\ReportNRII\vendor\yiisoft\yii2-debug\panels\AssetPanel.php(53): yii\base\Component->__get('assetManager')
+#10 E:\Project\php\ReportNRII\vendor\yiisoft\yii2-debug\LogTarget.php(54): yii\debug\panels\AssetPanel->save()
+#11 E:\Project\php\ReportNRII\vendor\yiisoft\yii2-debug\LogTarget.php(118): yii\debug\LogTarget->export()
+#12 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\log\Dispatcher.php(188): yii\debug\LogTarget->collect(Array, true)
+#13 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\log\Logger.php(173): yii\log\Dispatcher->dispatch(Array, true)
+#14 E:\Project\php\ReportNRII\vendor\yiisoft\yii2\base\ErrorHandler.php(111): yii\log\Logger->flush(true)
+#15 [internal function]: yii\base\ErrorHandler->handleException(Object(yii\base\InvalidConfigException))
+#16 {main}
+2016-06-18 04:01:08 [::1][-][-][info][application] $_COOKIE = [
+    'PHPSESSID' => 'vaik8sng6bsd1ai6ft9oj00hu3'
+    '_csrf' => 'f943b852c268019dbe2a479407f4720daf3593af7154524383e54c0038cc543ba:2:{i:0;s:5:\"_csrf\";i:1;s:32:\"gjeYPGKK5CmzS5L6iREPCEQp1cuxs869\";}'
+    '_identity' => 'b88c5fb99829c661b8336e5c1391fdd3b03e93ad4d5349128221c5334487457fa:2:{i:0;s:9:\"_identity\";i:1;s:46:\"[1,\"qPyyCb5EPyLQWRMFt-E0X4YCzu1QPmfH\",2592000]\";}'
+]
+
+$_SERVER = [
+    'PATH' => 'C:\\ProgramData\\Oracle\\Java\\javapath;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows7Master;C:\\Program Files (x86)\\MySQL\\MySQL Fabric 1.5 & MySQL Utilities 1.5\\;C:\\Program Files (x86)\\MySQL\\MySQL Fabric 1.5 & MySQL Utilities 1.5\\Doctrine extensions for PHP\\;C:\\Windows\\system32\\config\\systemprofile\\.dnx\\bin;C:\\Program Files\\Microsoft DNX\\Dnvm\\;C:\\Program Files\\Microsoft SQL Server\\130\\Tools\\Binn\\;C:\\Program Files\\Git\\cmd;D:\\workspaces\\php-7.0.7-Win32-VC14-x64;C:\\ProgramData\\ComposerSetup\\bin;'
+    'SYSTEMROOT' => 'C:\\Windows'
+    'COMSPEC' => 'C:\\Windows\\system32\\cmd.exe'
+    'PATHEXT' => '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC'
+    'WINDIR' => 'C:\\Windows'
+    'PHP_FCGI_MAX_REQUESTS' => '1000'
+    'PHPRC' => 'D:/workspaces/php-7.0.7-Win32-VC14-x64'
+    '_FCGI_SHUTDOWN_EVENT_' => '924'
+    'SCRIPT_NAME' => '/ReportNRII/frontend/web/index.php'
+    'REQUEST_URI' => '/ReportNRII/frontend/web/'
+    'QUERY_STRING' => ''
+    'REQUEST_METHOD' => 'GET'
+    'SERVER_PROTOCOL' => 'HTTP/1.1'
+    'GATEWAY_INTERFACE' => 'CGI/1.1'
+    'REMOTE_PORT' => '50788'
+    'SCRIPT_FILENAME' => 'E:/Project/php/ReportNRII/frontend/web/index.php'
+    'SERVER_ADMIN' => 'admin@example.com'
+    'CONTEXT_DOCUMENT_ROOT' => 'E:/Project/php'
+    'CONTEXT_PREFIX' => ''
+    'REQUEST_SCHEME' => 'http'
+    'DOCUMENT_ROOT' => 'E:/Project/php'
+    'REMOTE_ADDR' => '::1'
+    'SERVER_PORT' => '80'
+    'SERVER_ADDR' => '::1'
+    'SERVER_NAME' => 'localhost'
+    'SERVER_SOFTWARE' => 'Apache/2.4.20 (Win64) mod_fcgid/2.3.9'
+    'SERVER_SIGNATURE' => ''
+    'SystemRoot' => 'C:\\Windows'
+    'HTTP_COOKIE' => 'PHPSESSID=vaik8sng6bsd1ai6ft9oj00hu3; _csrf=f943b852c268019dbe2a479407f4720daf3593af7154524383e54c0038cc543ba%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22gjeYPGKK5CmzS5L6iREPCEQp1cuxs869%22%3B%7D; _identity=b88c5fb99829c661b8336e5c1391fdd3b03e93ad4d5349128221c5334487457fa%3A2%3A%7Bi%3A0%3Bs%3A9%3A%22_identity%22%3Bi%3A1%3Bs%3A46%3A%22%5B1%2C%22qPyyCb5EPyLQWRMFt-E0X4YCzu1QPmfH%22%2C2592000%5D%22%3B%7D'
+    'HTTP_ACCEPT_LANGUAGE' => 'zh-CN,zh;q=0.8'
+    'HTTP_ACCEPT_ENCODING' => 'gzip, deflate, sdch'
+    'HTTP_REFERER' => 'http://localhost/ReportNRII/frontend/'
+    'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36'
+    'HTTP_UPGRADE_INSECURE_REQUESTS' => '1'
+    'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    'HTTP_CACHE_CONTROL' => 'max-age=0'
+    'HTTP_CONNECTION' => 'close'
+    'HTTP_HOST' => 'localhost'
+    'FCGI_ROLE' => 'RESPONDER'
+    'PHP_SELF' => '/ReportNRII/frontend/web/index.php'
+    'REQUEST_TIME_FLOAT' => 1466222468.5774
+    'REQUEST_TIME' => 1466222468
+]
