@@ -24,4 +24,16 @@ class ReportController extends Controller
         return $this->render('index');
     }
 
+    /**
+     * 配置总览
+     *
+     * @return mixed
+     */
+    public function actionShow($innerId)
+    {
+        return $this->render('show', [
+            'id' => $innerId
+        ]);
+    }
+
 }

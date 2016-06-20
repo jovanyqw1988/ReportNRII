@@ -67,7 +67,7 @@ $this->beginBlock('content-header');
                 <div class="chart tab-pane" id="config_2" style="position: relative;">
                     <div class="row">
                         <!-- left column -->
-                        <div class="col-md-12">
+                        <div class="col-lg-12">
                             <!-- general form elements -->
                             <div class="box box-primary">
                                 <div class="box-header with-border">
@@ -113,7 +113,7 @@ $this->beginBlock('content-header');
                             <!-- /.box -->
                         </div>
                         <!-- left column -->
-                        <div class="col-md-6">
+                        <div class="col-lg-6">
                             <!-- Horizontal Form -->
                             <div class="box box-info">
                                 <div class="box-header with-border">
@@ -146,7 +146,7 @@ $this->beginBlock('content-header');
                             </div>
                             <!-- /.box -->
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6">
                             <!-- Horizontal Form -->
                             <div class="box box-info">
                                 <div class="box-header with-border">
@@ -219,13 +219,13 @@ $this->beginBlock('content-header');
                 </div>
                 <div class="chart tab-pane" id="config_3" style="position: relative;">
                     <div class="row">
-                        <div class="col-xs-12">
+                        <div class="col-lg-12">
                             <div class="box">
                                 <div class="box-body table-responsive no-padding">
                                     <table class="table table-hover">
                                         <tr>
-                                            <th>字段名</th>
-                                            <th width="70%">表单</th>
+                                            <th width="80px">字段名</th>
+                                            <th>表单</th>
                                             <th width="80px">可查阅</th>
                                             <th width="60px">索引</th>
                                         </tr>

@@ -5,6 +5,11 @@ return [
     'Report NRII' => "国仪上报桥接平台",
     'Test' => '测试',
     'Save' => '保存',
+    'Operation' => '操作',
+    'Show' => '查看',
+    'Back' => '返回',
+    'Large Instrument Platform' => '大仪平台授权登录',
+    'Authorization' => '绑定Report NRII平台账户',
     //左边栏
     'PERSONAL CENTER' => '个人中心',
     'CONFIGURE' => '配置中心',
@@ -20,7 +25,9 @@ return [
     'SYSTEM' => '系统配置',
     'CONFIGURATION' => '配置一览',
     'SERVICE' => '服务',
-    'REPORT NRII' => '上报',
+    'REPORT NRII' => '仪器上报',
+    'CUSTOMS SUPERVISION' => '海关监管记录',
+    'SERVICE RECORD' => '服务记录',
     'SERVICE EFFECT' => '服务成效',
     // 数据库链接
     'Database Link' => '数据库链接',
@@ -54,6 +61,12 @@ return [
     'SQL Start' => '开始位置',
     'SQL Limit' => '每页数目',
     'Result:{total} records!' => '共获取{total}条数据！',
+    //上报
+    'Instrument Report' => '仪器上报',
+    'Instrument Report Center' => '仪器上报中心',
+    'Instrument Report Information' => '仪器上报信息',
+    'Instrument Report' => '仪器上报',
+    //海关监管信息
 
 
 ];

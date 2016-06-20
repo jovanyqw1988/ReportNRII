@@ -12,6 +12,7 @@ class AdminLteAsset extends BaseAdminLteAsset
 {
     public $sourcePath = '@vendor/almasaeed2010/adminlte';
     public $css = [
+        'plugins/datatables/dataTables.bootstrap.css',
         'plugins/select2/select2.min.css',
         'dist/css/AdminLTE.min.css',
     ];
@@ -19,6 +20,8 @@ class AdminLteAsset extends BaseAdminLteAsset
         'plugins/select2/select2.full.min.js',
         'plugins/input-mask/jquery.inputmask.js',
         'plugins/input-mask/jquery.inputmask.extensions.js',
+        'plugins/datatables/jquery.dataTables.min.js',
+        'plugins/datatables/dataTables.bootstrap.min.js',
         'plugins/slimScroll/jquery.slimscroll.min.js',
         'dist/js/app.min.js',
     ];

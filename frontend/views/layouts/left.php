@@ -1,6 +1,3 @@
-<?php
-
-?>
 <aside class="main-sidebar">
 
     <section class="sidebar">
@@ -54,6 +51,8 @@
                     ],
                     ['label' => Yii::t('yii', 'SERVICE'), 'options' => ['class' => 'header']],
                     ['label' => Yii::t('yii', 'REPORT NRII'), 'icon' => 'fa fa-file-code-o', 'url' => ['report/index']],
+                    ['label' => Yii::t('yii', 'CUSTOMS SUPERVISION'), 'icon' => 'fa fa-file-code-o', 'url' => ['report/index']],
+                    ['label' => Yii::t('yii', 'SERVICE RECORD'), 'icon' => 'fa fa-file-code-o', 'url' => ['report/index']],
                     ['label' => Yii::t('yii', 'SERVICE EFFECT'), 'icon' => 'fa fa-file-code-o', 'url' => ['report/index']],
                     ['label' => 'Menu Yii2', 'options' => ['class' => 'header']],
                     ['label' => 'Gii', 'icon' => 'fa fa-file-code-o', 'url' => ['/gii']],
