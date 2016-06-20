@@ -6,6 +6,7 @@ use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use common\models\LoginForm;
+use backend\models\SignupForm;
 
 /**
  * Site controller
@@ -22,7 +23,7 @@ class SiteController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error','signup'],
                         'allow' => true,
                     ],
                     [
@@ -60,6 +61,7 @@ class SiteController extends Controller
 
     public function actionLogin()
     {
+        $this->layout="main2";
         if (!Yii::$app->user->isGuest) {
             return $this->goHome();
         }
@@ -73,6 +75,26 @@ class SiteController extends Controller
             ]);
         }
     }
+/*
+ * 注册页面
+ */
+    public function actionSignup(){
+        $this->layout="main3";
+        $model = new SignupForm();
+        if ($model->load(Yii::$app->request->post())) {
+            if ($user = $model->signup()) {
+                if (Yii::$app->getUser()->login($user)) {
+                    return $this->goHome();
+                }
+            }
+        }
+
+        return $this->render('signup', [
+            'model' => $model,
+        ]);
+
+    }
+
 
     public function actionLogout()
     {
