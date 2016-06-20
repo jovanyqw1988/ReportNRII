@@ -22,7 +22,7 @@ AppAsset::register($this);
     <title><?= Html::encode($this->title) ?></title>
     <?php $this->head() ?>
 </head>
-<body>
+<body class="wapper">
 <?php $this->beginBody() ?>
 <div class="header"><h1>REPORT NRII</h1><span class="fr">
 <div class="email">
@@ -39,26 +39,27 @@ AppAsset::register($this);
         <div class="menu-title">
             <h1>配置中心</h1>
         </div>
+        <?php $action_id = Yii::$app->requestedAction->id;?>
         <div id="firstpane" class="menu_list">
-            <h3 class="menu_head current"><i class="icon03"></i>数据库链接</h3>
+            <h3 class="menu_head <?php if($action_id  == 'pageconnect' || $action_id  == 'index' ){?>current<?php }?>"><i class="icon03"></i><?=Html::a("数据库链接",["site/pageconnect"])?></h3>
             <div style="display:none" class="menu_body">
             </div>
-            <h3 class="menu_head"><i class="icon04"></i>数据类型</h3>
-            <div style="display:none" class="menu_body">
-                <a href="#">科学仪器中心</a>
-                <a href="#">大型科学装置</a>
-                <a href="#">科学仪器服务单元</a>
-                <a href="#">单台套科学仪器设备</a>
-                <a href="#">海关监管信息</a>
-                <a href="#">服务记录</a>
-                <a href="#">服务成效</a>
+            <h3 class="menu_head  <?php if($action_id  == 'page2'  ){?>current<?php }?>" ><i class="icon04"></i>数据类型</h3>
+            <div style="<?php if($action_id  != 'page2'  ){?>display:none<?php }?>" class="menu_body">
+                <?=Html::a("科学仪器中心",["site/page2"])?>
+                <?=Html::a("大型科学装置",["site/page2"])?>
+                <?=Html::a("科学仪器服务单元",["site/page2"])?>
+                <?=Html::a("单台套科学仪器设备",["site/page2"])?>
+                <?=Html::a("海关监管信息",["site/page2"])?>
+                <?=Html::a("服务记录",["site/page2"])?>
+                <?=Html::a("服务成效",["site/page2"])?>
             </div>
             <h3 class="menu_head"><i class="icon05"></i>系统参数</h3>
             <div style="display:none" class="menu_body">
                 <a href="#">
                     国家平台参数</a>
             </div>
-            <h3 class="menu_head"><i class="icon06"></i>上报</h3>
+            <h3 class="menu_head <?php if($action_id  == 'page4'  ){?>current<?php }?>"><i class="icon06"></i><?=Html::a("上报",["site/page4"])?></h3>
             <div style="display:none" class="menu_body">
             </div>
 

@@ -27,7 +27,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index'],
+                        'actions' => ['logout', 'index','pageconnect','page2','page3','page4'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -58,6 +58,29 @@ class SiteController extends Controller
     {
         return $this->render('index');
     }
+
+    public function actionPageconnect()
+    {
+        return $this->render('page_connect');
+    }
+
+
+    public function actionPage2()
+    {
+        return $this->render('page_2');
+    }
+
+    public function actionPage3()
+    {
+        return $this->render('page_3');
+    }
+
+    public function actionPage4()
+    {
+        return $this->render('page_4');
+    }
+
+
 
     public function actionLogin()
     {
