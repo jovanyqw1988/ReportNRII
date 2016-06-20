@@ -93,7 +93,7 @@ abstract class Application extends Module
     /**
      * @var string the application name.
      */
-    public $name = 'My Application';
+    public $name = 'Report NRII';
     /**
      * @var string the version of this application.
      */
@@ -108,7 +108,7 @@ abstract class Application extends Module
      * for English, while `en-US` stands for English (United States).
      * @see sourceLanguage
      */
-    public $language = 'en-US';
+    public $language = 'zh-CN';
     /**
      * @var string the language that the application is written in. This mainly refers to
      * the language that the messages and view files are written in.
@@ -184,7 +184,8 @@ abstract class Application extends Module
      * @var array list of loaded modules indexed by their class names.
      */
     public $loadedModules = [];
-
+    private $_runtimePath;
+    private $_vendorPath;
 
     /**
      * Constructor.
@@ -259,6 +260,125 @@ abstract class Application extends Module
     }
 
     /**
+     * Sets the root directory of the application and the @app alias.
+     * This method can only be invoked at the beginning of the constructor.
+     * @param string $path the root directory of the application.
+     * @property string the root directory of the application.
+     * @throws InvalidParamException if the directory does not exist.
+     */
+    public function setBasePath($path)
+    {
+        parent::setBasePath($path);
+        Yii::setAlias('@app', $this->getBasePath());
+    }
+
+    /**
+     * Returns the directory that stores vendor files.
+     * @return string the directory that stores vendor files.
+     * Defaults to "vendor" directory under [[basePath]].
+     */
+    public function getVendorPath()
+    {
+        if ($this->_vendorPath === null) {
+            $this->setVendorPath($this->getBasePath() . DIRECTORY_SEPARATOR . 'vendor');
+        }
+
+        return $this->_vendorPath;
+    }
+
+    /**
+     * Sets the directory that stores vendor files.
+     * @param string $path the directory that stores vendor files.
+     */
+    public function setVendorPath($path)
+    {
+        $this->_vendorPath = Yii::getAlias($path);
+        Yii::setAlias('@vendor', $this->_vendorPath);
+        Yii::setAlias('@bower', $this->_vendorPath . DIRECTORY_SEPARATOR . 'bower');
+        Yii::setAlias('@npm', $this->_vendorPath . DIRECTORY_SEPARATOR . 'npm');
+    }
+
+    /**
+     * Returns the directory that stores runtime files.
+     * @return string the directory that stores runtime files.
+     * Defaults to the "runtime" subdirectory under [[basePath]].
+     */
+    public function getRuntimePath()
+    {
+        if ($this->_runtimePath === null) {
+            $this->setRuntimePath($this->getBasePath() . DIRECTORY_SEPARATOR . 'runtime');
+        }
+
+        return $this->_runtimePath;
+    }
+
+    /**
+     * Sets the directory that stores runtime files.
+     * @param string $path the directory that stores runtime files.
+     */
+    public function setRuntimePath($path)
+    {
+        $this->_runtimePath = Yii::getAlias($path);
+        Yii::setAlias('@runtime', $this->_runtimePath);
+    }
+
+    /**
+     * Sets the time zone used by this application.
+     * This is a simple wrapper of PHP function date_default_timezone_set().
+     * Refer to the [php manual](http://www.php.net/manual/en/timezones.php) for available timezones.
+     * @param string $value the time zone used by this application.
+     * @see http://php.net/manual/en/function.date-default-timezone-set.php
+     */
+    public function setTimeZone($value)
+    {
+        date_default_timezone_set($value);
+    }
+
+    /**
+     * Returns the configuration of core application components.
+     * @see set()
+     */
+    public function coreComponents()
+    {
+        return [
+            'log' => ['class' => 'yii\log\Dispatcher'],
+            'view' => ['class' => 'yii\web\View'],
+            'formatter' => ['class' => 'yii\i18n\Formatter'],
+            'i18n' => ['class' => 'yii\i18n\I18N'],
+            'mailer' => ['class' => 'yii\swiftmailer\Mailer'],
+            'urlManager' => ['class' => 'yii\web\UrlManager'],
+            'assetManager' => ['class' => 'yii\web\AssetManager'],
+            'security' => ['class' => 'yii\base\Security'],
+        ];
+    }
+
+    /**
+     * Registers the errorHandler component as a PHP error handler.
+     * @param array $config application config
+     */
+    protected function registerErrorHandler(&$config)
+    {
+        if (YII_ENABLE_ERROR_HANDLER) {
+            if (!isset($config['components']['errorHandler']['class'])) {
+                echo "Error: no errorHandler component is configured.\n";
+                exit(1);
+            }
+            $this->set('errorHandler', $config['components']['errorHandler']);
+            unset($config['components']['errorHandler']);
+            $this->getErrorHandler()->register();
+        }
+    }
+
+    /**
+     * Returns the error handler component.
+     * @return \yii\web\ErrorHandler|\yii\console\ErrorHandler the error handler application component.
+     */
+    public function getErrorHandler()
+    {
+        return $this->get('errorHandler');
+    }
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -320,23 +440,6 @@ abstract class Application extends Module
     }
 
     /**
-     * Registers the errorHandler component as a PHP error handler.
-     * @param array $config application config
-     */
-    protected function registerErrorHandler(&$config)
-    {
-        if (YII_ENABLE_ERROR_HANDLER) {
-            if (!isset($config['components']['errorHandler']['class'])) {
-                echo "Error: no errorHandler component is configured.\n";
-                exit(1);
-            }
-            $this->set('errorHandler', $config['components']['errorHandler']);
-            unset($config['components']['errorHandler']);
-            $this->getErrorHandler()->register();
-        }
-    }
-
-    /**
      * Returns an ID that uniquely identifies this module among all modules within the current application.
      * Since this is an application instance, it will always return an empty string.
      * @return string the unique ID of the module.
@@ -344,19 +447,6 @@ abstract class Application extends Module
     public function getUniqueId()
     {
         return '';
-    }
-
-    /**
-     * Sets the root directory of the application and the @app alias.
-     * This method can only be invoked at the beginning of the constructor.
-     * @param string $path the root directory of the application.
-     * @property string the root directory of the application.
-     * @throws InvalidParamException if the directory does not exist.
-     */
-    public function setBasePath($path)
-    {
-        parent::setBasePath($path);
-        Yii::setAlias('@app', $this->getBasePath());
     }
 
     /**
@@ -403,58 +493,50 @@ abstract class Application extends Module
      */
     abstract public function handleRequest($request);
 
-    private $_runtimePath;
+    /**
+     * Returns the request component.
+     * @return \yii\web\Request|\yii\console\Request the request component.
+     */
+    public function getRequest()
+    {
+        return $this->get('request');
+    }
 
     /**
-     * Returns the directory that stores runtime files.
-     * @return string the directory that stores runtime files.
-     * Defaults to the "runtime" subdirectory under [[basePath]].
+     * Terminates the application.
+     * This method replaces the `exit()` function by ensuring the application life cycle is completed
+     * before terminating the application.
+     * @param integer $status the exit status (value 0 means normal exit while other values mean abnormal exit).
+     * @param Response $response the response to be sent. If not set, the default application [[response]] component will be used.
+     * @throws ExitException if the application is in testing mode
      */
-    public function getRuntimePath()
+    public function end($status = 0, $response = null)
     {
-        if ($this->_runtimePath === null) {
-            $this->setRuntimePath($this->getBasePath() . DIRECTORY_SEPARATOR . 'runtime');
+        if ($this->state === self::STATE_BEFORE_REQUEST || $this->state === self::STATE_HANDLING_REQUEST) {
+            $this->state = self::STATE_AFTER_REQUEST;
+            $this->trigger(self::EVENT_AFTER_REQUEST);
         }
 
-        return $this->_runtimePath;
-    }
-
-    /**
-     * Sets the directory that stores runtime files.
-     * @param string $path the directory that stores runtime files.
-     */
-    public function setRuntimePath($path)
-    {
-        $this->_runtimePath = Yii::getAlias($path);
-        Yii::setAlias('@runtime', $this->_runtimePath);
-    }
-
-    private $_vendorPath;
-
-    /**
-     * Returns the directory that stores vendor files.
-     * @return string the directory that stores vendor files.
-     * Defaults to "vendor" directory under [[basePath]].
-     */
-    public function getVendorPath()
-    {
-        if ($this->_vendorPath === null) {
-            $this->setVendorPath($this->getBasePath() . DIRECTORY_SEPARATOR . 'vendor');
+        if ($this->state !== self::STATE_SENDING_RESPONSE && $this->state !== self::STATE_END) {
+            $this->state = self::STATE_END;
+            $response = $response ?: $this->getResponse();
+            $response->send();
         }
 
-        return $this->_vendorPath;
+        if (YII_ENV_TEST) {
+            throw new ExitException($status);
+        } else {
+            exit($status);
+        }
     }
 
     /**
-     * Sets the directory that stores vendor files.
-     * @param string $path the directory that stores vendor files.
+     * Returns the response component.
+     * @return \yii\web\Response|\yii\console\Response the response component.
      */
-    public function setVendorPath($path)
+    public function getResponse()
     {
-        $this->_vendorPath = Yii::getAlias($path);
-        Yii::setAlias('@vendor', $this->_vendorPath);
-        Yii::setAlias('@bower', $this->_vendorPath . DIRECTORY_SEPARATOR . 'bower');
-        Yii::setAlias('@npm', $this->_vendorPath . DIRECTORY_SEPARATOR . 'npm');
+        return $this->get('response');
     }
 
     /**
@@ -468,18 +550,6 @@ abstract class Application extends Module
     public function getTimeZone()
     {
         return date_default_timezone_get();
-    }
-
-    /**
-     * Sets the time zone used by this application.
-     * This is a simple wrapper of PHP function date_default_timezone_set().
-     * Refer to the [php manual](http://www.php.net/manual/en/timezones.php) for available timezones.
-     * @param string $value the time zone used by this application.
-     * @see http://php.net/manual/en/function.date-default-timezone-set.php
-     */
-    public function setTimeZone($value)
-    {
-        date_default_timezone_set($value);
     }
 
     /**
@@ -501,15 +571,6 @@ abstract class Application extends Module
     }
 
     /**
-     * Returns the error handler component.
-     * @return \yii\web\ErrorHandler|\yii\console\ErrorHandler the error handler application component.
-     */
-    public function getErrorHandler()
-    {
-        return $this->get('errorHandler');
-    }
-
-    /**
      * Returns the cache component.
      * @return \yii\caching\Cache the cache application component. Null if the component is not enabled.
      */
@@ -525,24 +586,6 @@ abstract class Application extends Module
     public function getFormatter()
     {
         return $this->get('formatter');
-    }
-
-    /**
-     * Returns the request component.
-     * @return \yii\web\Request|\yii\console\Request the request component.
-     */
-    public function getRequest()
-    {
-        return $this->get('request');
-    }
-
-    /**
-     * Returns the response component.
-     * @return \yii\web\Response|\yii\console\Response the response component.
-     */
-    public function getResponse()
-    {
-        return $this->get('response');
     }
 
     /**
@@ -607,51 +650,5 @@ abstract class Application extends Module
     public function getSecurity()
     {
         return $this->get('security');
-    }
-
-    /**
-     * Returns the configuration of core application components.
-     * @see set()
-     */
-    public function coreComponents()
-    {
-        return [
-            'log' => ['class' => 'yii\log\Dispatcher'],
-            'view' => ['class' => 'yii\web\View'],
-            'formatter' => ['class' => 'yii\i18n\Formatter'],
-            'i18n' => ['class' => 'yii\i18n\I18N'],
-            'mailer' => ['class' => 'yii\swiftmailer\Mailer'],
-            'urlManager' => ['class' => 'yii\web\UrlManager'],
-            'assetManager' => ['class' => 'yii\web\AssetManager'],
-            'security' => ['class' => 'yii\base\Security'],
-        ];
-    }
-
-    /**
-     * Terminates the application.
-     * This method replaces the `exit()` function by ensuring the application life cycle is completed
-     * before terminating the application.
-     * @param integer $status the exit status (value 0 means normal exit while other values mean abnormal exit).
-     * @param Response $response the response to be sent. If not set, the default application [[response]] component will be used.
-     * @throws ExitException if the application is in testing mode
-     */
-    public function end($status = 0, $response = null)
-    {
-        if ($this->state === self::STATE_BEFORE_REQUEST || $this->state === self::STATE_HANDLING_REQUEST) {
-            $this->state = self::STATE_AFTER_REQUEST;
-            $this->trigger(self::EVENT_AFTER_REQUEST);
-        }
-
-        if ($this->state !== self::STATE_SENDING_RESPONSE && $this->state !== self::STATE_END) {
-            $this->state = self::STATE_END;
-            $response = $response ? : $this->getResponse();
-            $response->send();
-        }
-
-        if (YII_ENV_TEST) {
-            throw new ExitException($status);
-        } else {
-            exit($status);
-        }
     }
 }

@@ -20,6 +20,7 @@ require(__DIR__ . '/BaseYii.php');
  */
 class Yii extends \yii\BaseYii
 {
+
 }
 
 spl_autoload_register(['Yii', 'autoload'], true, true);
