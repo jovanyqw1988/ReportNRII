@@ -12,11 +12,13 @@ class AdminLteAsset extends BaseAdminLteAsset
 {
     public $sourcePath = '@vendor/almasaeed2010/adminlte';
     public $css = [
+        'plugins/colorpicker/bootstrap-colorpicker.min.css',
         'plugins/datatables/dataTables.bootstrap.css',
         'plugins/select2/select2.min.css',
         'dist/css/AdminLTE.min.css',
     ];
     public $js = [
+        'plugins/datepicker/bootstrap-datepicker.js',
         'plugins/select2/select2.full.min.js',
         'plugins/input-mask/jquery.inputmask.js',
         'plugins/input-mask/jquery.inputmask.extensions.js',
