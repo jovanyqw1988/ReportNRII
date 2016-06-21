@@ -1,8 +1,8 @@
 <?php
 namespace backend\models;
 
-use yii\base\Model;
 use common\models\User;
+use yii\base\Model;
 
 /**
  * Signup form
@@ -55,7 +55,7 @@ class SignupForm extends Model
         $user->phone = $this->phone;
         $user->setPassword($this->password);
         $user->generateAuthKey();
-        
+
         return $user->save() ? $user : null;
     }
 }

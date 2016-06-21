@@ -1,10 +1,11 @@
-
 <div class="main-title"><b>上报</b></div>
 
 <div class="main-box">
     <div class="box02 f">
         <div class="list01">
-            <select class="select02 fl"><option>科学仪器中心</option></select><input class="text02" type="text">
+            <select class="select02 fl">
+                <option>科学仪器中心</option>
+            </select><input class="text02" type="text">
             <label>
                 <input name="RadioGroup1" value="单选" id="RadioGroup1_0" type="radio">
                 已上报</label>
@@ -13,7 +14,8 @@
                 未上报</label>
             <a href="#" class="seach-button fr">查询</a>
             <span class="fl"></span>
-        </div></div>
+        </div>
+    </div>
     <div class="box02 fl">
         <div class="list01">
             <table class="table01" border="0" cellpadding="0" cellspacing="0" width="100%">

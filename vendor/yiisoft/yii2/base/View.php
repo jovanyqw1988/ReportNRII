@@ -190,8 +190,16 @@ class View extends Component
         if ($this->defaultExtension !== 'php' && !is_file($path)) {
             $path = $file . '.php';
         }
- //echo $path;
+        //echo $path;
         return $path;
+    }
+
+    /**
+     * @return string|boolean the view file currently being rendered. False if no view file is being rendered.
+     */
+    public function getViewFile()
+    {
+        return end($this->_viewFiles);
     }
 
     /**
@@ -255,14 +263,6 @@ class View extends Component
     }
 
     /**
-     * @return string|boolean the view file currently being rendered. False if no view file is being rendered.
-     */
-    public function getViewFile()
-    {
-        return end($this->_viewFiles);
-    }
-
-    /**
      * This method is invoked right before [[renderFile()]] renders a view file.
      * The default implementation will trigger the [[EVENT_BEFORE_RENDER]] event.
      * If you override this method, make sure you call the parent implementation first.
@@ -279,28 +279,6 @@ class View extends Component
         $this->trigger(self::EVENT_BEFORE_RENDER, $event);
 
         return $event->isValid;
-    }
-
-    /**
-     * This method is invoked right after [[renderFile()]] renders a view file.
-     * The default implementation will trigger the [[EVENT_AFTER_RENDER]] event.
-     * If you override this method, make sure you call the parent implementation first.
-     * @param string $viewFile the view file being rendered.
-     * @param array $params the parameter array passed to the [[render()]] method.
-     * @param string $output the rendering result of the view file. Updates to this parameter
-     * will be passed back and returned by [[renderFile()]].
-     */
-    public function afterRender($viewFile, $params, &$output)
-    {
-        if ($this->hasEventHandlers(self::EVENT_AFTER_RENDER)) {
-            $event = new ViewEvent([
-                'viewFile' => $viewFile,
-                'params' => $params,
-                'output' => $output,
-            ]);
-            $this->trigger(self::EVENT_AFTER_RENDER, $event);
-            $output = $event->output;
-        }
     }
 
     /**
@@ -324,6 +302,28 @@ class View extends Component
         require($_file_);
 
         return ob_get_clean();
+    }
+
+    /**
+     * This method is invoked right after [[renderFile()]] renders a view file.
+     * The default implementation will trigger the [[EVENT_AFTER_RENDER]] event.
+     * If you override this method, make sure you call the parent implementation first.
+     * @param string $viewFile the view file being rendered.
+     * @param array $params the parameter array passed to the [[render()]] method.
+     * @param string $output the rendering result of the view file. Updates to this parameter
+     * will be passed back and returned by [[renderFile()]].
+     */
+    public function afterRender($viewFile, $params, &$output)
+    {
+        if ($this->hasEventHandlers(self::EVENT_AFTER_RENDER)) {
+            $event = new ViewEvent([
+                'viewFile' => $viewFile,
+                'params' => $params,
+                'output' => $output,
+            ]);
+            $this->trigger(self::EVENT_AFTER_RENDER, $event);
+            $output = $event->output;
+        }
     }
 
     /**

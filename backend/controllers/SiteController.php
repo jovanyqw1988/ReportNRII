@@ -1,12 +1,12 @@
 <?php
 namespace backend\controllers;
 
-use Yii;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
-use common\models\LoginForm;
 use backend\models\SignupForm;
+use common\models\LoginForm;
+use Yii;
+use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
+use yii\web\Controller;
 
 /**
  * Site controller
@@ -23,11 +23,11 @@ class SiteController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error','signup'],
+                        'actions' => ['login', 'error', 'signup'],
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','pageconnect','page2','page3','page4'],
+                        'actions' => ['logout', 'index', 'pageconnect', 'page2', 'page3', 'page4'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -84,7 +84,7 @@ class SiteController extends Controller
 
     public function actionLogin()
     {
-        $this->layout="main2";
+        $this->layout = "main2";
         if (!Yii::$app->user->isGuest) {
             return $this->goHome();
         }
@@ -98,11 +98,13 @@ class SiteController extends Controller
             ]);
         }
     }
-/*
- * 注册页面
- */
-    public function actionSignup(){
-        $this->layout="main3";
+
+    /*
+     * 注册页面
+     */
+    public function actionSignup()
+    {
+        $this->layout = "main3";
         $model = new SignupForm();
         if ($model->load(Yii::$app->request->post())) {
             if ($user = $model->signup()) {

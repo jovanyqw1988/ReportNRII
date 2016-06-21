@@ -46,14 +46,16 @@ class PlatformUser extends \yii\db\ActiveRecord
             'user_id' => 'User ID',
         ];
     }
-/*
- * $parames $username string username
- * $parames $email  string email
- * return platformuser info
- */
-    public function isPlatformUser($username,$email){
-        $platform =   new \common\models\PlatformUser();
-        $row = $platform->findOne(['platform_username'=>$username,'platform_email'=>$email]);
+
+    /*
+     * $parames $username string username
+     * $parames $email  string email
+     * return platformuser info
+     */
+    public function isPlatformUser($username, $email)
+    {
+        $platform = new \common\models\PlatformUser();
+        $row = $platform->findOne(['platform_username' => $username, 'platform_email' => $email]);
         return $row;
     }
 

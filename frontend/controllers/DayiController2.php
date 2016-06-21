@@ -8,11 +8,9 @@
 namespace frontend\controllers;
 
 use Yii;
-use yii\base\Model;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
-use yii\web\BadRequestHttpException;
+use yii\filters\VerbFilter;
+use yii\web\Controller;
 
 
 class DayiController extends Controller
@@ -229,8 +227,8 @@ class DayiController extends Controller
 //"comment":"非常满意",
 //"auditStatus":"-1"
 //}',true),
-            '7'=>json_decode('{
-"insCode":"'.$insCode.'",
+            '7' => json_decode('{
+"insCode":"' . $insCode . '",
 "submittedRates":"95%",
 "activatedRates":"99%",
 "totalShareRates":"80%",
@@ -248,37 +246,20 @@ class DayiController extends Controller
 "serviceIncome":"856.23",
 "socialBenefit":"产生4项社会效益，其中重大工程2项、企业创新1项、服务民生1项、应急事件0项",
 "remark":"其他成果"
-}',true)
+}', true)
         ];
 //        if($data_all_keys){
 //            foreach($data_all_keys as $type=>$keys){
 //                $this->testYiqi($type,$keys);
 //            }
 //        }
-        if($data_all_keys){
-            foreach($data_all_keys as $type=>$keys){
-                $this->testEffect($type,$keys);
-            }
-        }
-    }
-
-
-    public function testYiqi($instruType = 1, $data_all_keys = array(), $insCode = '7025826f8aef4c88a27e21d9103c5dc2')
-    {
-        echo $instruType . '<br><br><br><br><br>------' . "<br>";
-        $url = "http://localhost:8080/instru";
-        $data_arr['all'] = $data_all_keys;
         if ($data_all_keys) {
-            foreach ($data_all_keys as $k => $v) {
-                if ($k == 'insCode') {
-                    continue;
-                }
-                $arr1 = $data_all_keys;
-                $arr1[$k] = '';
-                $data_arr[$k] = $arr1;
+            foreach ($data_all_keys as $type => $keys) {
+                $this->testEffect($type, $keys);
             }
         }
     }
+
     public function testEffect($instruType = 1, $data_all_keys = array(), $insCode = '7025826f8aef4c88a27e21d9103c5dc2')
     {
         $url = "http://localhost:8080/effect";
@@ -311,7 +292,22 @@ class DayiController extends Controller
         }
     }
 
-
+    public function testYiqi($instruType = 1, $data_all_keys = array(), $insCode = '7025826f8aef4c88a27e21d9103c5dc2')
+    {
+        echo $instruType . '<br><br><br><br><br>------' . "<br>";
+        $url = "http://localhost:8080/instru";
+        $data_arr['all'] = $data_all_keys;
+        if ($data_all_keys) {
+            foreach ($data_all_keys as $k => $v) {
+                if ($k == 'insCode') {
+                    continue;
+                }
+                $arr1 = $data_all_keys;
+                $arr1[$k] = '';
+                $data_arr[$k] = $arr1;
+            }
+        }
+    }
 
     public function actionTest()
     {
@@ -374,14 +370,15 @@ class DayiController extends Controller
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch,CURLOPT_CONNECTTIMEOUT,10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         $return = curl_exec($ch);
-        curl_close($ch); var_dump($url,$return);
+        curl_close($ch);
+        var_dump($url, $return);
         exit;
     }
 
     //大仪网站获取授权码
-    public function  actionAuthResponse()
+    public function actionAuthResponse()
     {
         $message = "";
         $authorize_code = Yii::$app->getRequest()->params('code');
