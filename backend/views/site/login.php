@@ -7,29 +7,16 @@
 use yii\helpers\Html;
 use yii\bootstrap\ActiveForm;
 
-$this->title = 'Login';
-$this->params['breadcrumbs'][] = $this->title;
+
 ?>
-<div class="site-login">
-    <h1><?= Html::encode($this->title) ?></h1>
-
-    <p>Please fill out the following fields to login:</p>
-
-    <div class="row">
-        <div class="col-lg-5">
-            <?php $form = ActiveForm::begin(['id' => 'login-form']); ?>
-
-                <?= $form->field($model, 'username')->textInput(['autofocus' => true]) ?>
-
-                <?= $form->field($model, 'password')->passwordInput() ?>
-
-                <?= $form->field($model, 'rememberMe')->checkbox() ?>
-
-                <div class="form-group">
-                    <?= Html::submitButton('Login', ['class' => 'btn btn-primary', 'name' => 'login-button']) ?>
-                </div>
-
-            <?php ActiveForm::end(); ?>
-        </div>
+<?php $form = ActiveForm::begin(['id' => 'login-form']); ?>
+<?= $form->field($model, 'username')->textInput(['autofocus' => true,'value'=>"账号",'class'=>"text01 icon01"])->label('') ?>
+<?= $form->field($model, 'password')->passwordInput(['class'=>"text01 icon02"])->label("") ?>
+<?= Html::submitButton('登录', ['class' => 'login-button button-bg01 fl','name' => 'login-button']) ?>
+<input type="button" class="login-button button-bg02 fr" value="大仪平台授权登录">
+<div style="display: none">
+<?= $form->field($model, 'rememberMe')->checkbox() ?>
     </div>
-</div>
+<p class="fr"> <?= Html::a('注册',['site/signup']) ?><span>|</span><a href="#">忘记密码?</a></p>
+<?php ActiveForm::end(); ?>
+

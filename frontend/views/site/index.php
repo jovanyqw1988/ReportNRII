@@ -1,52 +1,25 @@
-<?php
 
-/* @var $this yii\web\View */
+<div class="main-title"><b>数据库链接</b></div>
 
-$this->title = 'My Yii Application';
-?>
-<div class="site-index">
+<div class="main-box">
+    <div class="box fl">
+        <div class="box-title"><B>基本信息</B></div>
+        <ul class="list01">
+            <li><b>类型</b><select class="select01"><option>MYsql</option></select></li>
+            <li><b>端口号</b><input type="text" class="text02"></li>
+            <li><b>数据库名</b><input type="text" class="text02"></li>
+            <li><b>用户名</b><input type="text" class="text02"></li>
+            <li><b>密码</b><input type="text" class="text02"></li>
 
-    <div class="jumbotron">
-        <h1>Congratulations!</h1>
+        </ul>
 
-        <p class="lead">You have successfully created your Yii-powered application.</p>
-
-        <p><a class="btn btn-lg btn-success" href="http://www.yiiframework.com">Get started with Yii</a></p>
     </div>
+    <div class="box fr">
+        <div class="box-title"><B>基本信息</B></div>
 
-    <div class="body-content">
+        <div class="list01">
+            <p>测试成功</p>
 
-        <div class="row">
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/doc/">Yii Documentation &raquo;</a></p>
-            </div>
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/forum/">Yii Forum &raquo;</a></p>
-            </div>
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/extensions/">Yii Extensions &raquo;</a></p>
-            </div>
         </div>
 
     </div>

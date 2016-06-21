@@ -190,7 +190,7 @@ class View extends Component
         if ($this->defaultExtension !== 'php' && !is_file($path)) {
             $path = $file . '.php';
         }
-
+ //echo $path;
         return $path;
     }
 
@@ -216,7 +216,6 @@ class View extends Component
     public function renderFile($viewFile, $params = [], $context = null)
     {
         $viewFile = Yii::getAlias($viewFile);
-
         if ($this->theme !== null) {
             $viewFile = $this->theme->applyTo($viewFile);
         }
