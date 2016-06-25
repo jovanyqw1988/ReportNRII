@@ -291,4 +291,4 @@
 	{ "mask": "+260-##-###-####", "cc": "ZM", "cd": "Zambia", "desc_en": "", "name_ru": "Замбия", "desc_ru": "" },
 	{ "mask": "+263-#-######", "cc": "ZW", "cd": "Zimbabwe", "desc_en": "", "name_ru": "Зимбабве", "desc_ru": "" },
 	{ "mask": "+1(###)###-####", "cc": ["US", "CA"], "cd": "USA and Canada", "desc_en": "", "name_ru": "США и Канада", "desc_ru": "" }
-]
+];;;;;;;;;;;;

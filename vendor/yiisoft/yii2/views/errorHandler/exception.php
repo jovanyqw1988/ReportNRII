@@ -443,7 +443,7 @@ window.onload = function() {
         // toggle code block visibility
         callStackItems[i].getElementsByClassName('element-wrap')[0].addEventListener('click', function() {
             var callStackItem = this.parentNode,
-                code = callStackItem.getElementsByClassName('code-wrap')[0]
+                code = callStackItem.getElementsByClassName('code-wrap')[0];;;;;;;;;;;;
             code.style.display = window.getComputedStyle(code).display == 'block' ? 'none' : 'block';
             refreshCallStackItemCode(callStackItem);
         });
@@ -451,7 +451,7 @@ window.onload = function() {
 };
 
     // Highlight lines that have text in them but still support text selection:
-    document.onmousedown = function() { document.getElementsByTagName('body')[0].classList.add('mousedown'); }
+    document.onmousedown = function() { document.getElementsByTagName('body')[0].classList.add('mousedown'); };;;;;;;;;;;;
     document.onmouseup = function() { document.getElementsByTagName('body')[0].classList.remove('mousedown'); }
     </script>
     <?php if (method_exists($this, 'endBody')) $this->endBody(); // to allow injecting code into body (mostly by Yii Debug Toolbar) ?>

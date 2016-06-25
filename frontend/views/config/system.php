@@ -1,4 +1,7 @@
 <?php
+use yii\bootstrap\ActiveForm;use yii\helpers\Html;
+
+
 $this->params['breadcrumbs'][] = Yii::t('yii', 'System Configuration');
 $this->beginBlock('content-header');
 ?>
@@ -9,43 +12,59 @@ $this->beginBlock('content-header');
 <div class="row">
     <!-- left column -->
     <div class="col-md-12">
+        <!-- form start -->
+        <?php $form = ActiveForm::begin([
+            'id' => 'login-form',
+            'enableClientValidation' => true,
+            'layout' => 'horizontal',
+            'fieldConfig' => [
+                'template' => "{label}\n{beginWrapper}\n{input}\n{hint}\n{error}\n{endWrapper}",
+                'horizontalCssClasses' => [
+                    'label' => 'col-sm-3',
+                    'offset' => '',
+                    'wrapper' => 'col-sm-9',
+                    'error' => '',
+                    'hint' => '',
+                ],
+            ]
+        ]); ?>
         <!-- general form elements -->
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title"><?= Yii::t('yii', 'Set System Configuration') ?></h3>
             </div>
             <!-- /.box-header -->
-            <!-- form start -->
-            <form role="form">
-                <div class="box-body">
-                    <div class="form-group">
-                        <label for="insCode"><?= Yii::t('yii', 'insCode') ?></label>
-                        <input id="insCode" type="text" class="form-control" placeholder="Enter insCode"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="client_id"><?= Yii::t('yii', 'client_id') ?></label>
-                        <input id="client_id" type="text" class="form-control" placeholder="Enter client_id"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="client_secret"><?= Yii::t('yii', 'client_secret') ?></label>
-                        <input id="client_secret" type="text" class="form-control" placeholder="Enter client_secret"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="redirect_uri"><?= Yii::t('yii', 'redirect_uri') ?></label>
-                        <input id="redirect_uri" type="text" class="form-control" placeholder="Enter redirect_uri"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="state"><?= Yii::t('yii', 'state') ?></label>
-                        <input id="state" type="text" class="form-control" placeholder="Enter state"/>
-                    </div>
-                </div>
-                <!-- /.box-body -->
 
-                <div class="box-footer">
-                    <button type="submit" class="btn btn-primary pull-right"><?= Yii::t('yii', 'Save') ?></button>
-                </div>
-            </form>
+            <div class="box-body">
+                <?= $form
+                    ->field($model, 'insCode')
+                    ->textInput([])
+                ?>
+                <?= $form
+                    ->field($model, 'client_id')
+                    ->textInput([])
+                ?>
+                <?= $form
+                    ->field($model, 'client_secret')
+                    ->textInput([])
+                ?>
+                <?= $form
+                    ->field($model, 'redirect_uri')
+                    ->textInput([])
+                ?>
+                <?= $form
+                    ->field($model, 'state')
+                    ->textInput([])
+                ?>
+            </div>
+            <!-- /.box-body -->
+
+            <div class="box-footer">
+                <?= Html::submitButton(Yii::t('yii', 'Save'), ['class' => 'btn btn-primary pull-right', 'name' => 'submit', 'value' => 'save']) ?>
+                <?= Html::submitButton(Yii::t('yii', 'Test'), ['class' => 'btn btn-primary', 'name' => 'submit', 'value' => 'test']) ?>
+            </div>
         </div>
+        <?php ActiveForm::end(); ?>
         <!-- /.box -->
     </div>
 </div>

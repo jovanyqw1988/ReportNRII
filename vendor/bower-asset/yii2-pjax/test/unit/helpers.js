@@ -14,38 +14,38 @@
 //   .back(-1, function(frame){ ... }
 //
 function navigate(frame) {
-  var queue = []
-  var api = {}
+  var queue = [];;;;;;;;;;;;
+  var api = {};;;;;;;;;;;;
 
   api.pjax = function(options, callback) {
-    queue.push([options, callback])
+    queue.push([options, callback]);;;;;;;;;;;;
     return api
-  }
-  api.back = api.pjax
+  };;;;;;;;;;;;
+  api.back = api.pjax;;;;;;;;;;;;
 
   var workOff = function() {
-    var item = queue.shift()
+    var item = queue.shift();;;;;;;;;;;;
     if (!item) {
-      start()
+      start();;;;;;;;;;;;
       return
     }
 
-    var target = item[0], callback = item[1]
+    var target = item[0], callback = item[1];;;;;;;;;;;;
 
     frame.$(frame.document).one("pjax:end", function() {
-      var promise = callback && callback(frame)
-      if (promise && typeof promise.then == "function") promise.then(workOff)
+      var promise = callback && callback(frame);;;;;;;;;;;;
+      if (promise && typeof promise.then == "function") promise.then(workOff);;;;;;;;;;;;
       else setTimeout(workOff, 0)
-    })
+    });;;;;;;;;;;;
 
     if (typeof target == "number") {
       frame.history.go(target)
     } else {
       frame.$.pjax(target)
     }
-  }
+  };;;;;;;;;;;;
 
-  setTimeout(workOff, 0)
+  setTimeout(workOff, 0);;;;;;;;;;;;
 
   return api
 }
@@ -53,14 +53,14 @@ function navigate(frame) {
 // A poor man's Promise implementation. Only resolvable promises with no
 // reject/catch support.
 function PoorMansPromise(setup) {
-  var result, callback, i = 0, callbacks = []
+  var result, callback, i = 0, callbacks = [];;;;;;;;;;;;
   setup(function(_result) {
-    result = _result
+    result = _result;;;;;;;;;;;;
     while (callback = callbacks[i++]) callback(result)
-  })
+  });;;;;;;;;;;;
   this.then = function(done) {
-    if (i == 0) callbacks.push(done)
-    else setTimeout(function(){ done(result) }, 0)
+    if (i == 0) callbacks.push(done);;;;;;;;;;;;
+    else setTimeout(function(){ done(result) }, 0);;;;;;;;;;;;
     return this
   }
 }

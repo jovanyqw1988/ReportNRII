@@ -10,7 +10,7 @@ if (class_exists('backend\assets\AppAsset')) {
 
 dmstr\web\AdminLteAsset::register($this);
 
-$directoryAsset = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/dist');
+$directoryAsset = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/');
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>

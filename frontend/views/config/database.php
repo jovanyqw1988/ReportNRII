@@ -1,4 +1,6 @@
 <?php
+use yii\bootstrap\ActiveForm;use yii\helpers\Html;
+
 $this->params['breadcrumbs'][] = Yii::t('yii', 'Database Link');
 $this->beginBlock('content-header');
 ?>
@@ -9,55 +11,68 @@ $this->beginBlock('content-header');
     <div class="row">
         <!-- left column -->
         <div class="col-md-12">
+            <!-- form start -->
+            <?php $form = ActiveForm::begin([
+                'id' => 'login-form',
+                'enableClientValidation' => true,
+                'layout' => 'horizontal',
+                'fieldConfig' => [
+                    'template' => "{label}\n{beginWrapper}\n{input}\n{hint}\n{error}\n{endWrapper}",
+                    'horizontalCssClasses' => [
+                        'label' => 'col-sm-3',
+                        'offset' => '',
+                        'wrapper' => 'col-sm-9',
+                        'error' => '',
+                        'hint' => '',
+                    ],
+                ]
+            ]); ?>
             <!-- general form elements -->
             <div class="box box-primary">
                 <div class="box-header with-border">
                     <h3 class="box-title"><?= Yii::t('yii', 'Set Database Link') ?></h3>
                 </div>
                 <!-- /.box-header -->
-                <!-- form start -->
-                <form role="form">
-                    <div class="box-body">
-                        <div class="form-group">
-                            <label for="type"><?= Yii::t('yii', 'Database Type') ?></label>
-                            <select id="type" class="form-control select2" style="width: 100%;">
-                                <option selected="selected" value="mysql">MySQL</option>
-                            </select>
-                        </div>
-                        <!-- IP mask -->
-                        <div class="form-group">
-                            <label for="host"><?= Yii::t('yii', 'Host') ?></label>
-                            <div class="input-group">
-                                <div class="input-group-addon">
-                                    <i class="fa fa-laptop"></i>
-                                </div>
-                                <input id="host" type="text" class="form-control" data-inputmask="'alias': 'ip'"
-                                       data-mask>
-                            </div>
-                            <!-- /.input group -->
-                        </div>
-                        <div class="form-group">
-                            <label for="dbname"><?= Yii::t('yii', 'Database Name') ?></label>
-                            <input id="dbname" type="text" class="form-control" placeholder="Enter ..."/>
-                        </div>
-                        <div class="form-group">
-                            <label for="user"><?= Yii::t('yii', 'User') ?></label>
-                            <input id="user" type="text" class="form-control" placeholder="Enter ..."/>
-                        </div>
-                        <!-- /.form group -->
-                        <div class="form-group">
-                            <label for="password"><?= Yii::t('yii', 'Password') ?></label>
-                            <input type="password" class="form-control" id="password" placeholder="Enter ...">
-                        </div>
-                    </div>
-                    <!-- /.box-body -->
 
-                    <div class="box-footer">
-                        <button type="submit" class="btn btn-primary pull-right"><?= Yii::t('yii', 'Save') ?></button>
-                        <button type="submit" class="btn btn-primary"><?= Yii::t('yii', 'Test') ?></button>
-                    </div>
-                </form>
+
+                <div class="box-body">
+                    <?= $form
+                        ->field($model, 'type')
+                        ->dropDownList(['MySQL' => 'MySQL'])
+                    ?>
+                    <?= $form
+                        ->field($model, 'host')
+                        ->textInput([])
+                    ?>
+                    <?= $form
+                        ->field($model, 'port')
+                        ->textInput([])
+                    ?>
+                    <?= $form
+                        ->field($model, 'name')
+                        ->textInput([])
+                    ?>
+                    <?= $form
+                        ->field($model, 'charset')
+                        ->textInput([])
+                    ?>
+                    <?= $form
+                        ->field($model, 'user')
+                        ->textInput([])
+                    ?>
+                    <?= $form
+                        ->field($model, 'password')
+                        ->passwordInput([])
+                    ?>
+                </div>
+                <!-- /.box-body -->
+
+                <div class="box-footer">
+                    <?= Html::submitButton(Yii::t('yii', 'Save'), ['class' => 'btn btn-primary pull-right', 'name' => 'submit', 'value' => 'save']) ?>
+                    <?= Html::submitButton(Yii::t('yii', 'Test'), ['class' => 'btn btn-primary', 'name' => 'submit', 'value' => 'test']) ?>
+                </div>
             </div>
+            <?php ActiveForm::end(); ?>
             <!-- /.box -->
 
             <!-- Horizontal Form -->
@@ -67,7 +82,7 @@ $this->beginBlock('content-header');
                 </div>
                 <!-- /.box-header -->
                 <div class="box-body">
-                    <?= Yii::t('yii', 'Test OK!') ?>
+                    <?= $result ?>
                 </div>
                 <!-- /.box-body -->
             </div>

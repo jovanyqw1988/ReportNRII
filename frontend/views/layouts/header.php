@@ -1,6 +1,5 @@
 <?php
-use yii\helpers\Html;
-use yii\helpers\Url;
+use yii\helpers\Html;use yii\helpers\Url;
 
 /* @var $this \yii\web\View */
 /* @var $content string */
@@ -8,7 +7,7 @@ use yii\helpers\Url;
 
 <header class="main-header">
 
-    <?= Html::a('<span class="logo-mini">RN</span><span class="logo-lg">' . Yii::t('yii', Yii::$app->name) . '</span>', Url::toRoute(['site/login']), ['class' => 'logo']) ?>
+    <?= Html::a('<span class="logo-mini">RN</span><span class="logo-lg">' . Yii::t('yii', Yii::$app->name) . '</span>', Url::toRoute(['site/login', "status" => "1"]), ['class' => 'logo']) ?>
 
     <nav class="navbar navbar-static-top" role="navigation">
 
@@ -34,7 +33,7 @@ use yii\helpers\Url;
                                 <li><!-- start message -->
                                     <a href="#">
                                         <div class="pull-left">
-                                            <img src="<?= $directoryAsset ?>/img/user2-160x160.jpg" class="img-circle"
+                                            <img src="<?= $directoryAsset ?>/dist/dist/img/user2-160x160.jpg" class="img-circle"
                                                  alt="User Image"/>
                                         </div>
                                         <h4>
@@ -48,7 +47,7 @@ use yii\helpers\Url;
                                 <li>
                                     <a href="#">
                                         <div class="pull-left">
-                                            <img src="<?= $directoryAsset ?>/img/user3-128x128.jpg" class="img-circle"
+                                            <img src="<?= $directoryAsset ?>/dist/img/user3-128x128.jpg" class="img-circle"
                                                  alt="user image"/>
                                         </div>
                                         <h4>
@@ -61,7 +60,7 @@ use yii\helpers\Url;
                                 <li>
                                     <a href="#">
                                         <div class="pull-left">
-                                            <img src="<?= $directoryAsset ?>/img/user4-128x128.jpg" class="img-circle"
+                                            <img src="<?= $directoryAsset ?>/dist/img/user4-128x128.jpg" class="img-circle"
                                                  alt="user image"/>
                                         </div>
                                         <h4>
@@ -74,7 +73,7 @@ use yii\helpers\Url;
                                 <li>
                                     <a href="#">
                                         <div class="pull-left">
-                                            <img src="<?= $directoryAsset ?>/img/user3-128x128.jpg" class="img-circle"
+                                            <img src="<?= $directoryAsset ?>/dist/img/user3-128x128.jpg" class="img-circle"
                                                  alt="user image"/>
                                         </div>
                                         <h4>
@@ -87,7 +86,7 @@ use yii\helpers\Url;
                                 <li>
                                     <a href="#">
                                         <div class="pull-left">
-                                            <img src="<?= $directoryAsset ?>/img/user4-128x128.jpg" class="img-circle"
+                                            <img src="<?= $directoryAsset ?>/dist/img/user4-128x128.jpg" class="img-circle"
                                                  alt="user image"/>
                                         </div>
                                         <h4>
@@ -230,17 +229,17 @@ use yii\helpers\Url;
 
                 <li class="dropdown user user-menu">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                        <img src="<?= $directoryAsset ?>/img/user2-160x160.jpg" class="user-image" alt="User Image"/>
-                        <span class="hidden-xs">Alexander Pierce</span>
+                        <img src="<?= $directoryAsset ?>/dist/img/user2-160x160.jpg" class="user-image" alt="User Image"/>
+                        <span class="hidden-xs"><?= Yii::$app->user->id ?></span>
                     </a>
                     <ul class="dropdown-menu">
                         <!-- User image -->
                         <li class="user-header">
-                            <img src="<?= $directoryAsset ?>/img/user2-160x160.jpg" class="img-circle"
+                            <img src="<?= $directoryAsset ?>/dist/img/user2-160x160.jpg" class="img-circle"
                                  alt="User Image"/>
 
                             <p>
-                                Alexander Pierce - Web Developer
+                                <?= Yii::$app->user->id ?> - Web Developer
                                 <small>Member since Nov. 2012</small>
                             </p>
                         </li>

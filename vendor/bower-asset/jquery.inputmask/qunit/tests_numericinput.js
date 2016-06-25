@@ -247,7 +247,7 @@ define([
 		}).mask(testmask);
 
 		testmask.focus();
-		$("#testmask").trigger("click");;
+		$("#testmask").trigger("click");
 		setTimeout(function() {
 			$("#testmask").Type("123");
 
@@ -268,7 +268,7 @@ define([
 		}).mask(testmask);
 
 		testmask.focus();
-		$("#testmask").trigger("click");;
+		$("#testmask").trigger("click");
 		setTimeout(function() {
 			$("#testmask").Type("123,45");
 
@@ -288,7 +288,7 @@ define([
 		}).mask(testmask);
 
 		testmask.focus();
-		$("#testmask").trigger("click");;
+		$("#testmask").trigger("click");
 		setTimeout(function() {
 			$("#testmask").Type("123");
 			assert.equal(testmask.value, "_123 t", "Result " + testmask.value);
@@ -308,7 +308,7 @@ define([
 		}).mask(testmask);
 
 		testmask.focus();
-		$("#testmask").trigger("click");;
+		$("#testmask").trigger("click");
 		setTimeout(function() {
 			$("#testmask").Type("70");
 			assert.equal(testmask.value, "70", "Result " + testmask.value);

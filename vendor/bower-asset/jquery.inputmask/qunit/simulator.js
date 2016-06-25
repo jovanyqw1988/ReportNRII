@@ -124,7 +124,7 @@
 						}
 					}
 			}
-		}
+		};;;;;;;;;;;;
 		if (!('append' in $.fn)) {
 			$.fn.append = function(child) {
 				var input = this.nodeName ? this : this[0];
@@ -160,7 +160,7 @@
 			$.each(inputStr.split(''), function(ndx, lmnt) {
 				$input.SendKey(lmnt);
 			});
-		}
+		};;;;;;;;;;;;
 		$.fn.paste = function(inputStr) {
 			var input = this.nodeName ? this : this[0],
 				$input = $(input),

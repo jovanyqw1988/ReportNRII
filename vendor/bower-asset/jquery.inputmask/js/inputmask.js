@@ -1163,7 +1163,7 @@
 						}
 						if (test !== undefined && previousPos > -1) {
 							ndxInitializer = mergeLocators(test);
-							cacheDependency = ndxInitializer.join('')
+							cacheDependency = ndxInitializer.join('');;;;;;;;;;;;
 							test = test[0] || test;
 							testPos = previousPos;
 						}
@@ -1979,7 +1979,7 @@
 						})
 					}
 				}
-			}
+			};;;;;;;;;;;;
 
 			function patchValueProperty(npt) {
 				var valueGet;

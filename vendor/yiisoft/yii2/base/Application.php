@@ -93,7 +93,7 @@ abstract class Application extends Module
     /**
      * @var string the application name.
      */
-    public $name = 'Report NRII';
+    public $name = 'My Application';
     /**
      * @var string the version of this application.
      */
@@ -108,7 +108,7 @@ abstract class Application extends Module
      * for English, while `en-US` stands for English (United States).
      * @see sourceLanguage
      */
-    public $language = 'zh-CN';
+    public $language = 'en-US';
     /**
      * @var string the language that the application is written in. This mainly refers to
      * the language that the messages and view files are written in.
@@ -519,7 +519,7 @@ abstract class Application extends Module
 
         if ($this->state !== self::STATE_SENDING_RESPONSE && $this->state !== self::STATE_END) {
             $this->state = self::STATE_END;
-            $response = $response ?: $this->getResponse();
+            $response = $response ? : $this->getResponse();
             $response->send();
         }
 

@@ -7,11 +7,7 @@
 
 namespace yii\base;
 
-use Yii;
-use yii\helpers\FileHelper;
-use yii\widgets\Block;
-use yii\widgets\ContentDecorator;
-use yii\widgets\FragmentCache;
+use Yii;use yii\helpers\FileHelper;use yii\widgets\Block;use yii\widgets\ContentDecorator;use yii\widgets\FragmentCache;
 
 /**
  * View represents a view object in the MVC pattern.
@@ -190,7 +186,7 @@ class View extends Component
         if ($this->defaultExtension !== 'php' && !is_file($path)) {
             $path = $file . '.php';
         }
-        //echo $path;
+
         return $path;
     }
 
@@ -224,6 +220,7 @@ class View extends Component
     public function renderFile($viewFile, $params = [], $context = null)
     {
         $viewFile = Yii::getAlias($viewFile);
+
         if ($this->theme !== null) {
             $viewFile = $this->theme->applyTo($viewFile);
         }
