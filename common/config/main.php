@@ -25,8 +25,8 @@ return [
         'db' => [
             'class' => 'yii\db\Connection',
             'dsn' => 'mysql:host=localhost;dbname=reportnrii',
-            'username' => 'root',
-            'password' => 'abc,123',
+            'username' => 'kd_shangbao',
+            'password' => 'KVGhPblcq349597U',
             'charset' => 'utf8',
             'tablePrefix' => 'rnrii_'
         ],
