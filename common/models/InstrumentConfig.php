@@ -87,10 +87,22 @@ class InstrumentConfig extends \yii\db\ActiveRecord
         return strtr($this->sql, [':fields' => $this->sql_fields, ':pages' => ""]);
     }
 
+    public function sqlFindOne($id)
+    {
+        $user = Account::findOne(['account' => Yii::$app->user->id]);
+        $id_field = "innerId";
+        if ($user) {
+            $remote_field_innerId = RemoteField::findOne(['account' => Yii::$app->user->id, "type" => $id, 'field' => 'innerId']);
+            $id_field = $remote_field_innerId['remote_field'];
+        }
+        return strtr($this->sql, [':fields' => $this->sql_fields, ':pages' => "", ':one' => "and $id_field = '$id'"]);
+    }
+
     public function sqlFindPages($start, $limit)
     {
         return strtr($this->sql, [':fields' => $this->sql_fields, ':pages' => strtr($this->sql_pages, [':start' => $start, ':limit' => $limit])]);
     }
+
     public function sqlFindPagesTotal($start, $limit)
     {
         return strtr($this->sql, [':fields' => 'COUNT(*) as ' . $this->total(), ':pages' => strtr($this->sql_pages, [':start' => $start, ':limit' => $limit])]);

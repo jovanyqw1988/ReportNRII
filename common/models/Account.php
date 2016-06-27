@@ -2,7 +2,10 @@
 
 namespace common\models;
 
-use common\helper\Connection;use Yii;use yii\db\ActiveRecord;use yii\web\IdentityInterface;
+use common\helper\Connection;
+use Yii;
+use yii\db\ActiveRecord;
+use yii\web\IdentityInterface;
 
 /**
  * This is the model class for table "{{%account}}".
@@ -210,12 +213,13 @@ class Account extends ActiveRecord implements IdentityInterface
 
     public function testDBConnection()
     {
-        $conn = $this->getDBConnection();
+        if (empty($conn = $this->getDBConnection()))
+            return "Pleas fill all forms!";
+        $result = '';
         $e = $conn->open();
         if (empty($conn->pdo))
             return $e;
         $transaction = $conn->beginTransaction();
-        $result = '';
         try {
             $conn->createCommand("CREATE TABLE IF NOT EXISTS `Test` (`id` INT(11) NOT NULL,`name` VARCHAR(45) NULL DEFAULT NULL, PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8")->execute();
             $conn->createCommand("INSERT INTO `Test` VALUES (1,:name) ON DUPLICATE KEY UPDATE `name` = :name")->bindValue(':name', '测试成功')->execute();
@@ -246,6 +250,14 @@ class Account extends ActiveRecord implements IdentityInterface
 
     public function getDsn()
     {
+        if (empty($this->db_type))
+            return null;
+        if (empty($this->db_host))
+            return null;
+        if (empty($this->db_type))
+            return null;
+        if (empty($this->db_name))
+            return null;
         if (!$dbConfig = Yii::$app->params['Database_Type'][$this->db_type])
             return null;
         if (!$dsn = $dbConfig['dsn'])
@@ -259,8 +271,9 @@ class Account extends ActiveRecord implements IdentityInterface
 
     public function testQuery($id, $start, $limit, $index = 0)
     {
+        if (empty($conn = $this->getDBConnection()))
+            return null;
         $result = [];
-        $conn = $this->getDBConnection();
         $e = $conn->open();
         if (empty($conn->pdo)) {
             return ["error" => $e];
@@ -281,8 +294,9 @@ class Account extends ActiveRecord implements IdentityInterface
 
     public function testQueryAll($id, $index = 0)
     {
+        if (empty($conn = $this->getDBConnection()))
+            return null;
         $result = [];
-        $conn = $this->getDBConnection();
         $e = $conn->open();
         if (empty($conn->pdo)) {
             return ["error" => $e];
@@ -299,6 +313,77 @@ class Account extends ActiveRecord implements IdentityInterface
             $conn->close();
         }
         return ['total' => count($query), 'data' => empty($query) ? [] : $query[$index], 'index' => $index, "sql" => [$insConfig->sqlFindAll()]];
+    }
+
+    public function getQueryAllCount($id)
+    {
+        if (empty($conn = $this->getDBConnection()))
+            return 0;
+        $e = $conn->open();
+        if (empty($conn->pdo)) {
+            return 0;
+        }
+        $insConfig = InstrumentConfig::findOne(['account' => Yii::$app->user->id, 'type' => $id]);
+        $transaction = $conn->beginTransaction();
+        $query = 0;
+        try {
+            $query = $conn->createCommand($insConfig->sqlCountAll())->queryAll();
+            $query = empty($query) ? 0 : $query[0][$insConfig->total()];
+            $transaction->commit();
+        } catch (\PDOException $e) {
+            return ["error" => $e];
+        } finally {
+            $conn->close();
+        }
+        return $query;
+    }
+
+
+    public function getQueryAll($id)
+    {
+
+        if (empty($conn = $this->getDBConnection()))
+            return [];
+        $conn->open();
+        if (empty($conn->pdo)) {
+            return [];
+        }
+        $insConfig = InstrumentConfig::findOne(['account' => Yii::$app->user->id, 'type' => $id]);
+        $transaction = $conn->beginTransaction();
+        $query = [];
+        try {
+            $query = $conn->createCommand($insConfig->sqlFindAll())->queryAll();
+            $transaction->commit();
+        } catch (\PDOException $e) {
+            return ["error" => $e];
+        } finally {
+            $conn->close();
+        }
+        return $query;
+    }
+
+    public function getQueryOne($id, $innerId)
+    {
+
+        if (empty($conn = $this->getDBConnection()))
+            return [];
+        $conn->open();
+        if (empty($conn->pdo)) {
+            return [];
+        }
+        $insConfig = InstrumentConfig::findOne(['account' => Yii::$app->user->id, 'type' => $id]);
+        $transaction = $conn->beginTransaction();
+        $query = [];
+        try {
+            $query = $conn->createCommand($insConfig->sqlFindOne($innerId))->queryAll();
+            $query = empty($query) ? [] : $query[0];
+            $transaction->commit();
+        } catch (\PDOException $e) {
+            return ["error" => $e];
+        } finally {
+            $conn->close();
+        }
+        return $query;
     }
 
     /**

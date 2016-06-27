@@ -1,5 +1,6 @@
 <?php
-use yii\bootstrap\ActiveForm;use yii\helpers\Html;
+use yii\bootstrap\ActiveForm;
+use yii\helpers\Html;
 
 
 $this->params['breadcrumbs'][] = Yii::t('yii', 'System Configuration');

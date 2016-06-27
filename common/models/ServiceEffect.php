@@ -27,6 +27,7 @@ use Yii;
  * @property string $Remark
  * @property integer $created_at
  * @property integer $updated_at
+ * @property integer $result
  *
  * @property Account $account0
  */
@@ -47,7 +48,7 @@ class ServiceEffect extends \yii\db\ActiveRecord
     {
         return [
             [['account'], 'required'],
-            [['created_at', 'updated_at'], 'integer'],
+            [['created_at', 'updated_at', 'result'], 'integer'],
             [['account'], 'string', 'max' => 32],
             [['submittedRates', 'activatedRates', 'totalShareRates', 'externalShareRates', 'Innovation', 'serviceAmounts', 'user', 'serviceIncome'], 'string', 'max' => 45],
             [['Project', 'Thesis', 'Book', 'Report', 'Patent', 'Output', 'Achievements', 'socialBenefit', 'Remark'], 'string', 'max' => 200],
@@ -81,6 +82,7 @@ class ServiceEffect extends \yii\db\ActiveRecord
             'Remark' => Yii::t('yii', '其他成果	非上述成果之外的成果（最多200字）'),
             'created_at' => Yii::t('yii', 'Created At'),
             'updated_at' => Yii::t('yii', 'Updated At'),
+            'result' => Yii::t('yii', 'Result'),
         ];
     }
 

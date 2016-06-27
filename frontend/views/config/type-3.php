@@ -1,5 +1,7 @@
 <?php
-use yii\bootstrap\ActiveForm;use yii\helpers\Html;use yii\helpers\Url;
+use yii\bootstrap\ActiveForm;
+use yii\helpers\Html;
+use yii\helpers\Url;
 
 $this->params['breadcrumbs'][] = Yii::t('yii', Yii::$app->params['Data_Type'][$id]);
 $this->beginBlock('content-header');
@@ -51,10 +53,9 @@ $this->beginBlock('content-header');
                                                 <th width="80px">可查阅</th>
                                                 <th width="60px">索引</th>
                                             </tr>
-                                            <?php foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-                                                if (!in_array($id, $opt['support'])) {
-                                                    continue;
-                                                }
+                                            <?php
+                                            function tmp_foreach($opt, $field, $result)
+                                            {
                                                 ?>
                                                 <tr>
                                                     <td align="right"><?= isset($opt['label']) ? $opt['label'] : $field ?></td>
@@ -173,7 +174,29 @@ $this->beginBlock('content-header');
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            <?php } ?>
+                                                <?php
+                                            }
+
+                                            if (in_array($id, ['1', '2', '3', '4'])) {
+                                                foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                                                    if (!in_array($id, $opt['support'])) {
+                                                        continue;
+                                                    }
+                                                    tmp_foreach($opt, $field, $result);
+                                                }
+                                            } else if (in_array($id, ['5'])) {
+                                                foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                                                    tmp_foreach($opt, $field, $result);
+                                                }
+                                            } else if (in_array($id, ['6'])) {
+                                                foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                                                    tmp_foreach($opt, $field, $result);
+                                                }
+                                            } else if (in_array($id, ['7'])) {
+                                                foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                                                    tmp_foreach($opt, $field, $result);
+                                                }
+                                            } ?>
                                         </table>
                                     </div><!-- /.box-body -->
                                     <!-- /.box-body -->

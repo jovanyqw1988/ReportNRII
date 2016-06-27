@@ -1,13 +1,16 @@
 <?php
 namespace frontend\models;
 
-use common\models\InstrumentConfig;use common\models\RemoteField;use Yii;use yii\base\Model;
+use common\models\InstrumentConfig;
+use common\models\RemoteField;
+use Yii;
+use yii\base\Model;
 
 class InstrumentFieldFilterForm extends Model
 {
     public $user;
     public $innerId;
-    public $canme;
+    public $cname;
     public $ename;
     public $instrBelongsType;
     public $InstrBelongsName;
@@ -45,6 +48,21 @@ class InstrumentFieldFilterForm extends Model
     public $image;
     public $auditStatus;
 
+    public $amounts;
+    public $serviceTime;
+    public $serviceWay;
+    public $serviceAmount;
+    public $subjectName;
+    public $subjectIncome;
+    public $subjectArea;
+    public $subjectContent;
+    public $applicant;
+    public $applicatPhone;
+    public $applicatEmail;
+    public $applicatUnit;
+    public $comment;
+
+
     /**
      * @inheritdoc
      */
@@ -72,35 +90,66 @@ class InstrumentFieldFilterForm extends Model
             $insConfig->account = Yii::$app->user->id;
             $insConfig->insert();
         }
-        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-            if (!in_array($id, $opt['support'])) {
-                continue;
+        if (in_array($id, ['1', '2', '3', '4'])) {
+            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                if (!in_array($id, $opt['support'])) {
+                    continue;
+                }
+                $this->do_save_mapping($id, $field);
             }
-            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-            if (empty($remoteField)) {
-                $remoteField = new RemoteField();
-                $remoteField->account = Yii::$app->user->id;
-                $remoteField->type = $id;
-                $remoteField->field = $field;
-                $remoteField->remote_field = $this->$field;
-                $remoteField->insert();
-            } else {
-                $remoteField->remote_field = $this->$field;
-                $remoteField->update();
+        } else if (in_array($id, ['5'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_save_mapping($id, $field);
+            }
+        } else if (in_array($id, ['6'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_save_mapping($id, $field);
+            }
+        } else if (in_array($id, ['7'])) {
+            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                $this->do_save_mapping($id, $field);
             }
         }
 
     }
 
+    protected function do_save_mapping($id, $field)
+    {
+        $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+        if ($remoteField) {
+            $remoteField->remote_field = $this->$field;
+            $remoteField->update();
+        }
+    }
+
     public function fetch_mapping($id)
     {
-        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-            if (!in_array($id, $opt['support'])) {
-                continue;
+        if (in_array($id, ['1', '2', '3', '4'])) {
+            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                if (!in_array($id, $opt['support'])) {
+                    continue;
+                }
+                $this->do_fetch_mapping($id, $field);
             }
-            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-            $this->$field = $remoteField ? $remoteField->remote_field : null;
+        } else if (in_array($id, ['5'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_mapping($id, $field);
+            }
+        } else if (in_array($id, ['6'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_mapping($id, $field);
+            }
+        } else if (in_array($id, ['7'])) {
+            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                $this->do_fetch_mapping($id, $field);
+            }
         }
+    }
+
+    protected function do_fetch_mapping($id, $field)
+    {
+        $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+        $this->$field = $remoteField ? $remoteField->remote_field : null;
     }
 
     /**
@@ -116,23 +165,42 @@ class InstrumentFieldFilterForm extends Model
             $insConfig->account = Yii::$app->user->id;
             $insConfig->insert();
         }
-        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-            if (!in_array($id, $opt['support'])) {
-                continue;
-            }
-            if ($this->$field) {
-                $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-                if (empty($remoteField)) {
-                    $remoteField = new RemoteField();
-                    $remoteField->account = Yii::$app->user->id;
-                    $remoteField->type = $id;
-                    $remoteField->field = $field;
-                    $remoteField->insert();
+        if (in_array($id, ['1', '2', '3', '4'])) {
+            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                if (!in_array($id, $opt['support'])) {
+                    continue;
                 }
-            } else {
-                $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-                $remoteField && $remoteField->delete();
+                $this->do_save_filter($id, $field);
             }
+        } else if (in_array($id, ['5'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_save_filter($id, $field);
+            }
+        } else if (in_array($id, ['6'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_save_filter($id, $field);
+            }
+        } else if (in_array($id, ['7'])) {
+            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                $this->do_save_filter($id, $field);
+            }
+        }
+    }
+
+    protected function do_save_filter($id, $field)
+    {
+        if ($this->$field) {
+            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+            if (empty($remoteField)) {
+                $remoteField = new RemoteField();
+                $remoteField->account = Yii::$app->user->id;
+                $remoteField->type = $id;
+                $remoteField->field = $field;
+                $remoteField->insert();
+            }
+        } else {
+            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+            $remoteField && $remoteField->delete();
         }
     }
 
@@ -141,37 +209,76 @@ class InstrumentFieldFilterForm extends Model
      */
     public function fetch_filter($id)
     {
-        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-            if (!in_array($id, $opt['support'])) {
-                continue;
-            }
-            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-            if(isset($opt['required']) && $opt['required']){
-                if(empty($remoteField)){
-                    $remoteField = new RemoteField();
-                    $remoteField->account = Yii::$app->user->id;
-                    $remoteField->type = $id;
-                    $remoteField->field = $field;
-                    $remoteField->insert();
+        if (in_array($id, ['1', '2', '3', '4'])) {
+            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                if (!in_array($id, $opt['support'])) {
+                    continue;
                 }
-                $this->$field = true;
-            }else{
-                $this->$field = !empty($remoteField);
+                $this->do_fetch_filter($id, $field);
+            }
+        } else if (in_array($id, ['5'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_filter($id, $field);
+            }
+        } else if (in_array($id, ['6'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_filter($id, $field);
+            }
+        } else if (in_array($id, ['7'])) {
+            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                $this->do_fetch_filter($id, $field);
             }
         }
+    }
+
+    protected function do_fetch_filter($id, $field)
+    {
+        $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+        if (isset($opt['required']) && $opt['required']) {
+            if (empty($remoteField)) {
+                $remoteField = new RemoteField();
+                $remoteField->account = Yii::$app->user->id;
+                $remoteField->type = $id;
+                $remoteField->field = $field;
+                $remoteField->insert();
+            }
+            $this->$field = true;
+        } else {
+            $this->$field = !empty($remoteField);
+        }
+
     }
 
     public function fetch_fields($id)
     {
         $fields = [];
-        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-            if (!in_array($id, $opt['support'])) {
-                continue;
+        if (in_array($id, ['1', '2', '3', '4'])) {
+            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                if (!in_array($id, $opt['support'])) {
+                    continue;
+                }
+                $this->do_fetch_fields($id, $field, $fields);
             }
-            $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
-            $remoteField && array_push($fields, $field);
+        } else if (in_array($id, ['5'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_fields($id, $field, $fields);
+            }
+        } else if (in_array($id, ['6'])) {
+            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                $this->do_fetch_fields($id, $field, $fields);
+            }
+        } else if (in_array($id, ['7'])) {
+            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                $this->do_fetch_fields($id, $field, $fields);
+            }
         }
         return $fields;
+    }
+
+    protected function do_fetch_fields($id, $field, &$fields)
+    {
+        $remoteField = RemoteField::findOne(['account' => Yii::$app->user->id, 'type' => $id, 'field' => $field]);
+        $remoteField && array_push($fields, $field);
     }
 
 }

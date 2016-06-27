@@ -7,7 +7,15 @@
  */
 namespace frontend\controllers;
 
-use common\models\Account;use common\models\RemoteField;use frontend\models\DatabaseForm;use frontend\models\InstrumentFieldFilterForm;use frontend\models\QueryForm;use frontend\models\SQLForm;use frontend\models\SystemParamForm;use Yii;use yii\web\Controller;
+use common\models\Account;
+use common\models\RemoteField;
+use frontend\models\DatabaseForm;
+use frontend\models\InstrumentFieldFilterForm;
+use frontend\models\QueryForm;
+use frontend\models\SQLForm;
+use frontend\models\SystemParamForm;
+use Yii;
+use yii\web\Controller;
 
 /**
  * 所有的配置都在这里进行
@@ -115,29 +123,38 @@ class ConfigController extends Controller
                     //获取字段映射表
                     $remote_mappings = RemoteField::findAll(['account' => Yii::$app->user->id, "type" => $id]);
                     //读取关键字段映射
-                    $remote_field_user = RemoteField::findOne(['account' => Yii::$app->user->id, "type" => $id, 'field' => 'frontend']);
                     $remote_field_innerId = RemoteField::findOne(['account' => Yii::$app->user->id, "type" => $id, 'field' => 'innerId']);
                     //查询远程数据
                     $remote_values = $user->testQueryAll($id, $index);
-                    if (empty($remote_values['total']) || empty($remote_field_user) || empty($remote_field_user['remote_field']) || empty($remote_field_innerId) || empty($remote_field_innerId['remote_field'])) {
+                    if (empty($remote_values['total']) || empty($remote_field_innerId) || empty($remote_field_innerId['remote_field'])) {
                         return $this->render('type-' . $step, [
                             'id' => $id,
                             'step' => $step,
                             'result' => [],
+                            'remote' => null,
                             'message' => "You should fill some required field mapping!"
                         ]);
                     }
                     foreach ($remote_values['data'] as $remote_field => $value) {
                         //var_dump($remote_field,"<hr>");
-                        foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
-                            if (!in_array($id, $opt['support'])) {
-                                continue;
-                            }
-                            foreach ($remote_mappings as $mapping) {
-                                if ($mapping['field'] == $field && $mapping['remote_field'] && $mapping['remote_field'] == $remote_field) {
-                                    $instr[$field] = $value;
-                                    break;
+                        if (in_array($id, ['1', '2', '3', '4'])) {
+                            foreach (Yii::$app->params['Instrument_Fields'] as $field => $opt) {
+                                if (!in_array($id, $opt['support'])) {
+                                    continue;
                                 }
+                                $this->tmp_foreach_type_3($remote_mappings, $remote_field, $field, $value, $instr);
+                            }
+                        } else if (in_array($id, ['5'])) {
+                            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                                $this->tmp_foreach_type_3($remote_mappings, $remote_field, $field, $value, $instr);
+                            }
+                        } else if (in_array($id, ['6'])) {
+                            foreach (Yii::$app->params['Service_Record'] as $field => $opt) {
+                                $this->tmp_foreach_type_3($remote_mappings, $remote_field, $field, $value, $instr);
+                            }
+                        } else if (in_array($id, ['7'])) {
+                            foreach (Yii::$app->params['Service_Effect'] as $field => $opt) {
+                                $this->tmp_foreach_type_3($remote_mappings, $remote_field, $field, $value, $instr);
                             }
                         }
                     }
@@ -177,8 +194,17 @@ class ConfigController extends Controller
             'step' => $step]);
     }
 
-    public
-    function actionSystem()
+    protected function tmp_foreach_type_3($remote_mappings, $remote_field, $field, $value, &$instr)
+    {
+        foreach ($remote_mappings as $mapping) {
+            if ($mapping['field'] == $field && $mapping['remote_field'] && $mapping['remote_field'] == $remote_field) {
+                $instr[$field] = $value;
+                break;
+            }
+        }
+    }
+
+    public function actionSystem()
     {
         $model = new SystemParamForm();
         $result = "";

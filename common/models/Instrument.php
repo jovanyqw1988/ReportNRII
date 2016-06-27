@@ -9,9 +9,8 @@ use Yii;
  *
  * @property string $account
  * @property string $innerId
- * @property string $user
  * @property integer $instrument
- * @property string $canme
+ * @property string $cname
  * @property string $ename
  * @property string $instrBelongsType
  * @property string $InstrBelongsName
@@ -48,6 +47,9 @@ use Yii;
  * @property string $shareMode
  * @property string $image
  * @property string $auditStatus
+ * @property integer $result
+ * @property integer $created_at
+ * @property integer $updated_at
  *
  * @property Account $account0
  */
@@ -67,14 +69,14 @@ class Instrument extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['account', 'innerId', 'user', 'instrument', 'image'], 'required'],
-            [['instrument'], 'integer'],
+            [['account', 'innerId', 'instrument'], 'required'],
+            [['instrument', 'result', 'created_at', 'updated_at'], 'integer'],
             [['worth'], 'number'],
             [['establish', 'beginDate'], 'safe'],
             [['technical', 'function', 'achievement', 'requirement', 'fee'], 'string'],
             [['account'], 'string', 'max' => 32],
-            [['innerId', 'user', 'instrBelongsType', 'InstrBelongsName', 'nation', 'province', 'city', 'county', 'street'], 'string', 'max' => 45],
-            [['canme', 'email'], 'string', 'max' => 50],
+            [['innerId', 'instrBelongsType', 'InstrBelongsName', 'nation', 'province', 'city', 'county', 'street'], 'string', 'max' => 45],
+            [['cname', 'email'], 'string', 'max' => 50],
             [['ename', 'url', 'manufacturer', 'instrVersion', 'address'], 'string', 'max' => 100],
             [['instrCategory', 'postalcode'], 'string', 'max' => 6],
             [['instrSource', 'instrSupervise', 'level', 'type', 'status', 'shareMode'], 'string', 'max' => 10],
@@ -94,7 +96,6 @@ class Instrument extends \yii\db\ActiveRecord
         return [
             'account' => Yii::t('yii', 'Account'),
             'innerId' => Yii::t('yii', '所在单位仪器内部编码	仪器所在单位系统内部id，能唯一标识仪器'),
-            'user' => Yii::t('yii', 'User'),
             'instrument' => Yii::t('yii', '填报数据类型
 1代表科学仪器中心
 2代表大型科学装置
@@ -102,7 +103,7 @@ class Instrument extends \yii\db\ActiveRecord
 4代表单台套科学仪器设备
 5代表海关监管信息
 6代表服务记录'),
-            'canme' => Yii::t('yii', '仪器中心名称	科学仪器中心全称，不可简写（最多50字）'),
+            'cname' => Yii::t('yii', '仪器中心名称	科学仪器中心全称，不可简写（最多50字）'),
             'ename' => Yii::t('yii', 'Ename'),
             'instrBelongsType' => Yii::t('yii', '所属大型科学装置/仪器中心/服务单元	仪器设备所隶属的科学仪器中心（1）、大型科学装置（2）或服务单元（3）（无隶属关系可填写“无”）'),
             'InstrBelongsName' => Yii::t('yii', '隶属仪器所在单位仪器内部编号	确定隶属大型科学装置/仪器中心/服务单元唯一的一台仪器。（无隶属关系可填写“无”）'),
@@ -160,6 +161,9 @@ class Instrument extends \yii\db\ActiveRecord
 -1未提交，代表后期需要对数据进行重复报，更新完善数据；
 0提交，代表报送的数据无误，后期无需更新完善。已经提交的数据，再次推送更新无效，需等待后期审核驳回再进行修改。
 如果因为失误提交，请等待国家平台审核驳回后更新。'),
+            'result' => Yii::t('yii', 'Result'),
+            'created_at' => Yii::t('yii', 'Created At'),
+            'updated_at' => Yii::t('yii', 'Updated At'),
         ];
     }
 
