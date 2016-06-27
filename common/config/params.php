@@ -4,7 +4,7 @@ return [
     'supportEmail' => 'support@example.com',
     'user.passwordResetTokenExpire' => 3600,
     'Database_Type' => [
-        'MySQL' => ['dsn' => 'mysql:host={host}:{port};dbname={dbname}',],
+        'MySQL' => ['dsn' => 'mysql:host={host};dbname={dbname}',],
     ],
     'Data_Type' => [
         "1" => Yii::t('yii', '科学仪器中心'),
