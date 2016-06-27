@@ -56,6 +56,8 @@ trait HeadlineTrait
 		}
 	}
 
+	abstract protected function parseInline($text);
+
 	/**
 	 * Renders a headline
 	 */
@@ -65,6 +67,5 @@ trait HeadlineTrait
 		return "<$tag>" . $this->renderAbsy($block['content']) . "</$tag>\n";
 	}
 
-	abstract protected function parseInline($text);
 	abstract protected function renderAbsy($absy);
 }

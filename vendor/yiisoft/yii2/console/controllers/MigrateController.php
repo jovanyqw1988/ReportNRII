@@ -307,22 +307,6 @@ class MigrateController extends BaseMigrateController
     }
 
     /**
-     * If `useTablePrefix` equals true, then the table name will contain the
-     * prefix format.
-     *
-     * @param string $tableName the table name to generate.
-     * @return string
-     * @since 2.0.8
-     */
-    protected function generateTableName($tableName)
-    {
-        if (!$this->useTablePrefix) {
-            return $tableName;
-        }
-        return '{{%' . $tableName . '}}';
-    }
-
-    /**
      * Parse the command line migration fields
      * @return array parse result with following fields:
      *
@@ -380,5 +364,21 @@ class MigrateController extends BaseMigrateController
             }
         }
         array_unshift($fields, ['property' => 'id', 'decorators' => 'primaryKey()']);
+    }
+
+    /**
+     * If `useTablePrefix` equals true, then the table name will contain the
+     * prefix format.
+     *
+     * @param string $tableName the table name to generate.
+     * @return string
+     * @since 2.0.8
+     */
+    protected function generateTableName($tableName)
+    {
+        if (!$this->useTablePrefix) {
+            return $tableName;
+        }
+        return '{{%' . $tableName . '}}';
     }
 }

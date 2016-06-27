@@ -164,52 +164,6 @@ trait QueryTrait
     }
 
     /**
-     * Adds an additional WHERE condition to the existing one but ignores [[isEmpty()|empty operands]].
-     * The new condition and the existing one will be joined using the 'AND' operator.
-     *
-     * This method is similar to [[andWhere()]]. The main difference is that this method will
-     * remove [[isEmpty()|empty query operands]]. As a result, this method is best suited
-     * for building query conditions based on filter values entered by users.
-     *
-     * @param array $condition the new WHERE condition. Please refer to [[where()]]
-     * on how to specify this parameter.
-     * @return $this the query object itself
-     * @see filterWhere()
-     * @see orFilterWhere()
-     */
-    public function andFilterWhere(array $condition)
-    {
-        $condition = $this->filterCondition($condition);
-        if ($condition !== []) {
-            $this->andWhere($condition);
-        }
-        return $this;
-    }
-
-    /**
-     * Adds an additional WHERE condition to the existing one but ignores [[isEmpty()|empty operands]].
-     * The new condition and the existing one will be joined using the 'OR' operator.
-     *
-     * This method is similar to [[orWhere()]]. The main difference is that this method will
-     * remove [[isEmpty()|empty query operands]]. As a result, this method is best suited
-     * for building query conditions based on filter values entered by users.
-     *
-     * @param array $condition the new WHERE condition. Please refer to [[where()]]
-     * on how to specify this parameter.
-     * @return $this the query object itself
-     * @see filterWhere()
-     * @see andFilterWhere()
-     */
-    public function orFilterWhere(array $condition)
-    {
-        $condition = $this->filterCondition($condition);
-        if ($condition !== []) {
-            $this->orWhere($condition);
-        }
-        return $this;
-    }
-
-    /**
      * Removes [[isEmpty()|empty operands]] from the given query condition.
      *
      * @param array $condition the original condition
@@ -291,6 +245,52 @@ trait QueryTrait
     }
 
     /**
+     * Adds an additional WHERE condition to the existing one but ignores [[isEmpty()|empty operands]].
+     * The new condition and the existing one will be joined using the 'AND' operator.
+     *
+     * This method is similar to [[andWhere()]]. The main difference is that this method will
+     * remove [[isEmpty()|empty query operands]]. As a result, this method is best suited
+     * for building query conditions based on filter values entered by users.
+     *
+     * @param array $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @return $this the query object itself
+     * @see filterWhere()
+     * @see orFilterWhere()
+     */
+    public function andFilterWhere(array $condition)
+    {
+        $condition = $this->filterCondition($condition);
+        if ($condition !== []) {
+            $this->andWhere($condition);
+        }
+        return $this;
+    }
+
+    /**
+     * Adds an additional WHERE condition to the existing one but ignores [[isEmpty()|empty operands]].
+     * The new condition and the existing one will be joined using the 'OR' operator.
+     *
+     * This method is similar to [[orWhere()]]. The main difference is that this method will
+     * remove [[isEmpty()|empty query operands]]. As a result, this method is best suited
+     * for building query conditions based on filter values entered by users.
+     *
+     * @param array $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @return $this the query object itself
+     * @see filterWhere()
+     * @see andFilterWhere()
+     */
+    public function orFilterWhere(array $condition)
+    {
+        $condition = $this->filterCondition($condition);
+        if ($condition !== []) {
+            $this->orWhere($condition);
+        }
+        return $this;
+    }
+
+    /**
      * Sets the ORDER BY part of the query.
      * @param string|array|Expression $columns the columns (and the directions) to be ordered by.
      * Columns can be specified in either a string (e.g. `"id ASC, name DESC"`) or an array
@@ -311,6 +311,32 @@ trait QueryTrait
     {
         $this->orderBy = $this->normalizeOrderBy($columns);
         return $this;
+    }
+
+    /**
+     * Normalizes format of ORDER BY data
+     *
+     * @param array|string|Expression $columns the columns value to normalize. See [[orderBy]] and [[addOrderBy]].
+     * @return array
+     */
+    protected function normalizeOrderBy($columns)
+    {
+        if ($columns instanceof Expression) {
+            return [$columns];
+        } elseif (is_array($columns)) {
+            return $columns;
+        } else {
+            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
+            $result = [];
+            foreach ($columns as $column) {
+                if (preg_match('/^(.*?)\s+(asc|desc)$/i', $column, $matches)) {
+                    $result[$matches[1]] = strcasecmp($matches[2], 'desc') ? SORT_ASC : SORT_DESC;
+                } else {
+                    $result[$column] = SORT_ASC;
+                }
+            }
+            return $result;
+        }
     }
 
     /**
@@ -339,32 +365,6 @@ trait QueryTrait
             $this->orderBy = array_merge($this->orderBy, $columns);
         }
         return $this;
-    }
-
-    /**
-     * Normalizes format of ORDER BY data
-     *
-     * @param array|string|Expression $columns the columns value to normalize. See [[orderBy]] and [[addOrderBy]].
-     * @return array
-     */
-    protected function normalizeOrderBy($columns)
-    {
-        if ($columns instanceof Expression) {
-            return [$columns];
-        } elseif (is_array($columns)) {
-            return $columns;
-        } else {
-            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-            $result = [];
-            foreach ($columns as $column) {
-                if (preg_match('/^(.*?)\s+(asc|desc)$/i', $column, $matches)) {
-                    $result[$matches[1]] = strcasecmp($matches[2], 'desc') ? SORT_ASC : SORT_DESC;
-                } else {
-                    $result[$column] = SORT_ASC;
-                }
-            }
-            return $result;
-        }
     }
 
     /**

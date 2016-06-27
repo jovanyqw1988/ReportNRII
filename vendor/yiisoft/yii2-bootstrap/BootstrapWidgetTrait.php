@@ -84,6 +84,12 @@ trait BootstrapWidgetTrait
     }
 
     /**
+     * @return \yii\web\View the view object that can be used to render views or view files.
+     * @see yii\base\Widget::getView()
+     */
+    abstract function getView();
+
+    /**
      * Registers JS event handlers that are listed in [[clientEvents]].
      * @since 2.0.2
      */
@@ -98,10 +104,4 @@ trait BootstrapWidgetTrait
             $this->getView()->registerJs(implode("\n", $js));
         }
     }
-
-    /**
-     * @return \yii\web\View the view object that can be used to render views or view files.
-     * @see yii\base\Widget::getView()
-     */
-    abstract function getView();
 }

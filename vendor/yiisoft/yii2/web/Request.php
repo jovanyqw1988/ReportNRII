@@ -167,7 +167,20 @@ class Request extends \yii\base\Request
      * @var HeaderCollection Collection of request headers.
      */
     private $_headers;
-
+    private $_rawBody;
+    private $_bodyParams;
+    private $_queryParams;
+    private $_hostInfo;
+    private $_baseUrl;
+    private $_scriptUrl;
+    private $_scriptFile;
+    private $_pathInfo;
+    private $_url;
+    private $_port;
+    private $_securePort;
+    private $_contentTypes;
+    private $_languages;
+    private $_csrfToken;
 
     /**
      * Resolves the current request into a route and the associated parameters.
@@ -188,6 +201,33 @@ class Request extends \yii\base\Request
         } else {
             throw new NotFoundHttpException(Yii::t('yii', 'Page not found.'));
         }
+    }
+
+    /**
+     * Returns the request parameters given in the [[queryString]].
+     *
+     * This method will return the contents of `$_GET` if params where not explicitly set.
+     * @return array the request GET parameter values.
+     * @see setQueryParams()
+     */
+    public function getQueryParams()
+    {
+        if ($this->_queryParams === null) {
+            return $_GET;
+        }
+
+        return $this->_queryParams;
+    }
+
+    /**
+     * Sets the request [[queryString]] parameters.
+     * @param array $values the request query parameters (name-value pairs)
+     * @see getQueryParam()
+     * @see getQueryParams()
+     */
+    public function setQueryParams($values)
+    {
+        $this->_queryParams = $values;
     }
 
     /**
@@ -222,6 +262,15 @@ class Request extends \yii\base\Request
     }
 
     /**
+     * Returns whether this is a GET request.
+     * @return boolean whether this is a GET request.
+     */
+    public function getIsGet()
+    {
+        return $this->getMethod() === 'GET';
+    }
+
+    /**
      * Returns the method of the current request (e.g. GET, POST, HEAD, PUT, PATCH, DELETE).
      * @return string request method, such as GET, POST, HEAD, PUT, PATCH, DELETE.
      * The value returned is turned into upper case.
@@ -241,15 +290,6 @@ class Request extends \yii\base\Request
         }
         
         return 'GET';
-    }
-
-    /**
-     * Returns whether this is a GET request.
-     * @return boolean whether this is a GET request.
-     */
-    public function getIsGet()
-    {
-        return $this->getMethod() === 'GET';
     }
 
     /**
@@ -307,6 +347,15 @@ class Request extends \yii\base\Request
     }
 
     /**
+     * Returns whether this is a PJAX request
+     * @return boolean whether this is a PJAX request
+     */
+    public function getIsPjax()
+    {
+        return $this->getIsAjax() && !empty($_SERVER['HTTP_X_PJAX']);
+    }
+
+    /**
      * Returns whether this is an AJAX (XMLHttpRequest) request.
      *
      * Note that jQuery doesn't set the header in case of cross domain
@@ -320,15 +369,6 @@ class Request extends \yii\base\Request
     }
 
     /**
-     * Returns whether this is a PJAX request
-     * @return boolean whether this is a PJAX request
-     */
-    public function getIsPjax()
-    {
-        return $this->getIsAjax() && !empty($_SERVER['HTTP_X_PJAX']);
-    }
-
-    /**
      * Returns whether this is an Adobe Flash or Flex request.
      * @return boolean whether this is an Adobe Flash or Adobe Flex request.
      */
@@ -338,31 +378,21 @@ class Request extends \yii\base\Request
             (stripos($_SERVER['HTTP_USER_AGENT'], 'Shockwave') !== false || stripos($_SERVER['HTTP_USER_AGENT'], 'Flash') !== false);
     }
 
-    private $_rawBody;
-
     /**
-     * Returns the raw HTTP request body.
-     * @return string the request body
+     * Returns POST parameter with a given name. If name isn't specified, returns an array of all POST parameters.
+     *
+     * @param string $name the parameter name
+     * @param mixed $defaultValue the default parameter value if the parameter does not exist.
+     * @return array|mixed
      */
-    public function getRawBody()
+    public function post($name = null, $defaultValue = null)
     {
-        if ($this->_rawBody === null) {
-            $this->_rawBody = file_get_contents('php://input');
+        if ($name === null) {
+            return $this->getBodyParams();
+        } else {
+            return $this->getBodyParam($name, $defaultValue);
         }
-
-        return $this->_rawBody;
     }
-
-    /**
-     * Sets the raw HTTP request body, this method is mainly used by test scripts to simulate raw HTTP requests.
-     * @param string $rawBody the request body
-     */
-    public function setRawBody($rawBody)
-    {
-        $this->_rawBody = $rawBody;
-    }
-
-    private $_bodyParams;
 
     /**
      * Returns the request parameters given in the request body.
@@ -427,6 +457,50 @@ class Request extends \yii\base\Request
     }
 
     /**
+     * Returns request content-type
+     * The Content-Type header field indicates the MIME type of the data
+     * contained in [[getRawBody()]] or, in the case of the HEAD method, the
+     * media type that would have been sent had the request been a GET.
+     * For the MIME-types the user expects in response, see [[acceptableContentTypes]].
+     * @return string request content-type. Null is returned if this information is not available.
+     * @link http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17
+     * HTTP 1.1 header field definitions
+     */
+    public function getContentType()
+    {
+        if (isset($_SERVER['CONTENT_TYPE'])) {
+            return $_SERVER['CONTENT_TYPE'];
+        } elseif (isset($_SERVER['HTTP_CONTENT_TYPE'])) {
+            //fix bug https://bugs.php.net/bug.php?id=66606
+            return $_SERVER['HTTP_CONTENT_TYPE'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns the raw HTTP request body.
+     * @return string the request body
+     */
+    public function getRawBody()
+    {
+        if ($this->_rawBody === null) {
+            $this->_rawBody = file_get_contents('php://input');
+        }
+
+        return $this->_rawBody;
+    }
+
+    /**
+     * Sets the raw HTTP request body, this method is mainly used by test scripts to simulate raw HTTP requests.
+     * @param string $rawBody the request body
+     */
+    public function setRawBody($rawBody)
+    {
+        $this->_rawBody = $rawBody;
+    }
+
+    /**
      * Returns the named request body parameter value.
      * If the parameter does not exist, the second parameter passed to this method will be returned.
      * @param string $name the parameter name
@@ -440,51 +514,6 @@ class Request extends \yii\base\Request
         $params = $this->getBodyParams();
 
         return isset($params[$name]) ? $params[$name] : $defaultValue;
-    }
-
-    /**
-     * Returns POST parameter with a given name. If name isn't specified, returns an array of all POST parameters.
-     *
-     * @param string $name the parameter name
-     * @param mixed $defaultValue the default parameter value if the parameter does not exist.
-     * @return array|mixed
-     */
-    public function post($name = null, $defaultValue = null)
-    {
-        if ($name === null) {
-            return $this->getBodyParams();
-        } else {
-            return $this->getBodyParam($name, $defaultValue);
-        }
-    }
-
-    private $_queryParams;
-
-    /**
-     * Returns the request parameters given in the [[queryString]].
-     *
-     * This method will return the contents of `$_GET` if params where not explicitly set.
-     * @return array the request GET parameter values.
-     * @see setQueryParams()
-     */
-    public function getQueryParams()
-    {
-        if ($this->_queryParams === null) {
-            return $_GET;
-        }
-
-        return $this->_queryParams;
-    }
-
-    /**
-     * Sets the request [[queryString]] parameters.
-     * @param array $values the request query parameters (name-value pairs)
-     * @see getQueryParam()
-     * @see getQueryParams()
-     */
-    public function setQueryParams($values)
-    {
-        $this->_queryParams = $values;
     }
 
     /**
@@ -517,151 +546,6 @@ class Request extends \yii\base\Request
 
         return isset($params[$name]) ? $params[$name] : $defaultValue;
     }
-
-    private $_hostInfo;
-
-    /**
-     * Returns the schema and host part of the current request URL.
-     * The returned URL does not have an ending slash.
-     * By default this is determined based on the user request information.
-     * You may explicitly specify it by setting the [[setHostInfo()|hostInfo]] property.
-     * @return string schema and hostname part (with port number if needed) of the request URL (e.g. `http://www.yiiframework.com`),
-     * null if can't be obtained from `$_SERVER` and wasn't set.
-     * @see setHostInfo()
-     */
-    public function getHostInfo()
-    {
-        if ($this->_hostInfo === null) {
-            $secure = $this->getIsSecureConnection();
-            $http = $secure ? 'https' : 'http';
-            if (isset($_SERVER['HTTP_HOST'])) {
-                $this->_hostInfo = $http . '://' . $_SERVER['HTTP_HOST'];
-            } elseif (isset($_SERVER['SERVER_NAME'])) {
-                $this->_hostInfo = $http . '://' . $_SERVER['SERVER_NAME'];
-                $port = $secure ? $this->getSecurePort() : $this->getPort();
-                if (($port !== 80 && !$secure) || ($port !== 443 && $secure)) {
-                    $this->_hostInfo .= ':' . $port;
-                }
-            }
-        }
-
-        return $this->_hostInfo;
-    }
-
-    /**
-     * Sets the schema and host part of the application URL.
-     * This setter is provided in case the schema and hostname cannot be determined
-     * on certain Web servers.
-     * @param string $value the schema and host part of the application URL. The trailing slashes will be removed.
-     */
-    public function setHostInfo($value)
-    {
-        $this->_hostInfo = $value === null ? null : rtrim($value, '/');
-    }
-
-    private $_baseUrl;
-
-    /**
-     * Returns the relative URL for the application.
-     * This is similar to [[scriptUrl]] except that it does not include the script file name,
-     * and the ending slashes are removed.
-     * @return string the relative URL for the application
-     * @see setScriptUrl()
-     */
-    public function getBaseUrl()
-    {
-        if ($this->_baseUrl === null) {
-            $this->_baseUrl = rtrim(dirname($this->getScriptUrl()), '\\/');
-        }
-
-        return $this->_baseUrl;
-    }
-
-    /**
-     * Sets the relative URL for the application.
-     * By default the URL is determined based on the entry script URL.
-     * This setter is provided in case you want to change this behavior.
-     * @param string $value the relative URL for the application
-     */
-    public function setBaseUrl($value)
-    {
-        $this->_baseUrl = $value;
-    }
-
-    private $_scriptUrl;
-
-    /**
-     * Returns the relative URL of the entry script.
-     * The implementation of this method referenced Zend_Controller_Request_Http in Zend Framework.
-     * @return string the relative URL of the entry script.
-     * @throws InvalidConfigException if unable to determine the entry script URL
-     */
-    public function getScriptUrl()
-    {
-        if ($this->_scriptUrl === null) {
-            $scriptFile = $this->getScriptFile();
-            $scriptName = basename($scriptFile);
-            if (isset($_SERVER['SCRIPT_NAME']) && basename($_SERVER['SCRIPT_NAME']) === $scriptName) {
-                $this->_scriptUrl = $_SERVER['SCRIPT_NAME'];
-            } elseif (isset($_SERVER['PHP_SELF']) && basename($_SERVER['PHP_SELF']) === $scriptName) {
-                $this->_scriptUrl = $_SERVER['PHP_SELF'];
-            } elseif (isset($_SERVER['ORIG_SCRIPT_NAME']) && basename($_SERVER['ORIG_SCRIPT_NAME']) === $scriptName) {
-                $this->_scriptUrl = $_SERVER['ORIG_SCRIPT_NAME'];
-            } elseif (isset($_SERVER['PHP_SELF']) && ($pos = strpos($_SERVER['PHP_SELF'], '/' . $scriptName)) !== false) {
-                $this->_scriptUrl = substr($_SERVER['SCRIPT_NAME'], 0, $pos) . '/' . $scriptName;
-            } elseif (!empty($_SERVER['DOCUMENT_ROOT']) && strpos($scriptFile, $_SERVER['DOCUMENT_ROOT']) === 0) {
-                $this->_scriptUrl = str_replace('\\', '/', str_replace($_SERVER['DOCUMENT_ROOT'], '', $scriptFile));
-            } else {
-                throw new InvalidConfigException('Unable to determine the entry script URL.');
-            }
-        }
-
-        return $this->_scriptUrl;
-    }
-
-    /**
-     * Sets the relative URL for the application entry script.
-     * This setter is provided in case the entry script URL cannot be determined
-     * on certain Web servers.
-     * @param string $value the relative URL for the application entry script.
-     */
-    public function setScriptUrl($value)
-    {
-        $this->_scriptUrl = $value === null ? null : '/' . trim($value, '/');
-    }
-
-    private $_scriptFile;
-
-    /**
-     * Returns the entry script file path.
-     * The default implementation will simply return `$_SERVER['SCRIPT_FILENAME']`.
-     * @return string the entry script file path
-     * @throws InvalidConfigException
-     */
-    public function getScriptFile()
-    {
-        if (isset($this->_scriptFile)) {
-            return $this->_scriptFile;
-        } elseif (isset($_SERVER['SCRIPT_FILENAME'])) {
-            return $_SERVER['SCRIPT_FILENAME'];
-        } else {
-            throw new InvalidConfigException('Unable to determine the entry script file path.');
-        }
-    }
-
-    /**
-     * Sets the entry script file path.
-     * The entry script file path normally can be obtained from `$_SERVER['SCRIPT_FILENAME']`.
-     * If your server configuration does not return the correct value, you may configure
-     * this property to make it right.
-     * @param string $value the entry script file path.
-     */
-    public function setScriptFile($value)
-    {
-        $this->_scriptFile = $value;
-    }
-
-    private $_pathInfo;
 
     /**
      * Returns the path info of the currently requested URL.
@@ -744,18 +628,6 @@ class Request extends \yii\base\Request
     }
 
     /**
-     * Returns the currently requested absolute URL.
-     * This is a shortcut to the concatenation of [[hostInfo]] and [[url]].
-     * @return string the currently requested absolute URL.
-     */
-    public function getAbsoluteUrl()
-    {
-        return $this->getHostInfo() . $this->getUrl();
-    }
-
-    private $_url;
-
-    /**
      * Returns the currently requested relative URL.
      * This refers to the portion of the URL that is after the [[hostInfo]] part.
      * It includes the [[queryString]] part if any.
@@ -812,12 +684,148 @@ class Request extends \yii\base\Request
     }
 
     /**
-     * Returns part of the request URL that is after the question mark.
-     * @return string part of the request URL that is after the question mark
+     * Returns the relative URL of the entry script.
+     * The implementation of this method referenced Zend_Controller_Request_Http in Zend Framework.
+     * @return string the relative URL of the entry script.
+     * @throws InvalidConfigException if unable to determine the entry script URL
      */
-    public function getQueryString()
+    public function getScriptUrl()
     {
-        return isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '';
+        if ($this->_scriptUrl === null) {
+            $scriptFile = $this->getScriptFile();
+            $scriptName = basename($scriptFile);
+            if (isset($_SERVER['SCRIPT_NAME']) && basename($_SERVER['SCRIPT_NAME']) === $scriptName) {
+                $this->_scriptUrl = $_SERVER['SCRIPT_NAME'];
+            } elseif (isset($_SERVER['PHP_SELF']) && basename($_SERVER['PHP_SELF']) === $scriptName) {
+                $this->_scriptUrl = $_SERVER['PHP_SELF'];
+            } elseif (isset($_SERVER['ORIG_SCRIPT_NAME']) && basename($_SERVER['ORIG_SCRIPT_NAME']) === $scriptName) {
+                $this->_scriptUrl = $_SERVER['ORIG_SCRIPT_NAME'];
+            } elseif (isset($_SERVER['PHP_SELF']) && ($pos = strpos($_SERVER['PHP_SELF'], '/' . $scriptName)) !== false) {
+                $this->_scriptUrl = substr($_SERVER['SCRIPT_NAME'], 0, $pos) . '/' . $scriptName;
+            } elseif (!empty($_SERVER['DOCUMENT_ROOT']) && strpos($scriptFile, $_SERVER['DOCUMENT_ROOT']) === 0) {
+                $this->_scriptUrl = str_replace('\\', '/', str_replace($_SERVER['DOCUMENT_ROOT'], '', $scriptFile));
+            } else {
+                throw new InvalidConfigException('Unable to determine the entry script URL.');
+            }
+        }
+
+        return $this->_scriptUrl;
+    }
+
+    /**
+     * Sets the relative URL for the application entry script.
+     * This setter is provided in case the entry script URL cannot be determined
+     * on certain Web servers.
+     * @param string $value the relative URL for the application entry script.
+     */
+    public function setScriptUrl($value)
+    {
+        $this->_scriptUrl = $value === null ? null : '/' . trim($value, '/');
+    }
+
+    /**
+     * Returns the entry script file path.
+     * The default implementation will simply return `$_SERVER['SCRIPT_FILENAME']`.
+     * @return string the entry script file path
+     * @throws InvalidConfigException
+     */
+    public function getScriptFile()
+    {
+        if (isset($this->_scriptFile)) {
+            return $this->_scriptFile;
+        } elseif (isset($_SERVER['SCRIPT_FILENAME'])) {
+            return $_SERVER['SCRIPT_FILENAME'];
+        } else {
+            throw new InvalidConfigException('Unable to determine the entry script file path.');
+        }
+    }
+
+    /**
+     * Sets the entry script file path.
+     * The entry script file path normally can be obtained from `$_SERVER['SCRIPT_FILENAME']`.
+     * If your server configuration does not return the correct value, you may configure
+     * this property to make it right.
+     * @param string $value the entry script file path.
+     */
+    public function setScriptFile($value)
+    {
+        $this->_scriptFile = $value;
+    }
+
+    /**
+     * Returns the relative URL for the application.
+     * This is similar to [[scriptUrl]] except that it does not include the script file name,
+     * and the ending slashes are removed.
+     * @return string the relative URL for the application
+     * @see setScriptUrl()
+     */
+    public function getBaseUrl()
+    {
+        if ($this->_baseUrl === null) {
+            $this->_baseUrl = rtrim(dirname($this->getScriptUrl()), '\\/');
+        }
+
+        return $this->_baseUrl;
+    }
+
+    /**
+     * Sets the relative URL for the application.
+     * By default the URL is determined based on the entry script URL.
+     * This setter is provided in case you want to change this behavior.
+     * @param string $value the relative URL for the application
+     */
+    public function setBaseUrl($value)
+    {
+        $this->_baseUrl = $value;
+    }
+
+    /**
+     * Returns the currently requested absolute URL.
+     * This is a shortcut to the concatenation of [[hostInfo]] and [[url]].
+     * @return string the currently requested absolute URL.
+     */
+    public function getAbsoluteUrl()
+    {
+        return $this->getHostInfo() . $this->getUrl();
+    }
+
+    /**
+     * Returns the schema and host part of the current request URL.
+     * The returned URL does not have an ending slash.
+     * By default this is determined based on the user request information.
+     * You may explicitly specify it by setting the [[setHostInfo()|hostInfo]] property.
+     * @return string schema and hostname part (with port number if needed) of the request URL (e.g. `http://www.yiiframework.com`),
+     * null if can't be obtained from `$_SERVER` and wasn't set.
+     * @see setHostInfo()
+     */
+    public function getHostInfo()
+    {
+        if ($this->_hostInfo === null) {
+            $secure = $this->getIsSecureConnection();
+            $http = $secure ? 'https' : 'http';
+            if (isset($_SERVER['HTTP_HOST'])) {
+                $this->_hostInfo = $http . '://' . $_SERVER['HTTP_HOST'];
+            } elseif (isset($_SERVER['SERVER_NAME'])) {
+                $this->_hostInfo = $http . '://' . $_SERVER['SERVER_NAME'];
+                $port = $secure ? $this->getSecurePort() : $this->getPort();
+                if (($port !== 80 && !$secure) || ($port !== 443 && $secure)) {
+                    $this->_hostInfo .= ':' . $port;
+                }
+            }
+        }
+
+        return $this->_hostInfo;
+    }
+
+    /**
+     * Sets the schema and host part of the application URL.
+     * This setter is provided in case the schema and hostname cannot be determined
+     * on certain Web servers.
+     * @param string $value the schema and host part of the application URL. The trailing slashes will be removed.
+     */
+    public function setHostInfo($value)
+    {
+        $this->_hostInfo = $value === null ? null : rtrim($value, '/');
     }
 
     /**
@@ -827,7 +835,76 @@ class Request extends \yii\base\Request
     public function getIsSecureConnection()
     {
         return isset($_SERVER['HTTPS']) && (strcasecmp($_SERVER['HTTPS'], 'on') === 0 || $_SERVER['HTTPS'] == 1)
-            || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strcasecmp($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') === 0;
+        || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strcasecmp($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') === 0;
+    }
+
+    /**
+     * Returns the port to use for secure requests.
+     * Defaults to 443, or the port specified by the server if the current
+     * request is secure.
+     * @return integer port number for secure requests.
+     * @see setSecurePort()
+     */
+    public function getSecurePort()
+    {
+        if ($this->_securePort === null) {
+            $this->_securePort = $this->getIsSecureConnection() && isset($_SERVER['SERVER_PORT']) ? (int)$_SERVER['SERVER_PORT'] : 443;
+        }
+
+        return $this->_securePort;
+    }
+
+    /**
+     * Sets the port to use for secure requests.
+     * This setter is provided in case a custom port is necessary for certain
+     * server configurations.
+     * @param integer $value port number.
+     */
+    public function setSecurePort($value)
+    {
+        if ($value != $this->_securePort) {
+            $this->_securePort = (int)$value;
+            $this->_hostInfo = null;
+        }
+    }
+
+    /**
+     * Returns the port to use for insecure requests.
+     * Defaults to 80, or the port specified by the server if the current
+     * request is insecure.
+     * @return integer port number for insecure requests.
+     * @see setPort()
+     */
+    public function getPort()
+    {
+        if ($this->_port === null) {
+            $this->_port = !$this->getIsSecureConnection() && isset($_SERVER['SERVER_PORT']) ? (int) $_SERVER['SERVER_PORT'] : 80;
+        }
+
+        return $this->_port;
+    }
+
+    /**
+     * Sets the port to use for insecure requests.
+     * This setter is provided in case a custom port is necessary for certain
+     * server configurations.
+     * @param integer $value port number.
+     */
+    public function setPort($value)
+    {
+        if ($value != $this->_port) {
+            $this->_port = (int) $value;
+            $this->_hostInfo = null;
+        }
+    }
+
+    /**
+     * Returns part of the request URL that is after the question mark.
+     * @return string part of the request URL that is after the question mark
+     */
+    public function getQueryString()
+    {
+        return isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '';
     }
 
     /**
@@ -845,7 +922,7 @@ class Request extends \yii\base\Request
      */
     public function getServerPort()
     {
-        return isset($_SERVER['SERVER_PORT']) ? (int) $_SERVER['SERVER_PORT'] : null;
+        return isset($_SERVER['SERVER_PORT']) ? (int)$_SERVER['SERVER_PORT'] : null;
     }
 
     /**
@@ -900,72 +977,6 @@ class Request extends \yii\base\Request
         return isset($_SERVER['PHP_AUTH_PW']) ? $_SERVER['PHP_AUTH_PW'] : null;
     }
 
-    private $_port;
-
-    /**
-     * Returns the port to use for insecure requests.
-     * Defaults to 80, or the port specified by the server if the current
-     * request is insecure.
-     * @return integer port number for insecure requests.
-     * @see setPort()
-     */
-    public function getPort()
-    {
-        if ($this->_port === null) {
-            $this->_port = !$this->getIsSecureConnection() && isset($_SERVER['SERVER_PORT']) ? (int) $_SERVER['SERVER_PORT'] : 80;
-        }
-
-        return $this->_port;
-    }
-
-    /**
-     * Sets the port to use for insecure requests.
-     * This setter is provided in case a custom port is necessary for certain
-     * server configurations.
-     * @param integer $value port number.
-     */
-    public function setPort($value)
-    {
-        if ($value != $this->_port) {
-            $this->_port = (int) $value;
-            $this->_hostInfo = null;
-        }
-    }
-
-    private $_securePort;
-
-    /**
-     * Returns the port to use for secure requests.
-     * Defaults to 443, or the port specified by the server if the current
-     * request is secure.
-     * @return integer port number for secure requests.
-     * @see setSecurePort()
-     */
-    public function getSecurePort()
-    {
-        if ($this->_securePort === null) {
-            $this->_securePort = $this->getIsSecureConnection() && isset($_SERVER['SERVER_PORT']) ? (int) $_SERVER['SERVER_PORT'] : 443;
-        }
-
-        return $this->_securePort;
-    }
-
-    /**
-     * Sets the port to use for secure requests.
-     * This setter is provided in case a custom port is necessary for certain
-     * server configurations.
-     * @param integer $value port number.
-     */
-    public function setSecurePort($value)
-    {
-        if ($value != $this->_securePort) {
-            $this->_securePort = (int) $value;
-            $this->_hostInfo = null;
-        }
-    }
-
-    private $_contentTypes;
-
     /**
      * Returns the content types acceptable by the end user.
      * This is determined by the `Accept` HTTP header. For example,
@@ -997,71 +1008,6 @@ class Request extends \yii\base\Request
         }
 
         return $this->_contentTypes;
-    }
-
-    /**
-     * Sets the acceptable content types.
-     * Please refer to [[getAcceptableContentTypes()]] on the format of the parameter.
-     * @param array $value the content types that are acceptable by the end user. They should
-     * be ordered by the preference level.
-     * @see getAcceptableContentTypes()
-     * @see parseAcceptHeader()
-     */
-    public function setAcceptableContentTypes($value)
-    {
-        $this->_contentTypes = $value;
-    }
-
-    /**
-     * Returns request content-type
-     * The Content-Type header field indicates the MIME type of the data
-     * contained in [[getRawBody()]] or, in the case of the HEAD method, the
-     * media type that would have been sent had the request been a GET.
-     * For the MIME-types the user expects in response, see [[acceptableContentTypes]].
-     * @return string request content-type. Null is returned if this information is not available.
-     * @link http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.17
-     * HTTP 1.1 header field definitions
-     */
-    public function getContentType()
-    {
-        if (isset($_SERVER['CONTENT_TYPE'])) {
-            return $_SERVER['CONTENT_TYPE'];
-        } elseif (isset($_SERVER['HTTP_CONTENT_TYPE'])) {
-            //fix bug https://bugs.php.net/bug.php?id=66606
-            return $_SERVER['HTTP_CONTENT_TYPE'];
-        }
-
-        return null;
-    }
-
-    private $_languages;
-
-    /**
-     * Returns the languages acceptable by the end user.
-     * This is determined by the `Accept-Language` HTTP header.
-     * @return array the languages ordered by the preference level. The first element
-     * represents the most preferred language.
-     */
-    public function getAcceptableLanguages()
-    {
-        if ($this->_languages === null) {
-            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-                $this->_languages = array_keys($this->parseAcceptHeader($_SERVER['HTTP_ACCEPT_LANGUAGE']));
-            } else {
-                $this->_languages = [];
-            }
-        }
-
-        return $this->_languages;
-    }
-
-    /**
-     * @param array $value the languages that are acceptable by the end user. They should
-     * be ordered by the preference level.
-     */
-    public function setAcceptableLanguages($value)
-    {
-        $this->_languages = $value;
     }
 
     /**
@@ -1149,6 +1095,28 @@ class Request extends \yii\base\Request
     }
 
     /**
+     * Sets the acceptable content types.
+     * Please refer to [[getAcceptableContentTypes()]] on the format of the parameter.
+     * @param array $value the content types that are acceptable by the end user. They should
+     * be ordered by the preference level.
+     * @see getAcceptableContentTypes()
+     * @see parseAcceptHeader()
+     */
+    public function setAcceptableContentTypes($value)
+    {
+        $this->_contentTypes = $value;
+    }
+
+    /**
+     * @param array $value the languages that are acceptable by the end user. They should
+     * be ordered by the preference level.
+     */
+    public function setAcceptableLanguages($value)
+    {
+        $this->_languages = $value;
+    }
+
+    /**
      * Returns the user-preferred language that should be used by this application.
      * The language resolution is based on the user preferred languages and the languages
      * supported by the application. The method will try to find the best match.
@@ -1179,6 +1147,25 @@ class Request extends \yii\base\Request
     }
 
     /**
+     * Returns the languages acceptable by the end user.
+     * This is determined by the `Accept-Language` HTTP header.
+     * @return array the languages ordered by the preference level. The first element
+     * represents the most preferred language.
+     */
+    public function getAcceptableLanguages()
+    {
+        if ($this->_languages === null) {
+            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+                $this->_languages = array_keys($this->parseAcceptHeader($_SERVER['HTTP_ACCEPT_LANGUAGE']));
+            } else {
+                $this->_languages = [];
+            }
+        }
+
+        return $this->_languages;
+    }
+
+    /**
      * Gets the Etags.
      *
      * @return array The entity tags
@@ -1189,6 +1176,46 @@ class Request extends \yii\base\Request
             return preg_split('/[\s,]+/', str_replace('-gzip', '', $_SERVER['HTTP_IF_NONE_MATCH']), -1, PREG_SPLIT_NO_EMPTY);
         } else {
             return [];
+        }
+    }
+
+    /**
+     * Returns the token used to perform CSRF validation.
+     *
+     * This token is a masked version of [[rawCsrfToken]] to prevent [BREACH attacks](http://breachattack.com/).
+     * This token may be passed along via a hidden field of an HTML form or an HTTP header value
+     * to support CSRF validation.
+     * @param boolean $regenerate whether to regenerate CSRF token. When this parameter is true, each time
+     * this method is called, a new CSRF token will be generated and persisted (in session or cookie).
+     * @return string the token used to perform CSRF validation.
+     */
+    public function getCsrfToken($regenerate = false)
+    {
+        if ($this->_csrfToken === null || $regenerate) {
+            if ($regenerate || ($token = $this->loadCsrfToken()) === null) {
+                $token = $this->generateCsrfToken();
+            }
+            // the mask doesn't need to be very random
+            $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.';
+            $mask = substr(str_shuffle(str_repeat($chars, 5)), 0, static::CSRF_MASK_LENGTH);
+            // The + sign may be decoded as blank space later, which will fail the validation
+            $this->_csrfToken = str_replace('+', '.', base64_encode($mask . $this->xorTokens($token, $mask)));
+        }
+
+        return $this->_csrfToken;
+    }
+
+    /**
+     * Loads the CSRF token from cookie or session.
+     * @return string the CSRF token loaded from cookie or session. Null is returned if the cookie or session
+     * does not have CSRF token.
+     */
+    protected function loadCsrfToken()
+    {
+        if ($this->enableCsrfCookie) {
+            return $this->getCookies()->getValue($this->csrfParam);
+        } else {
+            return Yii::$app->getSession()->get($this->csrfParam);
         }
     }
 
@@ -1261,48 +1288,6 @@ class Request extends \yii\base\Request
         return $cookies;
     }
 
-    private $_csrfToken;
-
-    /**
-     * Returns the token used to perform CSRF validation.
-     *
-     * This token is a masked version of [[rawCsrfToken]] to prevent [BREACH attacks](http://breachattack.com/).
-     * This token may be passed along via a hidden field of an HTML form or an HTTP header value
-     * to support CSRF validation.
-     * @param boolean $regenerate whether to regenerate CSRF token. When this parameter is true, each time
-     * this method is called, a new CSRF token will be generated and persisted (in session or cookie).
-     * @return string the token used to perform CSRF validation.
-     */
-    public function getCsrfToken($regenerate = false)
-    {
-        if ($this->_csrfToken === null || $regenerate) {
-            if ($regenerate || ($token = $this->loadCsrfToken()) === null) {
-                $token = $this->generateCsrfToken();
-            }
-            // the mask doesn't need to be very random
-            $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.';
-            $mask = substr(str_shuffle(str_repeat($chars, 5)), 0, static::CSRF_MASK_LENGTH);
-            // The + sign may be decoded as blank space later, which will fail the validation
-            $this->_csrfToken = str_replace('+', '.', base64_encode($mask . $this->xorTokens($token, $mask)));
-        }
-
-        return $this->_csrfToken;
-    }
-
-    /**
-     * Loads the CSRF token from cookie or session.
-     * @return string the CSRF token loaded from cookie or session. Null is returned if the cookie or session
-     * does not have CSRF token.
-     */
-    protected function loadCsrfToken()
-    {
-        if ($this->enableCsrfCookie) {
-            return $this->getCookies()->getValue($this->csrfParam);
-        } else {
-            return Yii::$app->getSession()->get($this->csrfParam);
-        }
-    }
-
     /**
      * Generates  an unmasked random token used to perform CSRF validation.
      * @return string the random token for CSRF validation.
@@ -1317,6 +1302,21 @@ class Request extends \yii\base\Request
             Yii::$app->getSession()->set($this->csrfParam, $token);
         }
         return $token;
+    }
+
+    /**
+     * Creates a cookie with a randomly generated CSRF token.
+     * Initial values specified in [[csrfCookie]] will be applied to the generated cookie.
+     * @param string $token the CSRF token
+     * @return Cookie the generated cookie
+     * @see enableCsrfValidation
+     */
+    protected function createCsrfCookie($token)
+    {
+        $options = $this->csrfCookie;
+        $options['name'] = $this->csrfParam;
+        $options['value'] = $token;
+        return new Cookie($options);
     }
 
     /**
@@ -1337,30 +1337,6 @@ class Request extends \yii\base\Request
         }
 
         return $token1 ^ $token2;
-    }
-
-    /**
-     * @return string the CSRF token sent via [[CSRF_HEADER]] by browser. Null is returned if no such header is sent.
-     */
-    public function getCsrfTokenFromHeader()
-    {
-        $key = 'HTTP_' . str_replace('-', '_', strtoupper(static::CSRF_HEADER));
-        return isset($_SERVER[$key]) ? $_SERVER[$key] : null;
-    }
-
-    /**
-     * Creates a cookie with a randomly generated CSRF token.
-     * Initial values specified in [[csrfCookie]] will be applied to the generated cookie.
-     * @param string $token the CSRF token
-     * @return Cookie the generated cookie
-     * @see enableCsrfValidation
-     */
-    protected function createCsrfCookie($token)
-    {
-        $options = $this->csrfCookie;
-        $options['name'] = $this->csrfParam;
-        $options['value'] = $token;
-        return new Cookie($options);
     }
 
     /**
@@ -1414,5 +1390,14 @@ class Request extends \yii\base\Request
         $token = $this->xorTokens($mask, $token);
 
         return $token === $trueToken;
+    }
+
+    /**
+     * @return string the CSRF token sent via [[CSRF_HEADER]] by browser. Null is returned if no such header is sent.
+     */
+    public function getCsrfTokenFromHeader()
+    {
+        $key = 'HTTP_' . str_replace('-', '_', strtoupper(static::CSRF_HEADER));
+        return isset($_SERVER[$key]) ? $_SERVER[$key] : null;
     }
 }

@@ -39,6 +39,22 @@ class LogTarget extends Target
     }
 
     /**
+     * Processes the given log messages.
+     * This method will filter the given messages with [[levels]] and [[categories]].
+     * And if requested, it will also export the filtering result to specific medium (e.g. email).
+     * @param array $messages log messages to be processed. See [[\yii\log\Logger::messages]] for the structure
+     * of each message.
+     * @param boolean $final whether this method is called at the end of the current application
+     */
+    public function collect($messages, $final)
+    {
+        $this->messages = array_merge($this->messages, $messages);
+        if ($final) {
+            $this->export();
+        }
+    }
+
+    /**
      * Exports log messages to a specific destination.
      * Child classes must implement this method.
      */
@@ -61,6 +77,49 @@ class LogTarget extends Target
 
         $indexFile = "$path/index.data";
         $this->updateIndexFile($indexFile, $summary);
+    }
+
+    /**
+     * Collects summary data of current request.
+     * @return array
+     */
+    protected function collectSummary()
+    {
+        $request = Yii::$app->getRequest();
+        $response = Yii::$app->getResponse();
+        $summary = [
+            'tag' => $this->tag,
+            'url' => $request->getAbsoluteUrl(),
+            'ajax' => (int)$request->getIsAjax(),
+            'method' => $request->getMethod(),
+            'ip' => $request->getUserIP(),
+            'time' => time(),
+            'statusCode' => $response->statusCode,
+            'sqlCount' => $this->getSqlTotalCount(),
+        ];
+
+        if (isset($this->module->panels['mail'])) {
+            $summary['mailCount'] = count($this->module->panels['mail']->getMessages());
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Returns total sql count executed in current request. If database panel is not configured
+     * returns 0.
+     * @return integer
+     */
+    protected function getSqlTotalCount()
+    {
+        if (!isset($this->module->panels['db'])) {
+            return 0;
+        }
+        $profileLogs = $this->module->panels['db']->getProfileLogs();
+
+        # / 2 because messages are in couple (begin/end)
+
+        return count($profileLogs) / 2;
     }
 
     /**
@@ -103,22 +162,6 @@ class LogTarget extends Target
         }
     }
 
-    /**
-     * Processes the given log messages.
-     * This method will filter the given messages with [[levels]] and [[categories]].
-     * And if requested, it will also export the filtering result to specific medium (e.g. email).
-     * @param array $messages log messages to be processed. See [[\yii\log\Logger::messages]] for the structure
-     * of each message.
-     * @param boolean $final whether this method is called at the end of the current application
-     */
-    public function collect($messages, $final)
-    {
-        $this->messages = array_merge($this->messages, $messages);
-        if ($final) {
-            $this->export();
-        }
-    }
-
     protected function gc(&$manifest)
     {
         if (count($manifest) > $this->module->historySize + 10) {
@@ -132,48 +175,5 @@ class LogTarget extends Target
                 }
             }
         }
-    }
-
-    /**
-     * Collects summary data of current request.
-     * @return array
-     */
-    protected function collectSummary()
-    {
-        $request = Yii::$app->getRequest();
-        $response = Yii::$app->getResponse();
-        $summary = [
-            'tag' => $this->tag,
-            'url' => $request->getAbsoluteUrl(),
-            'ajax' => (int) $request->getIsAjax(),
-            'method' => $request->getMethod(),
-            'ip' => $request->getUserIP(),
-            'time' => time(),
-            'statusCode' => $response->statusCode,
-            'sqlCount' => $this->getSqlTotalCount(),
-        ];
-
-        if (isset($this->module->panels['mail'])) {
-            $summary['mailCount'] = count($this->module->panels['mail']->getMessages());
-        }
-
-        return $summary;
-    }
-
-    /**
-     * Returns total sql count executed in current request. If database panel is not configured
-     * returns 0.
-     * @return integer
-     */
-    protected function getSqlTotalCount()
-    {
-        if (!isset($this->module->panels['db'])) {
-            return 0;
-        }
-        $profileLogs = $this->module->panels['db']->getProfileLogs();
-
-        # / 2 because messages are in couple (begin/end)
-
-        return count($profileLogs) / 2;
     }
 }

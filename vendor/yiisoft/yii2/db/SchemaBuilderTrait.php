@@ -35,11 +35,6 @@ namespace yii\db;
 trait SchemaBuilderTrait
 {
     /**
-     * @return Connection the database connection to be used for schema building.
-     */
-    protected abstract function getDb();
-
-    /**
      * Creates a primary key column.
      * @param integer $length column size or precision definition.
      * This parameter will be ignored if not supported by the DBMS.
@@ -270,4 +265,9 @@ trait SchemaBuilderTrait
         }
         return $this->getDb()->getSchema()->createColumnSchemaBuilder(Schema::TYPE_MONEY, $length);
     }
+
+    /**
+     * @return Connection the database connection to be used for schema building.
+     */
+    protected abstract function getDb();
 }

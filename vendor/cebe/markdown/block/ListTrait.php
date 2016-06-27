@@ -53,21 +53,6 @@ trait ListTrait
 		return $this->consumeList($lines, $current, $block, 'ol');
 	}
 
-	/**
-	 * Consume lines for an unordered list
-	 */
-	protected function consumeUl($lines, $current)
-	{
-		// consume until newline
-
-		$block = [
-			'list',
-			'list' => 'ul',
-			'items' => [],
-		];
-		return $this->consumeList($lines, $current, $block, 'ul');
-	}
-
 	private function consumeList($lines, $current, $block, $type)
 	{
 		$item = 0;
@@ -157,6 +142,23 @@ trait ListTrait
 		return [$block, $i];
 	}
 
+	abstract protected function detectLineType($lines, $current);
+
+	/**
+	 * Consume lines for an unordered list
+	 */
+	protected function consumeUl($lines, $current)
+	{
+		// consume until newline
+
+		$block = [
+			'list',
+			'list' => 'ul',
+			'items' => [],
+		];
+		return $this->consumeList($lines, $current, $block, 'ul');
+	}
+
 	/**
 	 * Renders a list
 	 */
@@ -176,7 +178,6 @@ trait ListTrait
 		return $output . "</$type>\n";
 	}
 
-
 	/**
 	 * Return html attributes string from [attrName => attrValue] list
 	 * @param array $attributes the attribute name-value pairs.
@@ -191,7 +192,8 @@ trait ListTrait
 	}
 
 	abstract protected function parseBlocks($lines);
+
 	abstract protected function parseInline($text);
+
 	abstract protected function renderAbsy($absy);
-	abstract protected function detectLineType($lines, $current);
 }

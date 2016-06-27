@@ -21,6 +21,24 @@ class ColumnSchemaBuilder extends AbstractColumnSchemaBuilder
     /**
      * @inheritdoc
      */
+    public function __toString()
+    {
+        switch ($this->getTypeCategory()) {
+            case self::CATEGORY_PK:
+                $format = '{type}{length}{check}{pos}';
+                break;
+            case self::CATEGORY_NUMERIC:
+                $format = '{type}{length}{unsigned}{default}{notnull}{check}{pos}';
+                break;
+            default:
+                $format = '{type}{length}{default}{notnull}{check}{pos}';
+        }
+        return $this->buildCompleteString($format);
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function buildUnsignedString()
     {
         return $this->isUnsigned ? ' UNSIGNED' : '';
@@ -42,23 +60,5 @@ class ColumnSchemaBuilder extends AbstractColumnSchemaBuilder
     protected function buildFirstString()
     {
         return $this->isFirst ? ' FIRST' : '';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function __toString()
-    {
-        switch ($this->getTypeCategory()) {
-            case self::CATEGORY_PK:
-                $format = '{type}{length}{check}{pos}';
-                break;
-            case self::CATEGORY_NUMERIC:
-                $format = '{type}{length}{unsigned}{default}{notnull}{check}{pos}';
-                break;
-            default:
-                $format = '{type}{length}{default}{notnull}{check}{pos}';
-        }
-        return $this->buildCompleteString($format);
     }
 }

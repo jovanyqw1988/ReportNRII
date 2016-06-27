@@ -8,9 +8,9 @@
 namespace yii\data;
 
 use Yii;
-use yii\db\ActiveQueryInterface;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
+use yii\db\ActiveQueryInterface;
 use yii\db\Connection;
 use yii\db\QueryInterface;
 use yii\di\Instance;
@@ -95,6 +95,33 @@ class ActiveDataProvider extends BaseDataProvider
     /**
      * @inheritdoc
      */
+    public function setSort($value)
+    {
+        parent::setSort($value);
+        if (($sort = $this->getSort()) !== false && $this->query instanceof ActiveQueryInterface) {
+            /* @var $model Model */
+            $model = new $this->query->modelClass;
+            if (empty($sort->attributes)) {
+                foreach ($model->attributes() as $attribute) {
+                    $sort->attributes[$attribute] = [
+                        'asc' => [$attribute => SORT_ASC],
+                        'desc' => [$attribute => SORT_DESC],
+                        'label' => $model->getAttributeLabel($attribute),
+                    ];
+                }
+            } else {
+                foreach ($sort->attributes as $attribute => $config) {
+                    if (!isset($config['label'])) {
+                        $sort->attributes[$attribute]['label'] = $model->getAttributeLabel($attribute);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function prepareModels()
     {
         if (!$this->query instanceof QueryInterface) {
@@ -163,32 +190,5 @@ class ActiveDataProvider extends BaseDataProvider
         }
         $query = clone $this->query;
         return (int) $query->limit(-1)->offset(-1)->orderBy([])->count('*', $this->db);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setSort($value)
-    {
-        parent::setSort($value);
-        if (($sort = $this->getSort()) !== false && $this->query instanceof ActiveQueryInterface) {
-            /* @var $model Model */
-            $model = new $this->query->modelClass;
-            if (empty($sort->attributes)) {
-                foreach ($model->attributes() as $attribute) {
-                    $sort->attributes[$attribute] = [
-                        'asc' => [$attribute => SORT_ASC],
-                        'desc' => [$attribute => SORT_DESC],
-                        'label' => $model->getAttributeLabel($attribute),
-                    ];
-                }
-            } else {
-                foreach ($sort->attributes as $attribute => $config) {
-                    if (!isset($config['label'])) {
-                        $sort->attributes[$attribute]['label'] = $model->getAttributeLabel($attribute);
-                    }
-                }
-            }
-        }
     }
 }

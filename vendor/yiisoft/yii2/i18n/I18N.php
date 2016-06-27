@@ -47,7 +47,10 @@ class I18N extends Component
      * You may override the configuration of both categories.
      */
     public $translations;
-
+    /**
+     * @var string|array|MessageFormatter
+     */
+    private $_messageFormatter;
 
     /**
      * Initializes the component by configuring the default message categories.
@@ -95,72 +98,6 @@ class I18N extends Component
     }
 
     /**
-     * Formats a message using [[MessageFormatter]].
-     *
-     * @param string $message the message to be formatted.
-     * @param array $params the parameters that will be used to replace the corresponding placeholders in the message.
-     * @param string $language the language code (e.g. `en-US`, `en`).
-     * @return string the formatted message.
-     */
-    public function format($message, $params, $language)
-    {
-        $params = (array) $params;
-        if ($params === []) {
-            return $message;
-        }
-
-        if (preg_match('~{\s*[\d\w]+\s*,~u', $message)) {
-            $formatter = $this->getMessageFormatter();
-            $result = $formatter->format($message, $params, $language);
-            if ($result === false) {
-                $errorMessage = $formatter->getErrorMessage();
-                Yii::warning("Formatting message for language '$language' failed with error: $errorMessage. The message being formatted was: $message.", __METHOD__);
-
-                return $message;
-            } else {
-                return $result;
-            }
-        }
-
-        $p = [];
-        foreach ($params as $name => $value) {
-            $p['{' . $name . '}'] = $value;
-        }
-
-        return strtr($message, $p);
-    }
-
-    /**
-     * @var string|array|MessageFormatter
-     */
-    private $_messageFormatter;
-
-    /**
-     * Returns the message formatter instance.
-     * @return MessageFormatter the message formatter to be used to format message via ICU message format.
-     */
-    public function getMessageFormatter()
-    {
-        if ($this->_messageFormatter === null) {
-            $this->_messageFormatter = new MessageFormatter();
-        } elseif (is_array($this->_messageFormatter) || is_string($this->_messageFormatter)) {
-            $this->_messageFormatter = Yii::createObject($this->_messageFormatter);
-        }
-
-        return $this->_messageFormatter;
-    }
-
-    /**
-     * @param string|array|MessageFormatter $value the message formatter to be used to format message via ICU message format.
-     * Can be given as array or string configuration that will be given to [[Yii::createObject]] to create an instance
-     * or a [[MessageFormatter]] instance.
-     */
-    public function setMessageFormatter($value)
-    {
-        $this->_messageFormatter = $value;
-    }
-
-    /**
      * Returns the message source for the given category.
      * @param string $category the category name.
      * @return MessageSource the message source for the given category.
@@ -198,5 +135,66 @@ class I18N extends Component
         }
 
         throw new InvalidConfigException("Unable to locate message source for category '$category'.");
+    }
+
+    /**
+     * Formats a message using [[MessageFormatter]].
+     *
+     * @param string $message the message to be formatted.
+     * @param array $params the parameters that will be used to replace the corresponding placeholders in the message.
+     * @param string $language the language code (e.g. `en-US`, `en`).
+     * @return string the formatted message.
+     */
+    public function format($message, $params, $language)
+    {
+        $params = (array) $params;
+        if ($params === []) {
+            return $message;
+        }
+
+        if (preg_match('~{\s*[\d\w]+\s*,~u', $message)) {
+            $formatter = $this->getMessageFormatter();
+            $result = $formatter->format($message, $params, $language);
+            if ($result === false) {
+                $errorMessage = $formatter->getErrorMessage();
+                Yii::warning("Formatting message for language '$language' failed with error: $errorMessage. The message being formatted was: $message.", __METHOD__);
+
+                return $message;
+            } else {
+                return $result;
+            }
+        }
+
+        $p = [];
+        foreach ($params as $name => $value) {
+            $p['{' . $name . '}'] = $value;
+        }
+
+        return strtr($message, $p);
+    }
+
+    /**
+     * Returns the message formatter instance.
+     * @return MessageFormatter the message formatter to be used to format message via ICU message format.
+     */
+    public function getMessageFormatter()
+    {
+        if ($this->_messageFormatter === null) {
+            $this->_messageFormatter = new MessageFormatter();
+        } elseif (is_array($this->_messageFormatter) || is_string($this->_messageFormatter)) {
+            $this->_messageFormatter = Yii::createObject($this->_messageFormatter);
+        }
+
+        return $this->_messageFormatter;
+    }
+
+    /**
+     * @param string|array|MessageFormatter $value the message formatter to be used to format message via ICU message format.
+     * Can be given as array or string configuration that will be given to [[Yii::createObject]] to create an instance
+     * or a [[MessageFormatter]] instance.
+     */
+    public function setMessageFormatter($value)
+    {
+        $this->_messageFormatter = $value;
     }
 }

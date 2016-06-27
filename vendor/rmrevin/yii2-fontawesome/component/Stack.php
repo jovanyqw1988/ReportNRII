@@ -51,6 +51,37 @@ class Stack
     }
 
     /**
+     * @param string|null $tag
+     * @param array $options
+     * @return string
+     * @throws \yii\base\InvalidConfigException
+     */
+    public function render($tag = null, $options = [])
+    {
+        $tag = empty($tag)
+            ? (empty($this->tag) ? static::$defaultTag : $this->tag)
+            : $tag;
+
+        $options = array_merge($this->options, $options);
+
+        $template = ArrayHelper::remove($options, 'template', '{back}{front}');
+
+        $icon_back = $this->icon_back instanceof Icon
+            ? $this->icon_back->addCssClass('fa-stack-2x')
+            : null;
+
+        $icon_front = $this->icon_front instanceof Icon
+            ? $this->icon_front->addCssClass('fa-stack-1x')
+            : null;
+
+        return Html::tag(
+            $tag,
+            str_replace(['{back}', '{front}'], [$icon_back, $icon_front], $template),
+            $options
+        );
+    }
+
+    /**
      * @param string|Icon $icon
      * @param array $options
      * @return self
@@ -93,36 +124,5 @@ class Stack
         $this->tag = $tag;
 
         return $this;
-    }
-
-    /**
-     * @param string|null $tag
-     * @param array $options
-     * @return string
-     * @throws \yii\base\InvalidConfigException
-     */
-    public function render($tag = null, $options = [])
-    {
-        $tag = empty($tag)
-            ? (empty($this->tag) ? static::$defaultTag : $this->tag)
-            : $tag;
-
-        $options = array_merge($this->options, $options);
-
-        $template = ArrayHelper::remove($options, 'template', '{back}{front}');
-
-        $icon_back = $this->icon_back instanceof Icon
-            ? $this->icon_back->addCssClass('fa-stack-2x')
-            : null;
-
-        $icon_front = $this->icon_front instanceof Icon
-            ? $this->icon_front->addCssClass('fa-stack-1x')
-            : null;
-
-        return Html::tag(
-            $tag,
-            str_replace(['{back}', '{front}'], [$icon_back, $icon_front], $template),
-            $options
-        );
     }
 }

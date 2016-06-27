@@ -7,9 +7,9 @@
 
 namespace yii\web;
 
+use ArrayIterator;
 use Yii;
 use yii\base\Object;
-use ArrayIterator;
 
 /**
  * HeaderCollection is used by [[Response]] to maintain the currently registered HTTP headers.
@@ -61,40 +61,6 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
-     * Returns the named header(s).
-     * @param string $name the name of the header to return
-     * @param mixed $default the value to return in case the named header does not exist
-     * @param boolean $first whether to only return the first header of the specified name.
-     * If false, all headers of the specified name will be returned.
-     * @return string|array the named header(s). If `$first` is true, a string will be returned;
-     * If `$first` is false, an array will be returned.
-     */
-    public function get($name, $default = null, $first = true)
-    {
-        $name = strtolower($name);
-        if (isset($this->_headers[$name])) {
-            return $first ? reset($this->_headers[$name]) : $this->_headers[$name];
-        } else {
-            return $default;
-        }
-    }
-
-    /**
-     * Adds a new header.
-     * If there is already a header with the same name, it will be replaced.
-     * @param string $name the name of the header
-     * @param string $value the value of the header
-     * @return $this the collection object itself
-     */
-    public function set($name, $value = '')
-    {
-        $name = strtolower($name);
-        $this->_headers[$name] = (array) $value;
-
-        return $this;
-    }
-
-    /**
      * Adds a new header.
      * If there is already a header with the same name, the new one will
      * be appended to it instead of replacing it.
@@ -125,35 +91,6 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
         }
 
         return $this;
-    }
-
-    /**
-     * Returns a value indicating whether the named header exists.
-     * @param string $name the name of the header
-     * @return boolean whether the named header exists
-     */
-    public function has($name)
-    {
-        $name = strtolower($name);
-
-        return isset($this->_headers[$name]);
-    }
-
-    /**
-     * Removes a header.
-     * @param string $name the name of the header to be removed.
-     * @return array the value of the removed header. Null is returned if the header does not exist.
-     */
-    public function remove($name)
-    {
-        $name = strtolower($name);
-        if (isset($this->_headers[$name])) {
-            $value = $this->_headers[$name];
-            unset($this->_headers[$name]);
-            return $value;
-        } else {
-            return null;
-        }
     }
 
     /**
@@ -197,6 +134,18 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
+     * Returns a value indicating whether the named header exists.
+     * @param string $name the name of the header
+     * @return boolean whether the named header exists
+     */
+    public function has($name)
+    {
+        $name = strtolower($name);
+
+        return isset($this->_headers[$name]);
+    }
+
+    /**
      * Returns the header with the specified name.
      * This method is required by the SPL interface [[\ArrayAccess]].
      * It is implicitly called when you use something like `$header = $collection[$name];`.
@@ -207,6 +156,25 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function offsetGet($name)
     {
         return $this->get($name);
+    }
+
+    /**
+     * Returns the named header(s).
+     * @param string $name the name of the header to return
+     * @param mixed $default the value to return in case the named header does not exist
+     * @param boolean $first whether to only return the first header of the specified name.
+     * If false, all headers of the specified name will be returned.
+     * @return string|array the named header(s). If `$first` is true, a string will be returned;
+     * If `$first` is false, an array will be returned.
+     */
+    public function get($name, $default = null, $first = true)
+    {
+        $name = strtolower($name);
+        if (isset($this->_headers[$name])) {
+            return $first ? reset($this->_headers[$name]) : $this->_headers[$name];
+        } else {
+            return $default;
+        }
     }
 
     /**
@@ -223,6 +191,21 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
     }
 
     /**
+     * Adds a new header.
+     * If there is already a header with the same name, it will be replaced.
+     * @param string $name the name of the header
+     * @param string $value the value of the header
+     * @return $this the collection object itself
+     */
+    public function set($name, $value = '')
+    {
+        $name = strtolower($name);
+        $this->_headers[$name] = (array)$value;
+
+        return $this;
+    }
+
+    /**
      * Removes the named header.
      * This method is required by the SPL interface [[\ArrayAccess]].
      * It is implicitly called when you use something like `unset($collection[$name])`.
@@ -232,5 +215,22 @@ class HeaderCollection extends Object implements \IteratorAggregate, \ArrayAcces
     public function offsetUnset($name)
     {
         $this->remove($name);
+    }
+
+    /**
+     * Removes a header.
+     * @param string $name the name of the header to be removed.
+     * @return array the value of the removed header. Null is returned if the header does not exist.
+     */
+    public function remove($name)
+    {
+        $name = strtolower($name);
+        if (isset($this->_headers[$name])) {
+            $value = $this->_headers[$name];
+            unset($this->_headers[$name]);
+            return $value;
+        } else {
+            return null;
+        }
     }
 }

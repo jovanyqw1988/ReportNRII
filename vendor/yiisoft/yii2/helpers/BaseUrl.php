@@ -26,122 +26,53 @@ class BaseUrl
      */
     public static $urlManager;
 
-
     /**
-     * Creates a URL for the given route.
+     * Returns the base URL of the current request.
+     * @param boolean|string $scheme the URI scheme to use in the returned base URL:
      *
-     * This method will use [[\yii\web\UrlManager]] to create a URL.
-     *
-     * You may specify the route as a string, e.g., `site/index`. You may also use an array
-     * if you want to specify additional query parameters for the URL being created. The
-     * array format must be:
-     *
-     * ```php
-     * // generates: /index.php?r=site/index&param1=value1&param2=value2
-     * ['site/index', 'param1' => 'value1', 'param2' => 'value2']
-     * ```
-     *
-     * If you want to create a URL with an anchor, you can use the array format with a `#` parameter.
-     * For example,
-     *
-     * ```php
-     * // generates: /index.php?r=site/index&param1=value1#name
-     * ['site/index', 'param1' => 'value1', '#' => 'name']
-     * ```
-     *
-     * A route may be either absolute or relative. An absolute route has a leading slash (e.g. `/site/index`),
-     * while a relative route has none (e.g. `site/index` or `index`). A relative route will be converted
-     * into an absolute one by the following rules:
-     *
-     * - If the route is an empty string, the current [[\yii\web\Controller::route|route]] will be used;
-     * - If the route contains no slashes at all (e.g. `index`), it is considered to be an action ID
-     *   of the current controller and will be prepended with [[\yii\web\Controller::uniqueId]];
-     * - If the route has no leading slash (e.g. `site/index`), it is considered to be a route relative
-     *   to the current module and will be prepended with the module's [[\yii\base\Module::uniqueId|uniqueId]].
-     *
-     * Starting from version 2.0.2, a route can also be specified as an alias. In this case, the alias
-     * will be converted into the actual route first before conducting the above transformation steps.
-     *
-     * Below are some examples of using this method:
-     *
-     * ```php
-     * // /index.php?r=site%2Findex
-     * echo Url::toRoute('site/index');
-     *
-     * // /index.php?r=site%2Findex&src=ref1#name
-     * echo Url::toRoute(['site/index', 'src' => 'ref1', '#' => 'name']);
-     *
-     * // http://www.example.com/index.php?r=site%2Findex
-     * echo Url::toRoute('site/index', true);
-     *
-     * // https://www.example.com/index.php?r=site%2Findex
-     * echo Url::toRoute('site/index', 'https');
-     *
-     * // /index.php?r=post%2Findex     assume the alias "@posts" is defined as "post/index"
-     * echo Url::toRoute('@posts');
-     * ```
-     *
-     * @param string|array $route use a string to represent a route (e.g. `index`, `site/index`),
-     * or an array to represent a route with query parameters (e.g. `['site/index', 'param1' => 'value1']`).
-     * @param boolean|string $scheme the URI scheme to use in the generated URL:
-     *
-     * - `false` (default): generating a relative URL.
+     * - `false` (default): returning the base URL without host info.
      * - `true`: returning an absolute base URL whose scheme is the same as that in [[\yii\web\UrlManager::hostInfo]].
-     * - string: generating an absolute URL with the specified scheme (either `http` or `https`).
-     *
-     * @return string the generated URL
-     * @throws InvalidParamException a relative route is given while there is no active controller
+     * - string: returning an absolute base URL with the specified scheme (either `http` or `https`).
+     * @return string
      */
-    public static function toRoute($route, $scheme = false)
+    public static function base($scheme = false)
     {
-        $route = (array) $route;
-        $route[0] = static::normalizeRoute($route[0]);
-
+        $url = static::getUrlManager()->getBaseUrl();
         if ($scheme) {
-            return static::getUrlManager()->createAbsoluteUrl($route, is_string($scheme) ? $scheme : null);
-        } else {
-            return static::getUrlManager()->createUrl($route);
+            $url = static::getUrlManager()->getHostInfo() . $url;
+            if (is_string($scheme) && ($pos = strpos($url, '://')) !== false) {
+                $url = $scheme . substr($url, $pos);
+            }
         }
+        return $url;
     }
 
     /**
-     * Normalizes route and makes it suitable for UrlManager. Absolute routes are staying as is
-     * while relative routes are converted to absolute ones.
-     *
-     * A relative route is a route without a leading slash, such as "view", "post/view".
-     *
-     * - If the route is an empty string, the current [[\yii\web\Controller::route|route]] will be used;
-     * - If the route contains no slashes at all, it is considered to be an action ID
-     *   of the current controller and will be prepended with [[\yii\web\Controller::uniqueId]];
-     * - If the route has no leading slash, it is considered to be a route relative
-     *   to the current module and will be prepended with the module's uniqueId.
-     *
-     * Starting from version 2.0.2, a route can also be specified as an alias. In this case, the alias
-     * will be converted into the actual route first before conducting the above transformation steps.
-     *
-     * @param string $route the route. This can be either an absolute route or a relative route.
-     * @return string normalized route suitable for UrlManager
-     * @throws InvalidParamException a relative route is given while there is no active controller
+     * @return \yii\web\UrlManager URL manager used to create URLs
+     * @since 2.0.8
      */
-    protected static function normalizeRoute($route)
+    protected static function getUrlManager()
     {
-        $route = Yii::getAlias((string) $route);
-        if (strncmp($route, '/', 1) === 0) {
-            // absolute route
-            return ltrim($route, '/');
-        }
+        return static::$urlManager ?: Yii::$app->getUrlManager();
+    }
 
-        // relative route
-        if (Yii::$app->controller === null) {
-            throw new InvalidParamException("Unable to resolve the relative route: $route. No active controller is available.");
-        }
+    /**
+     * Remembers the specified URL so that it can be later fetched back by [[previous()]].
+     *
+     * @param string|array $url the URL to remember. Please refer to [[to()]] for acceptable formats.
+     * If this parameter is not specified, the currently requested URL will be used.
+     * @param string $name the name associated with the URL to be remembered. This can be used
+     * later by [[previous()]]. If not set, it will use [[\yii\web\User::returnUrlParam]].
+     * @see previous()
+     */
+    public static function remember($url = '', $name = null)
+    {
+        $url = static::to($url);
 
-        if (strpos($route, '/') === false) {
-            // empty or an action ID
-            return $route === '' ? Yii::$app->controller->getRoute() : Yii::$app->controller->getUniqueId() . '/' . $route;
+        if ($name === null) {
+            Yii::$app->getUser()->setReturnUrl($url);
         } else {
-            // relative to module
-            return ltrim(Yii::$app->controller->module->getUniqueId() . '/' . $route, '/');
+            Yii::$app->getSession()->set($name, $url);
         }
     }
 
@@ -237,43 +168,120 @@ class BaseUrl
     }
 
     /**
-     * Returns the base URL of the current request.
-     * @param boolean|string $scheme the URI scheme to use in the returned base URL:
+     * Creates a URL for the given route.
      *
-     * - `false` (default): returning the base URL without host info.
+     * This method will use [[\yii\web\UrlManager]] to create a URL.
+     *
+     * You may specify the route as a string, e.g., `site/index`. You may also use an array
+     * if you want to specify additional query parameters for the URL being created. The
+     * array format must be:
+     *
+     * ```php
+     * // generates: /index.php?r=site/index&param1=value1&param2=value2
+     * ['site/index', 'param1' => 'value1', 'param2' => 'value2']
+     * ```
+     *
+     * If you want to create a URL with an anchor, you can use the array format with a `#` parameter.
+     * For example,
+     *
+     * ```php
+     * // generates: /index.php?r=site/index&param1=value1#name
+     * ['site/index', 'param1' => 'value1', '#' => 'name']
+     * ```
+     *
+     * A route may be either absolute or relative. An absolute route has a leading slash (e.g. `/site/index`),
+     * while a relative route has none (e.g. `site/index` or `index`). A relative route will be converted
+     * into an absolute one by the following rules:
+     *
+     * - If the route is an empty string, the current [[\yii\web\Controller::route|route]] will be used;
+     * - If the route contains no slashes at all (e.g. `index`), it is considered to be an action ID
+     *   of the current controller and will be prepended with [[\yii\web\Controller::uniqueId]];
+     * - If the route has no leading slash (e.g. `site/index`), it is considered to be a route relative
+     *   to the current module and will be prepended with the module's [[\yii\base\Module::uniqueId|uniqueId]].
+     *
+     * Starting from version 2.0.2, a route can also be specified as an alias. In this case, the alias
+     * will be converted into the actual route first before conducting the above transformation steps.
+     *
+     * Below are some examples of using this method:
+     *
+     * ```php
+     * // /index.php?r=site%2Findex
+     * echo Url::toRoute('site/index');
+     *
+     * // /index.php?r=site%2Findex&src=ref1#name
+     * echo Url::toRoute(['site/index', 'src' => 'ref1', '#' => 'name']);
+     *
+     * // http://www.example.com/index.php?r=site%2Findex
+     * echo Url::toRoute('site/index', true);
+     *
+     * // https://www.example.com/index.php?r=site%2Findex
+     * echo Url::toRoute('site/index', 'https');
+     *
+     * // /index.php?r=post%2Findex     assume the alias "@posts" is defined as "post/index"
+     * echo Url::toRoute('@posts');
+     * ```
+     *
+     * @param string|array $route use a string to represent a route (e.g. `index`, `site/index`),
+     * or an array to represent a route with query parameters (e.g. `['site/index', 'param1' => 'value1']`).
+     * @param boolean|string $scheme the URI scheme to use in the generated URL:
+     *
+     * - `false` (default): generating a relative URL.
      * - `true`: returning an absolute base URL whose scheme is the same as that in [[\yii\web\UrlManager::hostInfo]].
-     * - string: returning an absolute base URL with the specified scheme (either `http` or `https`).
-     * @return string
+     * - string: generating an absolute URL with the specified scheme (either `http` or `https`).
+     *
+     * @return string the generated URL
+     * @throws InvalidParamException a relative route is given while there is no active controller
      */
-    public static function base($scheme = false)
+    public static function toRoute($route, $scheme = false)
     {
-        $url = static::getUrlManager()->getBaseUrl();
+        $route = (array)$route;
+        $route[0] = static::normalizeRoute($route[0]);
+
         if ($scheme) {
-            $url = static::getUrlManager()->getHostInfo() . $url;
-            if (is_string($scheme) && ($pos = strpos($url, '://')) !== false) {
-                $url = $scheme . substr($url, $pos);
-            }
+            return static::getUrlManager()->createAbsoluteUrl($route, is_string($scheme) ? $scheme : null);
+        } else {
+            return static::getUrlManager()->createUrl($route);
         }
-        return $url;
     }
 
     /**
-     * Remembers the specified URL so that it can be later fetched back by [[previous()]].
+     * Normalizes route and makes it suitable for UrlManager. Absolute routes are staying as is
+     * while relative routes are converted to absolute ones.
      *
-     * @param string|array $url the URL to remember. Please refer to [[to()]] for acceptable formats.
-     * If this parameter is not specified, the currently requested URL will be used.
-     * @param string $name the name associated with the URL to be remembered. This can be used
-     * later by [[previous()]]. If not set, it will use [[\yii\web\User::returnUrlParam]].
-     * @see previous()
+     * A relative route is a route without a leading slash, such as "view", "post/view".
+     *
+     * - If the route is an empty string, the current [[\yii\web\Controller::route|route]] will be used;
+     * - If the route contains no slashes at all, it is considered to be an action ID
+     *   of the current controller and will be prepended with [[\yii\web\Controller::uniqueId]];
+     * - If the route has no leading slash, it is considered to be a route relative
+     *   to the current module and will be prepended with the module's uniqueId.
+     *
+     * Starting from version 2.0.2, a route can also be specified as an alias. In this case, the alias
+     * will be converted into the actual route first before conducting the above transformation steps.
+     *
+     * @param string $route the route. This can be either an absolute route or a relative route.
+     * @return string normalized route suitable for UrlManager
+     * @throws InvalidParamException a relative route is given while there is no active controller
      */
-    public static function remember($url = '', $name = null)
+    protected static function normalizeRoute($route)
     {
-        $url = static::to($url);
+        $route = Yii::getAlias((string)$route);
+        if (strncmp($route, '/', 1) === 0) {
+            // absolute route
+            return ltrim($route, '/');
+        }
 
-        if ($name === null) {
-            Yii::$app->getUser()->setReturnUrl($url);
+        // relative route
+        if (Yii::$app->controller === null) {
+            throw new InvalidParamException("Unable to resolve the relative route: $route. No active controller is available.");
+        }
+
+        if (strpos($route, '/') === false) {
+            // empty or an action ID
+            return $route === '' ? Yii::$app->controller->getRoute() : Yii::$app->controller->getUniqueId() . '/' . $route;
         } else {
-            Yii::$app->getSession()->set($name, $url);
+            // relative to module
+            return ltrim(Yii::$app->controller->module->getUniqueId() . '/' . $route, '/');
         }
     }
 
@@ -388,14 +396,5 @@ class BaseUrl
         $currentParams[0] = '/' . Yii::$app->controller->getRoute();
         $route = ArrayHelper::merge($currentParams, $params);
         return static::toRoute($route, $scheme);
-    }
-
-    /**
-     * @return \yii\web\UrlManager URL manager used to create URLs
-     * @since 2.0.8
-     */
-    protected static function getUrlManager()
-    {
-        return static::$urlManager ?: Yii::$app->getUrlManager();
     }
 }

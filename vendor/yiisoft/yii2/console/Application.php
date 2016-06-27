@@ -132,6 +132,23 @@ class Application extends \yii\base\Application
     }
 
     /**
+     * Returns the configuration of the built-in commands.
+     * @return array the configuration of the built-in commands.
+     */
+    public function coreCommands()
+    {
+        return [
+            'asset' => 'yii\console\controllers\AssetController',
+            'cache' => 'yii\console\controllers\CacheController',
+            'fixture' => 'yii\console\controllers\FixtureController',
+            'help' => 'yii\console\controllers\HelpController',
+            'message' => 'yii\console\controllers\MessageController',
+            'migrate' => 'yii\console\controllers\MigrateController',
+            'serve' => 'yii\console\controllers\ServeController',
+        ];
+    }
+
+    /**
      * Handles the specified request.
      * @param Request $request the request to be handled
      * @return Response the resulting response
@@ -178,23 +195,6 @@ class Application extends \yii\base\Application
         } catch (InvalidRouteException $e) {
             throw new Exception("Unknown command \"$route\".", 0, $e);
         }
-    }
-
-    /**
-     * Returns the configuration of the built-in commands.
-     * @return array the configuration of the built-in commands.
-     */
-    public function coreCommands()
-    {
-        return [
-            'asset' => 'yii\console\controllers\AssetController',
-            'cache' => 'yii\console\controllers\CacheController',
-            'fixture' => 'yii\console\controllers\FixtureController',
-            'help' => 'yii\console\controllers\HelpController',
-            'message' => 'yii\console\controllers\MessageController',
-            'migrate' => 'yii\console\controllers\MigrateController',
-            'serve' => 'yii\console\controllers\ServeController',
-        ];
     }
 
     /**

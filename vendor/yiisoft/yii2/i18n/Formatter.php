@@ -18,8 +18,8 @@ use yii\base\Component;
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
 use yii\helpers\FormatConverter;
-use yii\helpers\HtmlPurifier;
 use yii\helpers\Html;
+use yii\helpers\HtmlPurifier;
 
 /**
  * Formatter provides a set of commonly used data formatting methods.
@@ -255,7 +255,15 @@ class Formatter extends Component
      * @var boolean whether the [PHP intl extension](http://php.net/manual/en/book.intl.php) is loaded.
      */
     private $_intlLoaded = false;
-
+    /**
+     * @var array map of short format names to IntlDateFormatter constant values.
+     */
+    private $_dateFormats = [
+        'short' => 3, // IntlDateFormatter::SHORT,
+        'medium' => 2, // IntlDateFormatter::MEDIUM,
+        'long' => 1, // IntlDateFormatter::LONG,
+        'full' => 0, // IntlDateFormatter::FULL,
+    ];
 
     /**
      * @inheritdoc
@@ -284,6 +292,9 @@ class Formatter extends Component
             }
         }
     }
+
+
+    // simple formats
 
     /**
      * Formats the value based on the given format type.
@@ -318,10 +329,6 @@ class Formatter extends Component
             throw new InvalidParamException("Unknown format type: $format");
         }
     }
-
-
-    // simple formats
-
 
     /**
      * Formats the value as is without any formatting.
@@ -442,6 +449,9 @@ class Formatter extends Component
         return Html::a(Html::encode($value), $url, $options);
     }
 
+
+    // date and time formats
+
     /**
      * Formats the value as a boolean.
      * @param mixed $value the value to be formatted.
@@ -456,10 +466,6 @@ class Formatter extends Component
 
         return $value ? $this->booleanFormat[1] : $this->booleanFormat[0];
     }
-
-
-    // date and time formats
-
 
     /**
      * Formats the value as a date.
@@ -492,80 +498,6 @@ class Formatter extends Component
         }
         return $this->formatDateTimeValue($value, $format, 'date');
     }
-
-    /**
-     * Formats the value as a time.
-     * @param integer|string|DateTime $value the value to be formatted. The following
-     * types of value are supported:
-     *
-     * - an integer representing a UNIX timestamp
-     * - a string that can be [parsed to create a DateTime object](http://php.net/manual/en/datetime.formats.php).
-     *   The timestamp is assumed to be in [[defaultTimeZone]] unless a time zone is explicitly given.
-     * - a PHP [DateTime](http://php.net/manual/en/class.datetime.php) object
-     *
-     * @param string $format the format used to convert the value into a date string.
-     * If null, [[timeFormat]] will be used.
-     *
-     * This can be "short", "medium", "long", or "full", which represents a preset format of different lengths.
-     * It can also be a custom format as specified in the [ICU manual](http://userguide.icu-project.org/formatparse/datetime).
-     *
-     * Alternatively this can be a string prefixed with `php:` representing a format that can be recognized by the
-     * PHP [date()](http://php.net/manual/en/function.date.php)-function.
-     *
-     * @return string the formatted result.
-     * @throws InvalidParamException if the input value can not be evaluated as a date value.
-     * @throws InvalidConfigException if the date format is invalid.
-     * @see timeFormat
-     */
-    public function asTime($value, $format = null)
-    {
-        if ($format === null) {
-            $format = $this->timeFormat;
-        }
-        return $this->formatDateTimeValue($value, $format, 'time');
-    }
-
-    /**
-     * Formats the value as a datetime.
-     * @param integer|string|DateTime $value the value to be formatted. The following
-     * types of value are supported:
-     *
-     * - an integer representing a UNIX timestamp
-     * - a string that can be [parsed to create a DateTime object](http://php.net/manual/en/datetime.formats.php).
-     *   The timestamp is assumed to be in [[defaultTimeZone]] unless a time zone is explicitly given.
-     * - a PHP [DateTime](http://php.net/manual/en/class.datetime.php) object
-     *
-     * @param string $format the format used to convert the value into a date string.
-     * If null, [[dateFormat]] will be used.
-     *
-     * This can be "short", "medium", "long", or "full", which represents a preset format of different lengths.
-     * It can also be a custom format as specified in the [ICU manual](http://userguide.icu-project.org/formatparse/datetime).
-     *
-     * Alternatively this can be a string prefixed with `php:` representing a format that can be recognized by the
-     * PHP [date()](http://php.net/manual/en/function.date.php)-function.
-     *
-     * @return string the formatted result.
-     * @throws InvalidParamException if the input value can not be evaluated as a date value.
-     * @throws InvalidConfigException if the date format is invalid.
-     * @see datetimeFormat
-     */
-    public function asDatetime($value, $format = null)
-    {
-        if ($format === null) {
-            $format = $this->datetimeFormat;
-        }
-        return $this->formatDateTimeValue($value, $format, 'datetime');
-    }
-
-    /**
-     * @var array map of short format names to IntlDateFormatter constant values.
-     */
-    private $_dateFormats = [
-        'short'  => 3, // IntlDateFormatter::SHORT,
-        'medium' => 2, // IntlDateFormatter::MEDIUM,
-        'long'   => 1, // IntlDateFormatter::LONG,
-        'full'   => 0, // IntlDateFormatter::FULL,
-    ];
 
     /**
      * @param integer|string|DateTime $value the value to be formatted. The following
@@ -693,6 +625,70 @@ class Formatter extends Component
             throw new InvalidParamException("'$value' is not a valid date time value: " . $e->getMessage()
                 . "\n" . print_r(DateTime::getLastErrors(), true), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Formats the value as a time.
+     * @param integer|string|DateTime $value the value to be formatted. The following
+     * types of value are supported:
+     *
+     * - an integer representing a UNIX timestamp
+     * - a string that can be [parsed to create a DateTime object](http://php.net/manual/en/datetime.formats.php).
+     *   The timestamp is assumed to be in [[defaultTimeZone]] unless a time zone is explicitly given.
+     * - a PHP [DateTime](http://php.net/manual/en/class.datetime.php) object
+     *
+     * @param string $format the format used to convert the value into a date string.
+     * If null, [[timeFormat]] will be used.
+     *
+     * This can be "short", "medium", "long", or "full", which represents a preset format of different lengths.
+     * It can also be a custom format as specified in the [ICU manual](http://userguide.icu-project.org/formatparse/datetime).
+     *
+     * Alternatively this can be a string prefixed with `php:` representing a format that can be recognized by the
+     * PHP [date()](http://php.net/manual/en/function.date.php)-function.
+     *
+     * @return string the formatted result.
+     * @throws InvalidParamException if the input value can not be evaluated as a date value.
+     * @throws InvalidConfigException if the date format is invalid.
+     * @see timeFormat
+     */
+    public function asTime($value, $format = null)
+    {
+        if ($format === null) {
+            $format = $this->timeFormat;
+        }
+        return $this->formatDateTimeValue($value, $format, 'time');
+    }
+
+    /**
+     * Formats the value as a datetime.
+     * @param integer|string|DateTime $value the value to be formatted. The following
+     * types of value are supported:
+     *
+     * - an integer representing a UNIX timestamp
+     * - a string that can be [parsed to create a DateTime object](http://php.net/manual/en/datetime.formats.php).
+     *   The timestamp is assumed to be in [[defaultTimeZone]] unless a time zone is explicitly given.
+     * - a PHP [DateTime](http://php.net/manual/en/class.datetime.php) object
+     *
+     * @param string $format the format used to convert the value into a date string.
+     * If null, [[dateFormat]] will be used.
+     *
+     * This can be "short", "medium", "long", or "full", which represents a preset format of different lengths.
+     * It can also be a custom format as specified in the [ICU manual](http://userguide.icu-project.org/formatparse/datetime).
+     *
+     * Alternatively this can be a string prefixed with `php:` representing a format that can be recognized by the
+     * PHP [date()](http://php.net/manual/en/function.date.php)-function.
+     *
+     * @return string the formatted result.
+     * @throws InvalidParamException if the input value can not be evaluated as a date value.
+     * @throws InvalidConfigException if the date format is invalid.
+     * @see datetimeFormat
+     */
+    public function asDatetime($value, $format = null)
+    {
+        if ($format === null) {
+            $format = $this->datetimeFormat;
+        }
+        return $this->formatDateTimeValue($value, $format, 'datetime');
     }
 
     /**
@@ -916,42 +912,81 @@ class Formatter extends Component
     }
 
     /**
-     * Formats the value as a decimal number.
+     * Normalizes a numeric input value
      *
-     * Property [[decimalSeparator]] will be used to represent the decimal point. The
-     * value is rounded automatically to the defined decimal digits.
+     * - everything [empty](http://php.net/manual/en/function.empty.php) will result in `0`
+     * - a [numeric](http://php.net/manual/en/function.is-numeric.php) string will be casted to float
+     * - everything else will be returned if it is [numeric](http://php.net/manual/en/function.is-numeric.php),
+     *   otherwise an exception is thrown.
      *
-     * @param mixed $value the value to be formatted.
-     * @param integer $decimals the number of digits after the decimal point. If not given the number of digits is determined from the
-     * [[locale]] and if the [PHP intl extension](http://php.net/manual/en/book.intl.php) is not available defaults to `2`.
-     * @param array $options optional configuration for the number formatter. This parameter will be merged with [[numberFormatterOptions]].
-     * @param array $textOptions optional configuration for the number formatter. This parameter will be merged with [[numberFormatterTextOptions]].
-     * @return string the formatted result.
-     * @throws InvalidParamException if the input value is not numeric or the formatting failed.
-     * @see decimalSeparator
-     * @see thousandSeparator
+     * @param mixed $value the input value
+     * @return float|integer the normalized number value
+     * @throws InvalidParamException if the input value is not numeric.
      */
-    public function asDecimal($value, $decimals = null, $options = [], $textOptions = [])
+    protected function normalizeNumericValue($value)
     {
-        if ($value === null) {
-            return $this->nullDisplay;
+        if (empty($value)) {
+            return 0;
         }
-        $value = $this->normalizeNumericValue($value);
-
-        if ($this->_intlLoaded) {
-            $f = $this->createNumberFormatter(NumberFormatter::DECIMAL, $decimals, $options, $textOptions);
-            if (($result = $f->format($value)) === false) {
-                throw new InvalidParamException('Formatting decimal value failed: ' . $f->getErrorCode() . ' ' . $f->getErrorMessage());
-            }
-            return $result;
-        } else {
-            if ($decimals === null) {
-                $decimals = 2;
-            }
-            return number_format($value, $decimals, $this->decimalSeparator, $this->thousandSeparator);
+        if (is_string($value) && is_numeric($value)) {
+            $value = (float)$value;
         }
+        if (!is_numeric($value)) {
+            throw new InvalidParamException("'$value' is not a numeric value.");
+        }
+        return $value;
     }
 
+    /**
+     * Creates a number formatter based on the given type and format.
+     *
+     * You may override this method to create a number formatter based on patterns.
+     *
+     * @param integer $style the type of the number formatter.
+     * Values: NumberFormatter::DECIMAL, ::CURRENCY, ::PERCENT, ::SCIENTIFIC, ::SPELLOUT, ::ORDINAL
+     * ::DURATION, ::PATTERN_RULEBASED, ::DEFAULT_STYLE, ::IGNORE
+     * @param integer $decimals the number of digits after the decimal point.
+     * @param array $options optional configuration for the number formatter. This parameter will be merged with [[numberFormatterOptions]].
+     * @param array $textOptions optional configuration for the number formatter. This parameter will be merged with [[numberFormatterTextOptions]].
+     * @return NumberFormatter the created formatter instance
+     */
+    protected function createNumberFormatter($style, $decimals = null, $options = [], $textOptions = [])
+    {
+        $formatter = new NumberFormatter($this->locale, $style);
+
+        // set text attributes
+        foreach ($this->numberFormatterTextOptions as $name => $attribute) {
+            $formatter->setTextAttribute($name, $attribute);
+        }
+        foreach ($textOptions as $name => $attribute) {
+            $formatter->setTextAttribute($name, $attribute);
+        }
+
+        // set attributes
+        foreach ($this->numberFormatterOptions as $name => $value) {
+            $formatter->setAttribute($name, $value);
+        }
+        foreach ($options as $name => $value) {
+            $formatter->setAttribute($name, $value);
+        }
+        if ($decimals !== null) {
+            $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
+            $formatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
+        }
+
+        // set symbols
+        if ($this->decimalSeparator !== null) {
+            $formatter->setSymbol(NumberFormatter::DECIMAL_SEPARATOR_SYMBOL, $this->decimalSeparator);
+        }
+        if ($this->thousandSeparator !== null) {
+            $formatter->setSymbol(NumberFormatter::GROUPING_SEPARATOR_SYMBOL, $this->thousandSeparator);
+        }
+        foreach ($this->numberFormatterSymbols as $name => $symbol) {
+            $formatter->setSymbol($name, $symbol);
+        }
+
+        return $formatter;
+    }
 
     /**
      * Formats the value as a percent number with "%" sign.
@@ -1066,6 +1101,43 @@ class Formatter extends Component
     }
 
     /**
+     * Formats the value as a decimal number.
+     *
+     * Property [[decimalSeparator]] will be used to represent the decimal point. The
+     * value is rounded automatically to the defined decimal digits.
+     *
+     * @param mixed $value the value to be formatted.
+     * @param integer $decimals the number of digits after the decimal point. If not given the number of digits is determined from the
+     * [[locale]] and if the [PHP intl extension](http://php.net/manual/en/book.intl.php) is not available defaults to `2`.
+     * @param array $options optional configuration for the number formatter. This parameter will be merged with [[numberFormatterOptions]].
+     * @param array $textOptions optional configuration for the number formatter. This parameter will be merged with [[numberFormatterTextOptions]].
+     * @return string the formatted result.
+     * @throws InvalidParamException if the input value is not numeric or the formatting failed.
+     * @see decimalSeparator
+     * @see thousandSeparator
+     */
+    public function asDecimal($value, $decimals = null, $options = [], $textOptions = [])
+    {
+        if ($value === null) {
+            return $this->nullDisplay;
+        }
+        $value = $this->normalizeNumericValue($value);
+
+        if ($this->_intlLoaded) {
+            $f = $this->createNumberFormatter(NumberFormatter::DECIMAL, $decimals, $options, $textOptions);
+            if (($result = $f->format($value)) === false) {
+                throw new InvalidParamException('Formatting decimal value failed: ' . $f->getErrorCode() . ' ' . $f->getErrorMessage());
+            }
+            return $result;
+        } else {
+            if ($decimals === null) {
+                $decimals = 2;
+            }
+            return number_format($value, $decimals, $this->decimalSeparator, $this->thousandSeparator);
+        }
+    }
+
+    /**
      * Formats the value as a number spellout.
      *
      * This function requires the [PHP intl extension](http://php.net/manual/en/book.intl.php) to be installed.
@@ -1166,51 +1238,6 @@ class Formatter extends Component
     }
 
     /**
-     * Formats the value in bytes as a size in human readable form, for example `12 kilobytes`.
-     *
-     * If [[sizeFormatBase]] is 1024, [binary prefixes](http://en.wikipedia.org/wiki/Binary_prefix) (e.g. kibibyte/KiB, mebibyte/MiB, ...)
-     * are used in the formatting result.
-     *
-     * @param string|integer|float $value value in bytes to be formatted.
-     * @param integer $decimals the number of digits after the decimal point.
-     * @param array $options optional configuration for the number formatter. This parameter will be merged with [[numberFormatterOptions]].
-     * @param array $textOptions optional configuration for the number formatter. This parameter will be merged with [[numberFormatterTextOptions]].
-     * @return string the formatted result.
-     * @throws InvalidParamException if the input value is not numeric or the formatting failed.
-     * @see sizeFormat
-     * @see asShortSize
-     */
-    public function asSize($value, $decimals = null, $options = [], $textOptions = [])
-    {
-        if ($value === null) {
-            return $this->nullDisplay;
-        }
-
-        list($params, $position) = $this->formatSizeNumber($value, $decimals, $options, $textOptions);
-
-        if ($this->sizeFormatBase == 1024) {
-            switch ($position) {
-                case 0:  return Yii::t('yii', '{nFormatted} {n, plural, =1{byte} other{bytes}}', $params, $this->locale);
-                case 1:  return Yii::t('yii', '{nFormatted} {n, plural, =1{kibibyte} other{kibibytes}}', $params, $this->locale);
-                case 2:  return Yii::t('yii', '{nFormatted} {n, plural, =1{mebibyte} other{mebibytes}}', $params, $this->locale);
-                case 3:  return Yii::t('yii', '{nFormatted} {n, plural, =1{gibibyte} other{gibibytes}}', $params, $this->locale);
-                case 4:  return Yii::t('yii', '{nFormatted} {n, plural, =1{tebibyte} other{tebibytes}}', $params, $this->locale);
-                default: return Yii::t('yii', '{nFormatted} {n, plural, =1{pebibyte} other{pebibytes}}', $params, $this->locale);
-            }
-        } else {
-            switch ($position) {
-                case 0:  return Yii::t('yii', '{nFormatted} {n, plural, =1{byte} other{bytes}}', $params, $this->locale);
-                case 1:  return Yii::t('yii', '{nFormatted} {n, plural, =1{kilobyte} other{kilobytes}}', $params, $this->locale);
-                case 2:  return Yii::t('yii', '{nFormatted} {n, plural, =1{megabyte} other{megabytes}}', $params, $this->locale);
-                case 3:  return Yii::t('yii', '{nFormatted} {n, plural, =1{gigabyte} other{gigabytes}}', $params, $this->locale);
-                case 4:  return Yii::t('yii', '{nFormatted} {n, plural, =1{terabyte} other{terabytes}}', $params, $this->locale);
-                default: return Yii::t('yii', '{nFormatted} {n, plural, =1{petabyte} other{petabytes}}', $params, $this->locale);
-            }
-        }
-    }
-
-
-    /**
      * Given the value in bytes formats number part of the human readable form.
      *
      * @param string|integer|float $value value in bytes to be formatted.
@@ -1260,79 +1287,58 @@ class Formatter extends Component
     }
 
     /**
-     * Normalizes a numeric input value
+     * Formats the value in bytes as a size in human readable form, for example `12 kilobytes`.
      *
-     * - everything [empty](http://php.net/manual/en/function.empty.php) will result in `0`
-     * - a [numeric](http://php.net/manual/en/function.is-numeric.php) string will be casted to float
-     * - everything else will be returned if it is [numeric](http://php.net/manual/en/function.is-numeric.php),
-     *   otherwise an exception is thrown.
+     * If [[sizeFormatBase]] is 1024, [binary prefixes](http://en.wikipedia.org/wiki/Binary_prefix) (e.g. kibibyte/KiB, mebibyte/MiB, ...)
+     * are used in the formatting result.
      *
-     * @param mixed $value the input value
-     * @return float|integer the normalized number value
-     * @throws InvalidParamException if the input value is not numeric.
-     */
-    protected function normalizeNumericValue($value)
-    {
-        if (empty($value)) {
-            return 0;
-        }
-        if (is_string($value) && is_numeric($value)) {
-            $value = (float) $value;
-        }
-        if (!is_numeric($value)) {
-            throw new InvalidParamException("'$value' is not a numeric value.");
-        }
-        return $value;
-    }
-
-    /**
-     * Creates a number formatter based on the given type and format.
-     *
-     * You may override this method to create a number formatter based on patterns.
-     *
-     * @param integer $style the type of the number formatter.
-     * Values: NumberFormatter::DECIMAL, ::CURRENCY, ::PERCENT, ::SCIENTIFIC, ::SPELLOUT, ::ORDINAL
-     * ::DURATION, ::PATTERN_RULEBASED, ::DEFAULT_STYLE, ::IGNORE
+     * @param string|integer|float $value value in bytes to be formatted.
      * @param integer $decimals the number of digits after the decimal point.
      * @param array $options optional configuration for the number formatter. This parameter will be merged with [[numberFormatterOptions]].
      * @param array $textOptions optional configuration for the number formatter. This parameter will be merged with [[numberFormatterTextOptions]].
-     * @return NumberFormatter the created formatter instance
+     * @return string the formatted result.
+     * @throws InvalidParamException if the input value is not numeric or the formatting failed.
+     * @see sizeFormat
+     * @see asShortSize
      */
-    protected function createNumberFormatter($style, $decimals = null, $options = [], $textOptions = [])
+    public function asSize($value, $decimals = null, $options = [], $textOptions = [])
     {
-        $formatter = new NumberFormatter($this->locale, $style);
-
-        // set text attributes
-        foreach ($this->numberFormatterTextOptions as $name => $attribute) {
-            $formatter->setTextAttribute($name, $attribute);
-        }
-        foreach ($textOptions as $name => $attribute) {
-            $formatter->setTextAttribute($name, $attribute);
+        if ($value === null) {
+            return $this->nullDisplay;
         }
 
-        // set attributes
-        foreach ($this->numberFormatterOptions as $name => $value) {
-            $formatter->setAttribute($name, $value);
-        }
-        foreach ($options as $name => $value) {
-            $formatter->setAttribute($name, $value);
-        }
-        if ($decimals !== null) {
-            $formatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $decimals);
-            $formatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $decimals);
-        }
+        list($params, $position) = $this->formatSizeNumber($value, $decimals, $options, $textOptions);
 
-        // set symbols
-        if ($this->decimalSeparator !== null) {
-            $formatter->setSymbol(NumberFormatter::DECIMAL_SEPARATOR_SYMBOL, $this->decimalSeparator);
+        if ($this->sizeFormatBase == 1024) {
+            switch ($position) {
+                case 0:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{byte} other{bytes}}', $params, $this->locale);
+                case 1:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{kibibyte} other{kibibytes}}', $params, $this->locale);
+                case 2:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{mebibyte} other{mebibytes}}', $params, $this->locale);
+                case 3:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{gibibyte} other{gibibytes}}', $params, $this->locale);
+                case 4:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{tebibyte} other{tebibytes}}', $params, $this->locale);
+                default:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{pebibyte} other{pebibytes}}', $params, $this->locale);
+            }
+        } else {
+            switch ($position) {
+                case 0:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{byte} other{bytes}}', $params, $this->locale);
+                case 1:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{kilobyte} other{kilobytes}}', $params, $this->locale);
+                case 2:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{megabyte} other{megabytes}}', $params, $this->locale);
+                case 3:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{gigabyte} other{gigabytes}}', $params, $this->locale);
+                case 4:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{terabyte} other{terabytes}}', $params, $this->locale);
+                default:
+                    return Yii::t('yii', '{nFormatted} {n, plural, =1{petabyte} other{petabytes}}', $params, $this->locale);
+            }
         }
-        if ($this->thousandSeparator !== null) {
-            $formatter->setSymbol(NumberFormatter::GROUPING_SEPARATOR_SYMBOL, $this->thousandSeparator);
-        }
-        foreach ($this->numberFormatterSymbols as $name => $symbol) {
-            $formatter->setSymbol($name, $symbol);
-        }
-
-        return $formatter;
     }
 }

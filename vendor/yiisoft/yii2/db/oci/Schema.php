@@ -8,10 +8,10 @@
 namespace yii\db\oci;
 
 use yii\base\InvalidCallException;
+use yii\db\ColumnSchema;
 use yii\db\Connection;
 use yii\db\Expression;
 use yii\db\TableSchema;
-use yii\db\ColumnSchema;
 
 /**
  * Schema is the class for retrieving metadata from an Oracle database
@@ -50,14 +50,6 @@ class Schema extends \yii\db\Schema
     public function releaseSavepoint($name)
     {
         // does nothing as Oracle does not support this
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function quoteSimpleTableName($name)
-    {
-        return strpos($name, '"') !== false ? $name : '"' . $name . '"';
     }
 
     /**
@@ -169,50 +161,6 @@ SQL;
     }
 
     /**
-     * Sequence name of table
-     *
-     * @param string $tableName
-     * @internal param \yii\db\TableSchema $table->name the table schema
-     * @return string|null whether the sequence exists
-     */
-    protected function getTableSequenceName($tableName)
-    {
-
-        $seq_name_sql = <<<SQL
-SELECT ud.referenced_name as sequence_name
-FROM user_dependencies ud
-JOIN user_triggers ut on (ut.trigger_name = ud.name)
-WHERE ut.table_name = :tableName
-AND ud.type='TRIGGER'
-AND ud.referenced_type='SEQUENCE'
-SQL;
-        $sequenceName = $this->db->createCommand($seq_name_sql, [':tableName' => $tableName])->queryScalar();
-        return $sequenceName === false ? null : $sequenceName;
-    }
-
-    /**
-     * @Overrides method in class 'Schema'
-     * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php -> Oracle does not support this
-     *
-     * Returns the ID of the last inserted row or sequence value.
-     * @param string $sequenceName name of the sequence object (required by some DBMS)
-     * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
-     * @throws InvalidCallException if the DB connection is not active
-     */
-    public function getLastInsertID($sequenceName = '')
-    {
-        if ($this->db->isActive) {
-            // get the last insert id from the master connection
-            $sequenceName = $this->quoteSimpleTableName($sequenceName);
-            return $this->db->useMaster(function (Connection $db) use ($sequenceName) {
-                return $db->createCommand("SELECT {$sequenceName}.CURRVAL FROM DUAL")->queryScalar();
-            });
-        } else {
-            throw new InvalidCallException('DB Connection is not active.');
-        }
-    }
-
-    /**
      * Creates ColumnSchema instance
      *
      * @param array $column
@@ -254,6 +202,82 @@ SQL;
         }
 
         return $c;
+    }
+
+    /**
+     * Extracts the data types for the given column
+     * @param ColumnSchema $column
+     * @param string $dbType DB type
+     * @param string $precision total number of digits.
+     * This parameter is available since version 2.0.4.
+     * @param string $scale number of digits on the right of the decimal separator.
+     * This parameter is available since version 2.0.4.
+     * @param string $length length for character types.
+     * This parameter is available since version 2.0.4.
+     */
+    protected function extractColumnType($column, $dbType, $precision, $scale, $length)
+    {
+        $column->dbType = $dbType;
+
+        if (strpos($dbType, 'FLOAT') !== false || strpos($dbType, 'DOUBLE') !== false) {
+            $column->type = 'double';
+        } elseif (strpos($dbType, 'NUMBER') !== false) {
+            if ($scale === null || $scale > 0) {
+                $column->type = 'decimal';
+            } else {
+                $column->type = 'integer';
+            }
+        } elseif (strpos($dbType, 'INTEGER') !== false) {
+            $column->type = 'integer';
+        } elseif (strpos($dbType, 'BLOB') !== false) {
+            $column->type = 'binary';
+        } elseif (strpos($dbType, 'CLOB') !== false) {
+            $column->type = 'text';
+        } elseif (strpos($dbType, 'TIMESTAMP') !== false) {
+            $column->type = 'timestamp';
+        } else {
+            $column->type = 'string';
+        }
+    }
+
+    /**
+     * Extracts size, precision and scale information from column's DB type.
+     * @param ColumnSchema $column
+     * @param string $dbType the column's DB type
+     * @param string $precision total number of digits.
+     * This parameter is available since version 2.0.4.
+     * @param string $scale number of digits on the right of the decimal separator.
+     * This parameter is available since version 2.0.4.
+     * @param string $length length for character types.
+     * This parameter is available since version 2.0.4.
+     */
+    protected function extractColumnSize($column, $dbType, $precision, $scale, $length)
+    {
+        $column->size = trim($length) === '' ? null : (int)$length;
+        $column->precision = trim($precision) === '' ? null : (int)$precision;
+        $column->scale = trim($scale) === '' ? null : (int)$scale;
+    }
+
+    /**
+     * Sequence name of table
+     *
+     * @param string $tableName
+     * @internal param \yii\db\TableSchema $table->name the table schema
+     * @return string|null whether the sequence exists
+     */
+    protected function getTableSequenceName($tableName)
+    {
+
+        $seq_name_sql = <<<SQL
+SELECT ud.referenced_name as sequence_name
+FROM user_dependencies ud
+JOIN user_triggers ut on (ut.trigger_name = ud.name)
+WHERE ut.table_name = :tableName
+AND ud.type='TRIGGER'
+AND ud.referenced_type='SEQUENCE'
+SQL;
+        $sequenceName = $this->db->createCommand($seq_name_sql, [':tableName' => $tableName])->queryScalar();
+        return $sequenceName === false ? null : $sequenceName;
     }
 
     /**
@@ -300,6 +324,122 @@ SQL;
         foreach ($constraints as $constraint) {
             $table->foreignKeys[] = array_merge([$constraint['tableName']], $constraint['columns']);
         }
+    }
+
+    /**
+     * @Overrides method in class 'Schema'
+     * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php -> Oracle does not support this
+     *
+     * Returns the ID of the last inserted row or sequence value.
+     * @param string $sequenceName name of the sequence object (required by some DBMS)
+     * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
+     * @throws InvalidCallException if the DB connection is not active
+     */
+    public function getLastInsertID($sequenceName = '')
+    {
+        if ($this->db->isActive) {
+            // get the last insert id from the master connection
+            $sequenceName = $this->quoteSimpleTableName($sequenceName);
+            return $this->db->useMaster(function (Connection $db) use ($sequenceName) {
+                return $db->createCommand("SELECT {$sequenceName}.CURRVAL FROM DUAL")->queryScalar();
+            });
+        } else {
+            throw new InvalidCallException('DB Connection is not active.');
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function quoteSimpleTableName($name)
+    {
+        return strpos($name, '"') !== false ? $name : '"' . $name . '"';
+    }
+
+    /**
+     * Returns all unique indexes for the given table.
+     * Each array element is of the following structure:
+     *
+     * ```php
+     * [
+     *     'IndexName1' => ['col1' [, ...]],
+     *     'IndexName2' => ['col2' [, ...]],
+     * ]
+     * ```
+     *
+     * @param TableSchema $table the table metadata
+     * @return array all unique indexes for the given table.
+     * @since 2.0.4
+     */
+    public function findUniqueIndexes($table)
+    {
+        $query = <<<SQL
+SELECT dic.INDEX_NAME, dic.COLUMN_NAME
+FROM ALL_INDEXES di
+INNER JOIN ALL_IND_COLUMNS dic ON di.TABLE_NAME = dic.TABLE_NAME AND di.INDEX_NAME = dic.INDEX_NAME
+WHERE di.UNIQUENESS = 'UNIQUE'
+AND dic.TABLE_OWNER = :schemaName
+AND dic.TABLE_NAME = :tableName
+ORDER BY dic.TABLE_NAME, dic.INDEX_NAME, dic.COLUMN_POSITION
+SQL;
+        $result = [];
+        $command = $this->db->createCommand($query, [
+            ':tableName' => $table->name,
+            ':schemaName' => $table->schemaName,
+        ]);
+        foreach ($command->queryAll() as $row) {
+            $result[$row['INDEX_NAME']][] = $row['COLUMN_NAME'];
+        }
+        return $result;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function insert($table, $columns)
+    {
+        $params = [];
+        $returnParams = [];
+        $sql = $this->db->getQueryBuilder()->insert($table, $columns, $params);
+        $tableSchema = $this->getTableSchema($table);
+        $returnColumns = $tableSchema->primaryKey;
+        if (!empty($returnColumns)) {
+            $columnSchemas = $tableSchema->columns;
+            $returning = [];
+            foreach ((array) $returnColumns as $name) {
+                $phName = QueryBuilder::PARAM_PREFIX . (count($params) + count($returnParams));
+                $returnParams[$phName] = [
+                    'column' => $name,
+                    'value' => null,
+                ];
+                if (!isset($columnSchemas[$name]) || $columnSchemas[$name]->phpType !== 'integer') {
+                    $returnParams[$phName]['dataType'] = \PDO::PARAM_STR;
+                } else {
+                    $returnParams[$phName]['dataType'] = \PDO::PARAM_INT;
+                }
+                $returnParams[$phName]['size'] = isset($columnSchemas[$name]) && isset($columnSchemas[$name]->size) ? $columnSchemas[$name]->size : -1;
+                $returning[] = $this->quoteColumnName($name);
+            }
+            $sql .= ' RETURNING ' . implode(', ', $returning) . ' INTO ' . implode(', ', array_keys($returnParams));
+        }
+
+        $command = $this->db->createCommand($sql, $params);
+        $command->prepare(false);
+
+        foreach ($returnParams as $name => &$value) {
+            $command->pdoStatement->bindParam($name, $value['value'], $value['dataType'], $value['size']);
+        }
+
+        if (!$command->execute()) {
+            return false;
+        }
+
+        $result = [];
+        foreach ($returnParams as $value) {
+            $result[$value['column']] = $value['value'];
+        }
+
+        return $result;
     }
 
     /**
@@ -353,145 +493,5 @@ SQL;
             $names[] = $row['TABLE_NAME'];
         }
         return $names;
-    }
-
-    /**
-     * Returns all unique indexes for the given table.
-     * Each array element is of the following structure:
-     *
-     * ```php
-     * [
-     *     'IndexName1' => ['col1' [, ...]],
-     *     'IndexName2' => ['col2' [, ...]],
-     * ]
-     * ```
-     *
-     * @param TableSchema $table the table metadata
-     * @return array all unique indexes for the given table.
-     * @since 2.0.4
-     */
-    public function findUniqueIndexes($table)
-    {
-        $query = <<<SQL
-SELECT dic.INDEX_NAME, dic.COLUMN_NAME
-FROM ALL_INDEXES di
-INNER JOIN ALL_IND_COLUMNS dic ON di.TABLE_NAME = dic.TABLE_NAME AND di.INDEX_NAME = dic.INDEX_NAME
-WHERE di.UNIQUENESS = 'UNIQUE'
-AND dic.TABLE_OWNER = :schemaName
-AND dic.TABLE_NAME = :tableName
-ORDER BY dic.TABLE_NAME, dic.INDEX_NAME, dic.COLUMN_POSITION
-SQL;
-        $result = [];
-        $command = $this->db->createCommand($query, [
-            ':tableName' => $table->name,
-            ':schemaName' => $table->schemaName,
-        ]);
-        foreach ($command->queryAll() as $row) {
-            $result[$row['INDEX_NAME']][] = $row['COLUMN_NAME'];
-        }
-        return $result;
-    }
-
-    /**
-     * Extracts the data types for the given column
-     * @param ColumnSchema $column
-     * @param string $dbType DB type
-     * @param string $precision total number of digits.
-     * This parameter is available since version 2.0.4.
-     * @param string $scale number of digits on the right of the decimal separator.
-     * This parameter is available since version 2.0.4.
-     * @param string $length length for character types.
-     * This parameter is available since version 2.0.4.
-     */
-    protected function extractColumnType($column, $dbType, $precision, $scale, $length)
-    {
-        $column->dbType = $dbType;
-
-        if (strpos($dbType, 'FLOAT') !== false || strpos($dbType, 'DOUBLE') !== false) {
-            $column->type = 'double';
-        } elseif (strpos($dbType, 'NUMBER') !== false) {
-            if ($scale === null || $scale > 0) {
-                $column->type = 'decimal';
-            } else {
-                $column->type = 'integer';
-            }
-        } elseif (strpos($dbType, 'INTEGER') !== false) {
-            $column->type = 'integer';
-        } elseif (strpos($dbType, 'BLOB') !== false) {
-            $column->type = 'binary';
-        } elseif (strpos($dbType, 'CLOB') !== false) {
-            $column->type = 'text';
-        } elseif (strpos($dbType, 'TIMESTAMP') !== false) {
-            $column->type = 'timestamp';
-        } else {
-            $column->type = 'string';
-        }
-    }
-
-    /**
-     * Extracts size, precision and scale information from column's DB type.
-     * @param ColumnSchema $column
-     * @param string $dbType the column's DB type
-     * @param string $precision total number of digits.
-     * This parameter is available since version 2.0.4.
-     * @param string $scale number of digits on the right of the decimal separator.
-     * This parameter is available since version 2.0.4.
-     * @param string $length length for character types.
-     * This parameter is available since version 2.0.4.
-     */
-    protected function extractColumnSize($column, $dbType, $precision, $scale, $length)
-    {
-        $column->size = trim($length) === '' ? null : (int) $length;
-        $column->precision = trim($precision) === '' ? null : (int) $precision;
-        $column->scale = trim($scale) === '' ? null : (int) $scale;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function insert($table, $columns)
-    {
-        $params = [];
-        $returnParams = [];
-        $sql = $this->db->getQueryBuilder()->insert($table, $columns, $params);
-        $tableSchema = $this->getTableSchema($table);
-        $returnColumns = $tableSchema->primaryKey;
-        if (!empty($returnColumns)) {
-            $columnSchemas = $tableSchema->columns;
-            $returning = [];
-            foreach ((array) $returnColumns as $name) {
-                $phName = QueryBuilder::PARAM_PREFIX . (count($params) + count($returnParams));
-                $returnParams[$phName] = [
-                    'column' => $name,
-                    'value' => null,
-                ];
-                if (!isset($columnSchemas[$name]) || $columnSchemas[$name]->phpType !== 'integer') {
-                    $returnParams[$phName]['dataType'] = \PDO::PARAM_STR;
-                } else {
-                    $returnParams[$phName]['dataType'] = \PDO::PARAM_INT;
-                }
-                $returnParams[$phName]['size'] = isset($columnSchemas[$name]) && isset($columnSchemas[$name]->size) ? $columnSchemas[$name]->size : -1;
-                $returning[] = $this->quoteColumnName($name);
-            }
-            $sql .= ' RETURNING ' . implode(', ', $returning) . ' INTO ' . implode(', ', array_keys($returnParams));
-        }
-
-        $command = $this->db->createCommand($sql, $params);
-        $command->prepare(false);
-
-        foreach ($returnParams as $name => &$value) {
-            $command->pdoStatement->bindParam($name, $value['value'], $value['dataType'], $value['size']);
-        }
-
-        if (!$command->execute()) {
-            return false;
-        }
-
-        $result = [];
-        foreach ($returnParams as $value) {
-            $result[$value['column']] = $value['value'];
-        }
-
-        return $result;
     }
 }

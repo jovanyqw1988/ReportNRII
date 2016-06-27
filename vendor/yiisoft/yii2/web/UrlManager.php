@@ -166,31 +166,6 @@ class UrlManager extends Component
     }
 
     /**
-     * Adds additional URL rules.
-     *
-     * This method will call [[buildRules()]] to parse the given rule declarations and then append or insert
-     * them to the existing [[rules]].
-     *
-     * Note that if [[enablePrettyUrl]] is false, this method will do nothing.
-     *
-     * @param array $rules the new rules to be added. Each array element represents a single rule declaration.
-     * Please refer to [[rules]] for the acceptable rule format.
-     * @param boolean $append whether to add the new rules by appending them to the end of the existing rules.
-     */
-    public function addRules($rules, $append = true)
-    {
-        if (!$this->enablePrettyUrl) {
-            return;
-        }
-        $rules = $this->buildRules($rules);
-        if ($append) {
-            $this->rules = array_merge($this->rules, $rules);
-        } else {
-            $this->rules = array_merge($rules, $this->rules);
-        }
-    }
-
-    /**
      * Builds URL rule objects from the given rule declarations.
      * @param array $rules the rule declarations. Each array element represents a single rule declaration.
      * Please refer to [[rules]] for the acceptable rule formats.
@@ -223,6 +198,31 @@ class UrlManager extends Component
             $compiledRules[] = $rule;
         }
         return $compiledRules;
+    }
+
+    /**
+     * Adds additional URL rules.
+     *
+     * This method will call [[buildRules()]] to parse the given rule declarations and then append or insert
+     * them to the existing [[rules]].
+     *
+     * Note that if [[enablePrettyUrl]] is false, this method will do nothing.
+     *
+     * @param array $rules the new rules to be added. Each array element represents a single rule declaration.
+     * Please refer to [[rules]] for the acceptable rule format.
+     * @param boolean $append whether to add the new rules by appending them to the end of the existing rules.
+     */
+    public function addRules($rules, $append = true)
+    {
+        if (!$this->enablePrettyUrl) {
+            return;
+        }
+        $rules = $this->buildRules($rules);
+        if ($append) {
+            $this->rules = array_merge($this->rules, $rules);
+        } else {
+            $this->rules = array_merge($rules, $this->rules);
+        }
     }
 
     /**
@@ -278,6 +278,35 @@ class UrlManager extends Component
 
             return [(string) $route, []];
         }
+    }
+
+    /**
+     * Creates an absolute URL using the given route and query parameters.
+     *
+     * This method prepends the URL created by [[createUrl()]] with the [[hostInfo]].
+     *
+     * Note that unlike [[\yii\helpers\Url::toRoute()]], this method always treats the given route
+     * as an absolute route.
+     *
+     * @param string|array $params use a string to represent a route (e.g. `site/index`),
+     * or an array to represent a route with query parameters (e.g. `['site/index', 'param1' => 'value1']`).
+     * @param string $scheme the scheme to use for the url (either `http` or `https`). If not specified
+     * the scheme of the current request will be used.
+     * @return string the created URL
+     * @see createUrl()
+     */
+    public function createAbsoluteUrl($params, $scheme = null)
+    {
+        $params = (array)$params;
+        $url = $this->createUrl($params);
+        if (strpos($url, '://') === false) {
+            $url = $this->getHostInfo() . $url;
+        }
+        if (is_string($scheme) && ($pos = strpos($url, '://')) !== false) {
+            $url = $scheme . substr($url, $pos);
+        }
+
+        return $url;
     }
 
     /**
@@ -378,67 +407,34 @@ class UrlManager extends Component
     }
 
     /**
-     * Get URL from internal cache if exists
-     * @param string $cacheKey generated cache key to store data.
-     * @param string $route the route (e.g. `site/index`).
-     * @param array $params rule params.
-     * @return boolean|string the created URL
-     * @see createUrl()
-     * @since 2.0.8
+     * Returns the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
+     * It defaults to [[Request::scriptUrl]].
+     * This is mainly used when [[enablePrettyUrl]] is false or [[showScriptName]] is true.
+     * @return string the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
+     * @throws InvalidConfigException if running in console application and [[scriptUrl]] is not configured.
      */
-    protected function getUrlFromCache($cacheKey, $route, $params)
+    public function getScriptUrl()
     {
-        if (!empty($this->_ruleCache[$cacheKey])) {
-            foreach ($this->_ruleCache[$cacheKey] as $rule) {
-                /* @var $rule UrlRule */
-                if (($url = $rule->createUrl($this, $route, $params)) !== false) {
-                    return $url;
-                }
+        if ($this->_scriptUrl === null) {
+            $request = Yii::$app->getRequest();
+            if ($request instanceof Request) {
+                $this->_scriptUrl = $request->getScriptUrl();
+            } else {
+                throw new InvalidConfigException('Please configure UrlManager::scriptUrl correctly as you are running a console application.');
             }
-        } else {
-            $this->_ruleCache[$cacheKey] = [];
         }
-        return false;
+
+        return $this->_scriptUrl;
     }
 
     /**
-     * Store rule (e.g. [[UrlRule]]) to internal cache
-     * @param $cacheKey
-     * @param UrlRuleInterface $rule
-     * @since 2.0.8
+     * Sets the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
+     * This is mainly used when [[enablePrettyUrl]] is false or [[showScriptName]] is true.
+     * @param string $value the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
      */
-    protected function setRuleToCache($cacheKey, UrlRuleInterface $rule)
+    public function setScriptUrl($value)
     {
-        $this->_ruleCache[$cacheKey][] = $rule;
-    }
-
-    /**
-     * Creates an absolute URL using the given route and query parameters.
-     *
-     * This method prepends the URL created by [[createUrl()]] with the [[hostInfo]].
-     *
-     * Note that unlike [[\yii\helpers\Url::toRoute()]], this method always treats the given route
-     * as an absolute route.
-     *
-     * @param string|array $params use a string to represent a route (e.g. `site/index`),
-     * or an array to represent a route with query parameters (e.g. `['site/index', 'param1' => 'value1']`).
-     * @param string $scheme the scheme to use for the url (either `http` or `https`). If not specified
-     * the scheme of the current request will be used.
-     * @return string the created URL
-     * @see createUrl()
-     */
-    public function createAbsoluteUrl($params, $scheme = null)
-    {
-        $params = (array) $params;
-        $url = $this->createUrl($params);
-        if (strpos($url, '://') === false) {
-            $url = $this->getHostInfo() . $url;
-        }
-        if (is_string($scheme) && ($pos = strpos($url, '://')) !== false) {
-            $url = $scheme . substr($url, $pos);
-        }
-
-        return $url;
+        $this->_scriptUrl = $value;
     }
 
     /**
@@ -473,34 +469,38 @@ class UrlManager extends Component
     }
 
     /**
-     * Returns the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
-     * It defaults to [[Request::scriptUrl]].
-     * This is mainly used when [[enablePrettyUrl]] is false or [[showScriptName]] is true.
-     * @return string the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
-     * @throws InvalidConfigException if running in console application and [[scriptUrl]] is not configured.
+     * Get URL from internal cache if exists
+     * @param string $cacheKey generated cache key to store data.
+     * @param string $route the route (e.g. `site/index`).
+     * @param array $params rule params.
+     * @return boolean|string the created URL
+     * @see createUrl()
+     * @since 2.0.8
      */
-    public function getScriptUrl()
+    protected function getUrlFromCache($cacheKey, $route, $params)
     {
-        if ($this->_scriptUrl === null) {
-            $request = Yii::$app->getRequest();
-            if ($request instanceof Request) {
-                $this->_scriptUrl = $request->getScriptUrl();
-            } else {
-                throw new InvalidConfigException('Please configure UrlManager::scriptUrl correctly as you are running a console application.');
+        if (!empty($this->_ruleCache[$cacheKey])) {
+            foreach ($this->_ruleCache[$cacheKey] as $rule) {
+                /* @var $rule UrlRule */
+                if (($url = $rule->createUrl($this, $route, $params)) !== false) {
+                    return $url;
+                }
             }
+        } else {
+            $this->_ruleCache[$cacheKey] = [];
         }
-
-        return $this->_scriptUrl;
+        return false;
     }
 
     /**
-     * Sets the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
-     * This is mainly used when [[enablePrettyUrl]] is false or [[showScriptName]] is true.
-     * @param string $value the entry script URL that is used by [[createUrl()]] to prepend to created URLs.
+     * Store rule (e.g. [[UrlRule]]) to internal cache
+     * @param $cacheKey
+     * @param UrlRuleInterface $rule
+     * @since 2.0.8
      */
-    public function setScriptUrl($value)
+    protected function setRuleToCache($cacheKey, UrlRuleInterface $rule)
     {
-        $this->_scriptUrl = $value;
+        $this->_ruleCache[$cacheKey][] = $rule;
     }
 
     /**

@@ -8,12 +8,12 @@
 namespace yii\rbac;
 
 use Yii;
-use yii\caching\Cache;
-use yii\db\Connection;
-use yii\db\Query;
-use yii\db\Expression;
 use yii\base\InvalidCallException;
 use yii\base\InvalidParamException;
+use yii\caching\Cache;
+use yii\db\Connection;
+use yii\db\Expression;
+use yii\db\Query;
 use yii\di\Instance;
 
 /**
@@ -125,6 +125,90 @@ class DbManager extends BaseManager
         } else {
             return $this->checkAccessRecursive($userId, $permissionName, $params, $assignments);
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAssignments($userId)
+    {
+        if (empty($userId)) {
+            return [];
+        }
+
+        $query = (new Query)
+            ->from($this->assignmentTable)
+            ->where(['user_id' => (string)$userId]);
+
+        $assignments = [];
+        foreach ($query->all($this->db) as $row) {
+            $assignments[$row['item_name']] = new Assignment([
+                'userId' => $row['user_id'],
+                'roleName' => $row['item_name'],
+                'createdAt' => $row['created_at'],
+            ]);
+        }
+
+        return $assignments;
+    }
+
+    public function loadFromCache()
+    {
+        if ($this->items !== null || !$this->cache instanceof Cache) {
+            return;
+        }
+
+        $data = $this->cache->get($this->cacheKey);
+        if (is_array($data) && isset($data[0], $data[1], $data[2])) {
+            list ($this->items, $this->rules, $this->parents) = $data;
+            return;
+        }
+
+        $query = (new Query)->from($this->itemTable);
+        $this->items = [];
+        foreach ($query->all($this->db) as $row) {
+            $this->items[$row['name']] = $this->populateItem($row);
+        }
+
+        $query = (new Query)->from($this->ruleTable);
+        $this->rules = [];
+        foreach ($query->all($this->db) as $row) {
+            $this->rules[$row['name']] = unserialize($row['data']);
+        }
+
+        $query = (new Query)->from($this->itemChildTable);
+        $this->parents = [];
+        foreach ($query->all($this->db) as $row) {
+            if (isset($this->items[$row['child']])) {
+                $this->parents[$row['child']][] = $row['parent'];
+            }
+        }
+
+        $this->cache->set($this->cacheKey, [$this->items, $this->rules, $this->parents]);
+    }
+
+    /**
+     * Populates an auth item with the data fetched from database
+     * @param array $row the data from the auth item table
+     * @return Item the populated auth item instance (either Role or Permission)
+     */
+    protected function populateItem($row)
+    {
+        $class = $row['type'] == Item::TYPE_PERMISSION ? Permission::className() : Role::className();
+
+        if (!isset($row['data']) || ($data = @unserialize($row['data'])) === false) {
+            $data = null;
+        }
+
+        return new $class([
+            'name' => $row['name'],
+            'type' => $row['type'],
+            'description' => $row['description'],
+            'ruleName' => $row['rule_name'],
+            'data' => $data,
+            'createdAt' => $row['created_at'],
+            'updatedAt' => $row['updated_at'],
+        ]);
     }
 
     /**
@@ -240,6 +324,437 @@ class DbManager extends BaseManager
     }
 
     /**
+     * @inheritdoc
+     */
+    public function getRolesByUser($userId)
+    {
+        if (!isset($userId) || $userId === '') {
+            return [];
+        }
+
+        $query = (new Query)->select('b.*')
+            ->from(['a' => $this->assignmentTable, 'b' => $this->itemTable])
+            ->where('{{a}}.[[item_name]]={{b}}.[[name]]')
+            ->andWhere(['a.user_id' => (string) $userId])
+            ->andWhere(['b.type' => Item::TYPE_ROLE]);
+
+        $roles = [];
+        foreach ($query->all($this->db) as $row) {
+            $roles[$row['name']] = $this->populateItem($row);
+        }
+        return $roles;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPermissionsByRole($roleName)
+    {
+        $childrenList = $this->getChildrenList();
+        $result = [];
+        $this->getChildrenRecursive($roleName, $childrenList, $result);
+        if (empty($result)) {
+            return [];
+        }
+        $query = (new Query)->from($this->itemTable)->where([
+            'type' => Item::TYPE_PERMISSION,
+            'name' => array_keys($result),
+        ]);
+        $permissions = [];
+        foreach ($query->all($this->db) as $row) {
+            $permissions[$row['name']] = $this->populateItem($row);
+        }
+        return $permissions;
+    }
+
+    /**
+     * Returns the children for every parent.
+     * @return array the children list. Each array key is a parent item name,
+     * and the corresponding array value is a list of child item names.
+     */
+    protected function getChildrenList()
+    {
+        $query = (new Query)->from($this->itemChildTable);
+        $parents = [];
+        foreach ($query->all($this->db) as $row) {
+            $parents[$row['parent']][] = $row['child'];
+        }
+        return $parents;
+    }
+
+    /**
+     * Recursively finds all children and grand children of the specified item.
+     * @param string $name the name of the item whose children are to be looked for.
+     * @param array $childrenList the child list built via [[getChildrenList()]]
+     * @param array $result the children and grand children (in array keys)
+     */
+    protected function getChildrenRecursive($name, $childrenList, &$result)
+    {
+        if (isset($childrenList[$name])) {
+            foreach ($childrenList[$name] as $child) {
+                $result[$child] = true;
+                $this->getChildrenRecursive($child, $childrenList, $result);
+            }
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPermissionsByUser($userId)
+    {
+        if (empty($userId)) {
+            return [];
+        }
+
+        $directPermission = $this->getDirectPermissionsByUser($userId);
+        $inheritedPermission = $this->getInheritedPermissionsByUser($userId);
+
+        return array_merge($directPermission, $inheritedPermission);
+    }
+
+    /**
+     * Returns all permissions that are directly assigned to user.
+     * @param string|integer $userId the user ID (see [[\yii\web\User::id]])
+     * @return Permission[] all direct permissions that the user has. The array is indexed by the permission names.
+     * @since 2.0.7
+     */
+    protected function getDirectPermissionsByUser($userId)
+    {
+        $query = (new Query)->select('b.*')
+            ->from(['a' => $this->assignmentTable, 'b' => $this->itemTable])
+            ->where('{{a}}.[[item_name]]={{b}}.[[name]]')
+            ->andWhere(['a.user_id' => (string) $userId])
+            ->andWhere(['b.type' => Item::TYPE_PERMISSION]);
+
+        $permissions = [];
+        foreach ($query->all($this->db) as $row) {
+            $permissions[$row['name']] = $this->populateItem($row);
+        }
+        return $permissions;
+    }
+
+    /**
+     * Returns all permissions that the user inherits from the roles assigned to him.
+     * @param string|integer $userId the user ID (see [[\yii\web\User::id]])
+     * @return Permission[] all inherited permissions that the user has. The array is indexed by the permission names.
+     * @since 2.0.7
+     */
+    protected function getInheritedPermissionsByUser($userId)
+    {
+        $query = (new Query)->select('item_name')
+            ->from($this->assignmentTable)
+            ->where(['user_id' => (string) $userId]);
+
+        $childrenList = $this->getChildrenList();
+        $result = [];
+        foreach ($query->column($this->db) as $roleName) {
+            $this->getChildrenRecursive($roleName, $childrenList, $result);
+        }
+
+        if (empty($result)) {
+            return [];
+        }
+
+        $query = (new Query)->from($this->itemTable)->where([
+            'type' => Item::TYPE_PERMISSION,
+            'name' => array_keys($result),
+        ]);
+        $permissions = [];
+        foreach ($query->all($this->db) as $row) {
+            $permissions[$row['name']] = $this->populateItem($row);
+        }
+        return $permissions;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getRule($name)
+    {
+        if ($this->rules !== null) {
+            return isset($this->rules[$name]) ? $this->rules[$name] : null;
+        }
+
+        $row = (new Query)->select(['data'])
+            ->from($this->ruleTable)
+            ->where(['name' => $name])
+            ->one($this->db);
+        return $row === false ? null : unserialize($row['data']);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getRules()
+    {
+        if ($this->rules !== null) {
+            return $this->rules;
+        }
+
+        $query = (new Query)->from($this->ruleTable);
+
+        $rules = [];
+        foreach ($query->all($this->db) as $row) {
+            $rules[$row['name']] = unserialize($row['data']);
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAssignment($roleName, $userId)
+    {
+        if (empty($userId)) {
+            return null;
+        }
+
+        $row = (new Query)->from($this->assignmentTable)
+            ->where(['user_id' => (string) $userId, 'item_name' => $roleName])
+            ->one($this->db);
+
+        if ($row === false) {
+            return null;
+        }
+
+        return new Assignment([
+            'userId' => $row['user_id'],
+            'roleName' => $row['item_name'],
+            'createdAt' => $row['created_at'],
+        ]);
+    }
+
+    /**
+     * @inheritdoc
+     * @since 2.0.8
+     */
+    public function canAddChild($parent, $child)
+    {
+        return !$this->detectLoop($parent, $child);
+    }
+
+    /**
+     * Checks whether there is a loop in the authorization item hierarchy.
+     * @param Item $parent the parent item
+     * @param Item $child the child item to be added to the hierarchy
+     * @return boolean whether a loop exists
+     */
+    protected function detectLoop($parent, $child)
+    {
+        if ($child->name === $parent->name) {
+            return true;
+        }
+        foreach ($this->getChildren($child->name) as $grandchild) {
+            if ($this->detectLoop($parent, $grandchild)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getChildren($name)
+    {
+        $query = (new Query)
+            ->select(['name', 'type', 'description', 'rule_name', 'data', 'created_at', 'updated_at'])
+            ->from([$this->itemTable, $this->itemChildTable])
+            ->where(['parent' => $name, 'name' => new Expression('[[child]]')]);
+
+        $children = [];
+        foreach ($query->all($this->db) as $row) {
+            $children[$row['name']] = $this->populateItem($row);
+        }
+
+        return $children;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function addChild($parent, $child)
+    {
+        if ($parent->name === $child->name) {
+            throw new InvalidParamException("Cannot add '{$parent->name}' as a child of itself.");
+        }
+
+        if ($parent instanceof Permission && $child instanceof Role) {
+            throw new InvalidParamException('Cannot add a role as a child of a permission.');
+        }
+
+        if ($this->detectLoop($parent, $child)) {
+            throw new InvalidCallException("Cannot add '{$child->name}' as a child of '{$parent->name}'. A loop has been detected.");
+        }
+
+        $this->db->createCommand()
+            ->insert($this->itemChildTable, ['parent' => $parent->name, 'child' => $child->name])
+            ->execute();
+
+        $this->invalidateCache();
+
+        return true;
+    }
+
+    public function invalidateCache()
+    {
+        if ($this->cache !== null) {
+            $this->cache->delete($this->cacheKey);
+            $this->items = null;
+            $this->rules = null;
+            $this->parents = null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeChild($parent, $child)
+    {
+        $result = $this->db->createCommand()
+            ->delete($this->itemChildTable, ['parent' => $parent->name, 'child' => $child->name])
+            ->execute() > 0;
+
+        $this->invalidateCache();
+
+        return $result;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeChildren($parent)
+    {
+        $result = $this->db->createCommand()
+            ->delete($this->itemChildTable, ['parent' => $parent->name])
+            ->execute() > 0;
+
+        $this->invalidateCache();
+
+        return $result;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function hasChild($parent, $child)
+    {
+        return (new Query)
+            ->from($this->itemChildTable)
+            ->where(['parent' => $parent->name, 'child' => $child->name])
+            ->one($this->db) !== false;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function assign($role, $userId)
+    {
+        $assignment = new Assignment([
+            'userId' => $userId,
+            'roleName' => $role->name,
+            'createdAt' => time(),
+        ]);
+
+        $this->db->createCommand()
+            ->insert($this->assignmentTable, [
+                'user_id' => $assignment->userId,
+                'item_name' => $assignment->roleName,
+                'created_at' => $assignment->createdAt,
+            ])->execute();
+
+        return $assignment;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function revoke($role, $userId)
+    {
+        if (empty($userId)) {
+            return false;
+        }
+
+        return $this->db->createCommand()
+            ->delete($this->assignmentTable, ['user_id' => (string) $userId, 'item_name' => $role->name])
+            ->execute() > 0;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function revokeAll($userId)
+    {
+        if (empty($userId)) {
+            return false;
+        }
+
+        return $this->db->createCommand()
+            ->delete($this->assignmentTable, ['user_id' => (string) $userId])
+            ->execute() > 0;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAll()
+    {
+        $this->removeAllAssignments();
+        $this->db->createCommand()->delete($this->itemChildTable)->execute();
+        $this->db->createCommand()->delete($this->itemTable)->execute();
+        $this->db->createCommand()->delete($this->ruleTable)->execute();
+        $this->invalidateCache();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAllAssignments()
+    {
+        $this->db->createCommand()->delete($this->assignmentTable)->execute();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAllPermissions()
+    {
+        $this->removeAllItems(Item::TYPE_PERMISSION);
+    }
+
+    /**
+     * Removes all auth items of the specified type.
+     * @param integer $type the auth item type (either Item::TYPE_PERMISSION or Item::TYPE_ROLE)
+     */
+    protected function removeAllItems($type)
+    {
+        if (!$this->supportsCascadeUpdate()) {
+            $names = (new Query)
+                ->select(['name'])
+                ->from($this->itemTable)
+                ->where(['type' => $type])
+                ->column($this->db);
+            if (empty($names)) {
+                return;
+            }
+            $key = $type == Item::TYPE_PERMISSION ? 'child' : 'parent';
+            $this->db->createCommand()
+                ->delete($this->itemChildTable, [$key => $names])
+                ->execute();
+            $this->db->createCommand()
+                ->delete($this->assignmentTable, ['item_name' => $names])
+                ->execute();
+        }
+        $this->db->createCommand()
+            ->delete($this->itemTable, ['type' => $type])
+            ->execute();
+
+        $this->invalidateCache();
+    }
+
+    /**
      * Returns a value indicating whether the database supports cascading update and delete.
      * The default implementation will return false for SQLite database and true for all other databases.
      * @return boolean whether the database supports cascading update and delete.
@@ -247,6 +762,48 @@ class DbManager extends BaseManager
     protected function supportsCascadeUpdate()
     {
         return strncmp($this->db->getDriverName(), 'sqlite', 6) !== 0;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAllRoles()
+    {
+        $this->removeAllItems(Item::TYPE_ROLE);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function removeAllRules()
+    {
+        if (!$this->supportsCascadeUpdate()) {
+            $this->db->createCommand()
+                ->update($this->itemTable, ['rule_name' => null])
+                ->execute();
+        }
+
+        $this->db->createCommand()->delete($this->ruleTable)->execute();
+
+        $this->invalidateCache();
+    }
+
+    /**
+     * Returns all role assignment information for the specified role.
+     * @param string $roleName
+     * @return Assignment[] the assignments. An empty array will be
+     * returned if role is not assigned to any user.
+     * @since 2.0.7
+     */
+    public function getUserIdsByRole($roleName)
+    {
+        if (empty($roleName)) {
+            return [];
+        }
+
+        return (new Query)->select('[[user_id]]')
+            ->from($this->assignmentTable)
+            ->where(['item_name' => $roleName])->column($this->db);
     }
 
     /**
@@ -422,562 +979,5 @@ class DbManager extends BaseManager
         }
 
         return $items;
-    }
-
-    /**
-     * Populates an auth item with the data fetched from database
-     * @param array $row the data from the auth item table
-     * @return Item the populated auth item instance (either Role or Permission)
-     */
-    protected function populateItem($row)
-    {
-        $class = $row['type'] == Item::TYPE_PERMISSION ? Permission::className() : Role::className();
-
-        if (!isset($row['data']) || ($data = @unserialize($row['data'])) === false) {
-            $data = null;
-        }
-
-        return new $class([
-            'name' => $row['name'],
-            'type' => $row['type'],
-            'description' => $row['description'],
-            'ruleName' => $row['rule_name'],
-            'data' => $data,
-            'createdAt' => $row['created_at'],
-            'updatedAt' => $row['updated_at'],
-        ]);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getRolesByUser($userId)
-    {
-        if (!isset($userId) || $userId === '') {
-            return [];
-        }
-
-        $query = (new Query)->select('b.*')
-            ->from(['a' => $this->assignmentTable, 'b' => $this->itemTable])
-            ->where('{{a}}.[[item_name]]={{b}}.[[name]]')
-            ->andWhere(['a.user_id' => (string) $userId])
-            ->andWhere(['b.type' => Item::TYPE_ROLE]);
-
-        $roles = [];
-        foreach ($query->all($this->db) as $row) {
-            $roles[$row['name']] = $this->populateItem($row);
-        }
-        return $roles;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getPermissionsByRole($roleName)
-    {
-        $childrenList = $this->getChildrenList();
-        $result = [];
-        $this->getChildrenRecursive($roleName, $childrenList, $result);
-        if (empty($result)) {
-            return [];
-        }
-        $query = (new Query)->from($this->itemTable)->where([
-            'type' => Item::TYPE_PERMISSION,
-            'name' => array_keys($result),
-        ]);
-        $permissions = [];
-        foreach ($query->all($this->db) as $row) {
-            $permissions[$row['name']] = $this->populateItem($row);
-        }
-        return $permissions;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getPermissionsByUser($userId)
-    {
-        if (empty($userId)) {
-            return [];
-        }
-
-        $directPermission = $this->getDirectPermissionsByUser($userId);
-        $inheritedPermission = $this->getInheritedPermissionsByUser($userId);
-
-        return array_merge($directPermission, $inheritedPermission);
-    }
-
-    /**
-     * Returns all permissions that are directly assigned to user.
-     * @param string|integer $userId the user ID (see [[\yii\web\User::id]])
-     * @return Permission[] all direct permissions that the user has. The array is indexed by the permission names.
-     * @since 2.0.7
-     */
-    protected function getDirectPermissionsByUser($userId)
-    {
-        $query = (new Query)->select('b.*')
-            ->from(['a' => $this->assignmentTable, 'b' => $this->itemTable])
-            ->where('{{a}}.[[item_name]]={{b}}.[[name]]')
-            ->andWhere(['a.user_id' => (string) $userId])
-            ->andWhere(['b.type' => Item::TYPE_PERMISSION]);
-
-        $permissions = [];
-        foreach ($query->all($this->db) as $row) {
-            $permissions[$row['name']] = $this->populateItem($row);
-        }
-        return $permissions;
-    }
-
-    /**
-     * Returns all permissions that the user inherits from the roles assigned to him.
-     * @param string|integer $userId the user ID (see [[\yii\web\User::id]])
-     * @return Permission[] all inherited permissions that the user has. The array is indexed by the permission names.
-     * @since 2.0.7
-     */
-    protected function getInheritedPermissionsByUser($userId)
-    {
-        $query = (new Query)->select('item_name')
-            ->from($this->assignmentTable)
-            ->where(['user_id' => (string) $userId]);
-
-        $childrenList = $this->getChildrenList();
-        $result = [];
-        foreach ($query->column($this->db) as $roleName) {
-            $this->getChildrenRecursive($roleName, $childrenList, $result);
-        }
-
-        if (empty($result)) {
-            return [];
-        }
-
-        $query = (new Query)->from($this->itemTable)->where([
-            'type' => Item::TYPE_PERMISSION,
-            'name' => array_keys($result),
-        ]);
-        $permissions = [];
-        foreach ($query->all($this->db) as $row) {
-            $permissions[$row['name']] = $this->populateItem($row);
-        }
-        return $permissions;
-    }
-
-    /**
-     * Returns the children for every parent.
-     * @return array the children list. Each array key is a parent item name,
-     * and the corresponding array value is a list of child item names.
-     */
-    protected function getChildrenList()
-    {
-        $query = (new Query)->from($this->itemChildTable);
-        $parents = [];
-        foreach ($query->all($this->db) as $row) {
-            $parents[$row['parent']][] = $row['child'];
-        }
-        return $parents;
-    }
-
-    /**
-     * Recursively finds all children and grand children of the specified item.
-     * @param string $name the name of the item whose children are to be looked for.
-     * @param array $childrenList the child list built via [[getChildrenList()]]
-     * @param array $result the children and grand children (in array keys)
-     */
-    protected function getChildrenRecursive($name, $childrenList, &$result)
-    {
-        if (isset($childrenList[$name])) {
-            foreach ($childrenList[$name] as $child) {
-                $result[$child] = true;
-                $this->getChildrenRecursive($child, $childrenList, $result);
-            }
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getRule($name)
-    {
-        if ($this->rules !== null) {
-            return isset($this->rules[$name]) ? $this->rules[$name] : null;
-        }
-
-        $row = (new Query)->select(['data'])
-            ->from($this->ruleTable)
-            ->where(['name' => $name])
-            ->one($this->db);
-        return $row === false ? null : unserialize($row['data']);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getRules()
-    {
-        if ($this->rules !== null) {
-            return $this->rules;
-        }
-
-        $query = (new Query)->from($this->ruleTable);
-
-        $rules = [];
-        foreach ($query->all($this->db) as $row) {
-            $rules[$row['name']] = unserialize($row['data']);
-        }
-
-        return $rules;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getAssignment($roleName, $userId)
-    {
-        if (empty($userId)) {
-            return null;
-        }
-
-        $row = (new Query)->from($this->assignmentTable)
-            ->where(['user_id' => (string) $userId, 'item_name' => $roleName])
-            ->one($this->db);
-
-        if ($row === false) {
-            return null;
-        }
-
-        return new Assignment([
-            'userId' => $row['user_id'],
-            'roleName' => $row['item_name'],
-            'createdAt' => $row['created_at'],
-        ]);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getAssignments($userId)
-    {
-        if (empty($userId)) {
-            return [];
-        }
-
-        $query = (new Query)
-            ->from($this->assignmentTable)
-            ->where(['user_id' => (string) $userId]);
-
-        $assignments = [];
-        foreach ($query->all($this->db) as $row) {
-            $assignments[$row['item_name']] = new Assignment([
-                'userId' => $row['user_id'],
-                'roleName' => $row['item_name'],
-                'createdAt' => $row['created_at'],
-            ]);
-        }
-
-        return $assignments;
-    }
-
-    /**
-     * @inheritdoc
-     * @since 2.0.8
-     */
-    public function canAddChild($parent, $child)
-    {
-        return !$this->detectLoop($parent, $child);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function addChild($parent, $child)
-    {
-        if ($parent->name === $child->name) {
-            throw new InvalidParamException("Cannot add '{$parent->name}' as a child of itself.");
-        }
-
-        if ($parent instanceof Permission && $child instanceof Role) {
-            throw new InvalidParamException('Cannot add a role as a child of a permission.');
-        }
-
-        if ($this->detectLoop($parent, $child)) {
-            throw new InvalidCallException("Cannot add '{$child->name}' as a child of '{$parent->name}'. A loop has been detected.");
-        }
-
-        $this->db->createCommand()
-            ->insert($this->itemChildTable, ['parent' => $parent->name, 'child' => $child->name])
-            ->execute();
-
-        $this->invalidateCache();
-
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeChild($parent, $child)
-    {
-        $result = $this->db->createCommand()
-            ->delete($this->itemChildTable, ['parent' => $parent->name, 'child' => $child->name])
-            ->execute() > 0;
-
-        $this->invalidateCache();
-
-        return $result;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeChildren($parent)
-    {
-        $result = $this->db->createCommand()
-            ->delete($this->itemChildTable, ['parent' => $parent->name])
-            ->execute() > 0;
-
-        $this->invalidateCache();
-
-        return $result;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function hasChild($parent, $child)
-    {
-        return (new Query)
-            ->from($this->itemChildTable)
-            ->where(['parent' => $parent->name, 'child' => $child->name])
-            ->one($this->db) !== false;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getChildren($name)
-    {
-        $query = (new Query)
-            ->select(['name', 'type', 'description', 'rule_name', 'data', 'created_at', 'updated_at'])
-            ->from([$this->itemTable, $this->itemChildTable])
-            ->where(['parent' => $name, 'name' => new Expression('[[child]]')]);
-
-        $children = [];
-        foreach ($query->all($this->db) as $row) {
-            $children[$row['name']] = $this->populateItem($row);
-        }
-
-        return $children;
-    }
-
-    /**
-     * Checks whether there is a loop in the authorization item hierarchy.
-     * @param Item $parent the parent item
-     * @param Item $child the child item to be added to the hierarchy
-     * @return boolean whether a loop exists
-     */
-    protected function detectLoop($parent, $child)
-    {
-        if ($child->name === $parent->name) {
-            return true;
-        }
-        foreach ($this->getChildren($child->name) as $grandchild) {
-            if ($this->detectLoop($parent, $grandchild)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function assign($role, $userId)
-    {
-        $assignment = new Assignment([
-            'userId' => $userId,
-            'roleName' => $role->name,
-            'createdAt' => time(),
-        ]);
-
-        $this->db->createCommand()
-            ->insert($this->assignmentTable, [
-                'user_id' => $assignment->userId,
-                'item_name' => $assignment->roleName,
-                'created_at' => $assignment->createdAt,
-            ])->execute();
-
-        return $assignment;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function revoke($role, $userId)
-    {
-        if (empty($userId)) {
-            return false;
-        }
-
-        return $this->db->createCommand()
-            ->delete($this->assignmentTable, ['user_id' => (string) $userId, 'item_name' => $role->name])
-            ->execute() > 0;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function revokeAll($userId)
-    {
-        if (empty($userId)) {
-            return false;
-        }
-
-        return $this->db->createCommand()
-            ->delete($this->assignmentTable, ['user_id' => (string) $userId])
-            ->execute() > 0;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeAll()
-    {
-        $this->removeAllAssignments();
-        $this->db->createCommand()->delete($this->itemChildTable)->execute();
-        $this->db->createCommand()->delete($this->itemTable)->execute();
-        $this->db->createCommand()->delete($this->ruleTable)->execute();
-        $this->invalidateCache();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeAllPermissions()
-    {
-        $this->removeAllItems(Item::TYPE_PERMISSION);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeAllRoles()
-    {
-        $this->removeAllItems(Item::TYPE_ROLE);
-    }
-
-    /**
-     * Removes all auth items of the specified type.
-     * @param integer $type the auth item type (either Item::TYPE_PERMISSION or Item::TYPE_ROLE)
-     */
-    protected function removeAllItems($type)
-    {
-        if (!$this->supportsCascadeUpdate()) {
-            $names = (new Query)
-                ->select(['name'])
-                ->from($this->itemTable)
-                ->where(['type' => $type])
-                ->column($this->db);
-            if (empty($names)) {
-                return;
-            }
-            $key = $type == Item::TYPE_PERMISSION ? 'child' : 'parent';
-            $this->db->createCommand()
-                ->delete($this->itemChildTable, [$key => $names])
-                ->execute();
-            $this->db->createCommand()
-                ->delete($this->assignmentTable, ['item_name' => $names])
-                ->execute();
-        }
-        $this->db->createCommand()
-            ->delete($this->itemTable, ['type' => $type])
-            ->execute();
-
-        $this->invalidateCache();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeAllRules()
-    {
-        if (!$this->supportsCascadeUpdate()) {
-            $this->db->createCommand()
-                ->update($this->itemTable, ['rule_name' => null])
-                ->execute();
-        }
-
-        $this->db->createCommand()->delete($this->ruleTable)->execute();
-
-        $this->invalidateCache();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function removeAllAssignments()
-    {
-        $this->db->createCommand()->delete($this->assignmentTable)->execute();
-    }
-
-    public function invalidateCache()
-    {
-        if ($this->cache !== null) {
-            $this->cache->delete($this->cacheKey);
-            $this->items = null;
-            $this->rules = null;
-            $this->parents = null;
-        }
-    }
-
-    public function loadFromCache()
-    {
-        if ($this->items !== null || !$this->cache instanceof Cache) {
-            return;
-        }
-
-        $data = $this->cache->get($this->cacheKey);
-        if (is_array($data) && isset($data[0], $data[1], $data[2])) {
-            list ($this->items, $this->rules, $this->parents) = $data;
-            return;
-        }
-
-        $query = (new Query)->from($this->itemTable);
-        $this->items = [];
-        foreach ($query->all($this->db) as $row) {
-            $this->items[$row['name']] = $this->populateItem($row);
-        }
-
-        $query = (new Query)->from($this->ruleTable);
-        $this->rules = [];
-        foreach ($query->all($this->db) as $row) {
-            $this->rules[$row['name']] = unserialize($row['data']);
-        }
-
-        $query = (new Query)->from($this->itemChildTable);
-        $this->parents = [];
-        foreach ($query->all($this->db) as $row) {
-            if (isset($this->items[$row['child']])) {
-                $this->parents[$row['child']][] = $row['parent'];
-            }
-        }
-
-        $this->cache->set($this->cacheKey, [$this->items, $this->rules, $this->parents]);
-    }
-
-    /**
-     * Returns all role assignment information for the specified role.
-     * @param string $roleName
-     * @return Assignment[] the assignments. An empty array will be
-     * returned if role is not assigned to any user.
-     * @since 2.0.7
-     */
-    public function getUserIdsByRole($roleName)
-    {
-        if (empty($roleName)) {
-            return [];
-        }
-
-        return (new Query)->select('[[user_id]]')
-            ->from($this->assignmentTable)
-            ->where(['item_name' => $roleName])->column($this->db);
     }
 }

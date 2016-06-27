@@ -80,46 +80,7 @@ class Theme extends Component
     public $pathMap;
 
     private $_baseUrl;
-
-
-    /**
-     * @return string the base URL (without ending slash) for this theme. All resources of this theme are considered
-     * to be under this base URL.
-     */
-    public function getBaseUrl()
-    {
-        return $this->_baseUrl;
-    }
-
-    /**
-     * @param string $url the base URL or path alias for this theme. All resources of this theme are considered
-     * to be under this base URL.
-     */
-    public function setBaseUrl($url)
-    {
-        $this->_baseUrl = rtrim(Yii::getAlias($url), '/');
-    }
-
     private $_basePath;
-
-    /**
-     * @return string the root path of this theme. All resources of this theme are located under this directory.
-     * @see pathMap
-     */
-    public function getBasePath()
-    {
-        return $this->_basePath;
-    }
-
-    /**
-     * @param string $path the root path or path alias of this theme. All resources of this theme are located
-     * under this directory.
-     * @see pathMap
-     */
-    public function setBasePath($path)
-    {
-        $this->_basePath = Yii::getAlias($path);
-    }
 
     /**
      * Converts a file to a themed file if possible.
@@ -158,6 +119,25 @@ class Theme extends Component
     }
 
     /**
+     * @return string the root path of this theme. All resources of this theme are located under this directory.
+     * @see pathMap
+     */
+    public function getBasePath()
+    {
+        return $this->_basePath;
+    }
+
+    /**
+     * @param string $path the root path or path alias of this theme. All resources of this theme are located
+     * under this directory.
+     * @see pathMap
+     */
+    public function setBasePath($path)
+    {
+        $this->_basePath = Yii::getAlias($path);
+    }
+
+    /**
      * Converts a relative URL into an absolute URL using [[baseUrl]].
      * @param string $url the relative URL to be converted.
      * @return string the absolute URL
@@ -170,6 +150,24 @@ class Theme extends Component
         } else {
             throw new InvalidConfigException('The "baseUrl" property must be set.');
         }
+    }
+
+    /**
+     * @return string the base URL (without ending slash) for this theme. All resources of this theme are considered
+     * to be under this base URL.
+     */
+    public function getBaseUrl()
+    {
+        return $this->_baseUrl;
+    }
+
+    /**
+     * @param string $url the base URL or path alias for this theme. All resources of this theme are considered
+     * to be under this base URL.
+     */
+    public function setBaseUrl($url)
+    {
+        $this->_baseUrl = rtrim(Yii::getAlias($url), '/');
     }
 
     /**

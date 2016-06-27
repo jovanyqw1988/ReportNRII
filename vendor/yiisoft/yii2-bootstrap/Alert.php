@@ -82,14 +82,20 @@ class Alert extends Widget
     }
 
     /**
-     * Renders the widget.
+     * Initializes the widget options.
+     * This method sets the default values for various options.
      */
-    public function run()
+    protected function initOptions()
     {
-        echo "\n" . $this->renderBodyEnd();
-        echo "\n" . Html::endTag('div');
+        Html::addCssClass($this->options, ['alert', 'fade', 'in']);
 
-        $this->registerPlugin('alert');
+        if ($this->closeButton !== false) {
+            $this->closeButton = array_merge([
+                'data-dismiss' => 'alert',
+                'aria-hidden' => 'true',
+                'class' => 'close',
+            ], $this->closeButton);
+        }
     }
 
     /**
@@ -99,15 +105,6 @@ class Alert extends Widget
     protected function renderBodyBegin()
     {
         return $this->renderCloseButton();
-    }
-
-    /**
-     * Renders the alert body (if any).
-     * @return string the rendering result
-     */
-    protected function renderBodyEnd()
-    {
-        return $this->body . "\n";
     }
 
     /**
@@ -130,19 +127,22 @@ class Alert extends Widget
     }
 
     /**
-     * Initializes the widget options.
-     * This method sets the default values for various options.
+     * Renders the widget.
      */
-    protected function initOptions()
+    public function run()
     {
-        Html::addCssClass($this->options, ['alert', 'fade', 'in']);
+        echo "\n" . $this->renderBodyEnd();
+        echo "\n" . Html::endTag('div');
 
-        if ($this->closeButton !== false) {
-            $this->closeButton = array_merge([
-                'data-dismiss' => 'alert',
-                'aria-hidden' => 'true',
-                'class' => 'close',
-            ], $this->closeButton);
-        }
+        $this->registerPlugin('alert');
+    }
+
+    /**
+     * Renders the alert body (if any).
+     * @return string the rendering result
+     */
+    protected function renderBodyEnd()
+    {
+        return $this->body . "\n";
     }
 }

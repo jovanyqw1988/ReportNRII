@@ -141,63 +141,17 @@ class Pagination extends Object implements Linkable
      * If it is less than 1, it means the page size is infinite, and thus a single page contains all items.
      */
     private $_pageSize;
-
-
-    /**
-     * @return integer number of pages
-     */
-    public function getPageCount()
-    {
-        $pageSize = $this->getPageSize();
-        if ($pageSize < 1) {
-            return $this->totalCount > 0 ? 1 : 0;
-        } else {
-            $totalCount = $this->totalCount < 0 ? 0 : (int) $this->totalCount;
-
-            return (int) (($totalCount + $pageSize - 1) / $pageSize);
-        }
-    }
-
     private $_page;
 
     /**
-     * Returns the zero-based current page number.
-     * @param boolean $recalculate whether to recalculate the current page based on the page size and item count.
-     * @return integer the zero-based current page number.
+     * @return integer the offset of the data. This may be used to set the
+     * OFFSET value for a SQL statement for fetching the current page of data.
      */
-    public function getPage($recalculate = false)
+    public function getOffset()
     {
-        if ($this->_page === null || $recalculate) {
-            $page = (int) $this->getQueryParam($this->pageParam, 1) - 1;
-            $this->setPage($page, true);
-        }
+        $pageSize = $this->getPageSize();
 
-        return $this->_page;
-    }
-
-    /**
-     * Sets the current page number.
-     * @param integer $value the zero-based index of the current page.
-     * @param boolean $validatePage whether to validate the page number. Note that in order
-     * to validate the page number, both [[validatePage]] and this parameter must be true.
-     */
-    public function setPage($value, $validatePage = false)
-    {
-        if ($value === null) {
-            $this->_page = null;
-        } else {
-            $value = (int) $value;
-            if ($validatePage && $this->validatePage) {
-                $pageCount = $this->getPageCount();
-                if ($value >= $pageCount) {
-                    $value = $pageCount - 1;
-                }
-            }
-            if ($value < 0) {
-                $value = 0;
-            }
-            $this->_page = $value;
-        }
+        return $pageSize < 1 ? 0 : $this->getPage() * $pageSize;
     }
 
     /**
@@ -245,54 +199,60 @@ class Pagination extends Object implements Linkable
     }
 
     /**
-     * Creates the URL suitable for pagination with the specified page number.
-     * This method is mainly called by pagers when creating URLs used to perform pagination.
-     * @param integer $page the zero-based page number that the URL should point to.
-     * @param integer $pageSize the number of items on each page. If not set, the value of [[pageSize]] will be used.
-     * @param boolean $absolute whether to create an absolute URL. Defaults to `false`.
-     * @return string the created URL
-     * @see params
-     * @see forcePageParam
+     * Returns the value of the specified query parameter.
+     * This method returns the named parameter value from [[params]]. Null is returned if the value does not exist.
+     * @param string $name the parameter name
+     * @param string $defaultValue the value to be returned when the specified parameter does not exist in [[params]].
+     * @return string the parameter value
      */
-    public function createUrl($page, $pageSize = null, $absolute = false)
+    protected function getQueryParam($name, $defaultValue = null)
     {
-        $page = (int) $page;
-        $pageSize = (int) $pageSize;
         if (($params = $this->params) === null) {
             $request = Yii::$app->getRequest();
             $params = $request instanceof Request ? $request->getQueryParams() : [];
         }
-        if ($page > 0 || $page >= 0 && $this->forcePageParam) {
-            $params[$this->pageParam] = $page + 1;
-        } else {
-            unset($params[$this->pageParam]);
-        }
-        if ($pageSize <= 0) {
-            $pageSize = $this->getPageSize();
-        }
-        if ($pageSize != $this->defaultPageSize) {
-            $params[$this->pageSizeParam] = $pageSize;
-        } else {
-            unset($params[$this->pageSizeParam]);
-        }
-        $params[0] = $this->route === null ? Yii::$app->controller->getRoute() : $this->route;
-        $urlManager = $this->urlManager === null ? Yii::$app->getUrlManager() : $this->urlManager;
-        if ($absolute) {
-            return $urlManager->createAbsoluteUrl($params);
-        } else {
-            return $urlManager->createUrl($params);
-        }
+
+        return isset($params[$name]) && is_scalar($params[$name]) ? $params[$name] : $defaultValue;
     }
 
     /**
-     * @return integer the offset of the data. This may be used to set the
-     * OFFSET value for a SQL statement for fetching the current page of data.
+     * Returns the zero-based current page number.
+     * @param boolean $recalculate whether to recalculate the current page based on the page size and item count.
+     * @return integer the zero-based current page number.
      */
-    public function getOffset()
+    public function getPage($recalculate = false)
     {
-        $pageSize = $this->getPageSize();
+        if ($this->_page === null || $recalculate) {
+            $page = (int)$this->getQueryParam($this->pageParam, 1) - 1;
+            $this->setPage($page, true);
+        }
 
-        return $pageSize < 1 ? 0 : $this->getPage() * $pageSize;
+        return $this->_page;
+    }
+
+    /**
+     * Sets the current page number.
+     * @param integer $value the zero-based index of the current page.
+     * @param boolean $validatePage whether to validate the page number. Note that in order
+     * to validate the page number, both [[validatePage]] and this parameter must be true.
+     */
+    public function setPage($value, $validatePage = false)
+    {
+        if ($value === null) {
+            $this->_page = null;
+        } else {
+            $value = (int)$value;
+            if ($validatePage && $this->validatePage) {
+                $pageCount = $this->getPageCount();
+                if ($value >= $pageCount) {
+                    $value = $pageCount - 1;
+                }
+            }
+            if ($value < 0) {
+                $value = 0;
+            }
+            $this->_page = $value;
+        }
     }
 
     /**
@@ -333,19 +293,57 @@ class Pagination extends Object implements Linkable
     }
 
     /**
-     * Returns the value of the specified query parameter.
-     * This method returns the named parameter value from [[params]]. Null is returned if the value does not exist.
-     * @param string $name the parameter name
-     * @param string $defaultValue the value to be returned when the specified parameter does not exist in [[params]].
-     * @return string the parameter value
+     * @return integer number of pages
      */
-    protected function getQueryParam($name, $defaultValue = null)
+    public function getPageCount()
     {
+        $pageSize = $this->getPageSize();
+        if ($pageSize < 1) {
+            return $this->totalCount > 0 ? 1 : 0;
+        } else {
+            $totalCount = $this->totalCount < 0 ? 0 : (int)$this->totalCount;
+
+            return (int)(($totalCount + $pageSize - 1) / $pageSize);
+        }
+    }
+
+    /**
+     * Creates the URL suitable for pagination with the specified page number.
+     * This method is mainly called by pagers when creating URLs used to perform pagination.
+     * @param integer $page the zero-based page number that the URL should point to.
+     * @param integer $pageSize the number of items on each page. If not set, the value of [[pageSize]] will be used.
+     * @param boolean $absolute whether to create an absolute URL. Defaults to `false`.
+     * @return string the created URL
+     * @see params
+     * @see forcePageParam
+     */
+    public function createUrl($page, $pageSize = null, $absolute = false)
+    {
+        $page = (int)$page;
+        $pageSize = (int)$pageSize;
         if (($params = $this->params) === null) {
             $request = Yii::$app->getRequest();
             $params = $request instanceof Request ? $request->getQueryParams() : [];
         }
-
-        return isset($params[$name]) && is_scalar($params[$name]) ? $params[$name] : $defaultValue;
+        if ($page > 0 || $page >= 0 && $this->forcePageParam) {
+            $params[$this->pageParam] = $page + 1;
+        } else {
+            unset($params[$this->pageParam]);
+        }
+        if ($pageSize <= 0) {
+            $pageSize = $this->getPageSize();
+        }
+        if ($pageSize != $this->defaultPageSize) {
+            $params[$this->pageSizeParam] = $pageSize;
+        } else {
+            unset($params[$this->pageSizeParam]);
+        }
+        $params[0] = $this->route === null ? Yii::$app->controller->getRoute() : $this->route;
+        $urlManager = $this->urlManager === null ? Yii::$app->getUrlManager() : $this->urlManager;
+        if ($absolute) {
+            return $urlManager->createAbsoluteUrl($params);
+        } else {
+            return $urlManager->createUrl($params);
+        }
     }
 }

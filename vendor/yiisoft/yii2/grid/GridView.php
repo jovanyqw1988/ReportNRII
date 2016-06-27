@@ -7,15 +7,15 @@
 
 namespace yii\grid;
 
-use Yii;
 use Closure;
-use yii\i18n\Formatter;
+use Yii;
 use yii\base\InvalidConfigException;
-use yii\helpers\Url;
+use yii\base\Model;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\helpers\Url;
+use yii\i18n\Formatter;
 use yii\widgets\BaseListView;
-use yii\base\Model;
 
 /**
  * The GridView widget is used to display data in a grid.
@@ -276,6 +276,67 @@ class GridView extends BaseListView
     }
 
     /**
+     * Creates column objects and initializes them.
+     */
+    protected function initColumns()
+    {
+        if (empty($this->columns)) {
+            $this->guessColumns();
+        }
+        foreach ($this->columns as $i => $column) {
+            if (is_string($column)) {
+                $column = $this->createDataColumn($column);
+            } else {
+                $column = Yii::createObject(array_merge([
+                    'class' => $this->dataColumnClass ?: DataColumn::className(),
+                    'grid' => $this,
+                ], $column));
+            }
+            if (!$column->visible) {
+                unset($this->columns[$i]);
+                continue;
+            }
+            $this->columns[$i] = $column;
+        }
+    }
+
+    /**
+     * This function tries to guess the columns to show from the given data
+     * if [[columns]] are not explicitly specified.
+     */
+    protected function guessColumns()
+    {
+        $models = $this->dataProvider->getModels();
+        $model = reset($models);
+        if (is_array($model) || is_object($model)) {
+            foreach ($model as $name => $value) {
+                $this->columns[] = (string)$name;
+            }
+        }
+    }
+
+    /**
+     * Creates a [[DataColumn]] object based on a string in the format of "attribute:format:label".
+     * @param string $text the column specification string
+     * @return DataColumn the column instance
+     * @throws InvalidConfigException if the column specification is invalid
+     */
+    protected function createDataColumn($text)
+    {
+        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
+            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
+        }
+
+        return Yii::createObject([
+            'class' => $this->dataColumnClass ?: DataColumn::className(),
+            'grid' => $this,
+            'attribute' => $matches[1],
+            'format' => isset($matches[3]) ? $matches[3] : 'text',
+            'label' => isset($matches[5]) ? $matches[5] : null,
+        ]);
+    }
+
+    /**
      * Runs the widget.
      */
     public function run()
@@ -286,32 +347,6 @@ class GridView extends BaseListView
         GridViewAsset::register($view);
         $view->registerJs("jQuery('#$id').yiiGridView($options);");
         parent::run();
-    }
-
-    /**
-     * Renders validator errors of filter model.
-     * @return string the rendering result.
-     */
-    public function renderErrors()
-    {
-        if ($this->filterModel instanceof Model && $this->filterModel->hasErrors()) {
-            return Html::errorSummary($this->filterModel, $this->filterErrorSummaryOptions);
-        } else {
-            return '';
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function renderSection($name)
-    {
-        switch ($name) {
-            case '{errors}':
-                return $this->renderErrors();
-            default:
-                return parent::renderSection($name);
-        }
     }
 
     /**
@@ -331,6 +366,32 @@ class GridView extends BaseListView
             'filterUrl' => Url::to($filterUrl),
             'filterSelector' => $filterSelector,
         ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function renderSection($name)
+    {
+        switch ($name) {
+            case '{errors}':
+                return $this->renderErrors();
+            default:
+                return parent::renderSection($name);
+        }
+    }
+
+    /**
+     * Renders validator errors of filter model.
+     * @return string the rendering result.
+     */
+    public function renderErrors()
+    {
+        if ($this->filterModel instanceof Model && $this->filterModel->hasErrors()) {
+            return Html::errorSummary($this->filterModel, $this->filterErrorSummaryOptions);
+        } else {
+            return '';
+        }
     }
 
     /**
@@ -415,25 +476,6 @@ class GridView extends BaseListView
     }
 
     /**
-     * Renders the table footer.
-     * @return string the rendering result.
-     */
-    public function renderTableFooter()
-    {
-        $cells = [];
-        foreach ($this->columns as $column) {
-            /* @var $column Column */
-            $cells[] = $column->renderFooterCell();
-        }
-        $content = Html::tag('tr', implode('', $cells), $this->footerRowOptions);
-        if ($this->filterPosition === self::FILTER_POS_FOOTER) {
-            $content .= $this->renderFilters();
-        }
-
-        return "<tfoot>\n" . $content . "\n</tfoot>";
-    }
-
-    /**
      * Renders the filter.
      * @return string the rendering result.
      */
@@ -514,63 +556,21 @@ class GridView extends BaseListView
     }
 
     /**
-     * Creates column objects and initializes them.
+     * Renders the table footer.
+     * @return string the rendering result.
      */
-    protected function initColumns()
+    public function renderTableFooter()
     {
-        if (empty($this->columns)) {
-            $this->guessColumns();
+        $cells = [];
+        foreach ($this->columns as $column) {
+            /* @var $column Column */
+            $cells[] = $column->renderFooterCell();
         }
-        foreach ($this->columns as $i => $column) {
-            if (is_string($column)) {
-                $column = $this->createDataColumn($column);
-            } else {
-                $column = Yii::createObject(array_merge([
-                    'class' => $this->dataColumnClass ? : DataColumn::className(),
-                    'grid' => $this,
-                ], $column));
-            }
-            if (!$column->visible) {
-                unset($this->columns[$i]);
-                continue;
-            }
-            $this->columns[$i] = $column;
-        }
-    }
-
-    /**
-     * Creates a [[DataColumn]] object based on a string in the format of "attribute:format:label".
-     * @param string $text the column specification string
-     * @return DataColumn the column instance
-     * @throws InvalidConfigException if the column specification is invalid
-     */
-    protected function createDataColumn($text)
-    {
-        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
-            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
+        $content = Html::tag('tr', implode('', $cells), $this->footerRowOptions);
+        if ($this->filterPosition === self::FILTER_POS_FOOTER) {
+            $content .= $this->renderFilters();
         }
 
-        return Yii::createObject([
-            'class' => $this->dataColumnClass ? : DataColumn::className(),
-            'grid' => $this,
-            'attribute' => $matches[1],
-            'format' => isset($matches[3]) ? $matches[3] : 'text',
-            'label' => isset($matches[5]) ? $matches[5] : null,
-        ]);
-    }
-
-    /**
-     * This function tries to guess the columns to show from the given data
-     * if [[columns]] are not explicitly specified.
-     */
-    protected function guessColumns()
-    {
-        $models = $this->dataProvider->getModels();
-        $model = reset($models);
-        if (is_array($model) || is_object($model)) {
-            foreach ($model as $name => $value) {
-                $this->columns[] = (string) $name;
-            }
-        }
+        return "<tfoot>\n" . $content . "\n</tfoot>";
     }
 }

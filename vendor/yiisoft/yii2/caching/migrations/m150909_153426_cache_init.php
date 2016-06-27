@@ -19,19 +19,6 @@ class m150909_153426_cache_init extends Migration
 {
 
     /**
-     * @throws yii\base\InvalidConfigException
-     * @return DbCache
-     */
-    protected function getCache()
-    {
-        $cache = Yii::$app->getCache();
-        if (!$cache instanceof DbCache) {
-            throw new InvalidConfigException('You should configure "cache" component to use database before executing this migration.');
-        }
-        return $cache;
-    }
-
-    /**
      * @inheritdoc
      */
     public function up()
@@ -51,6 +38,19 @@ class m150909_153426_cache_init extends Migration
             'data' => $this->binary(),
             'PRIMARY KEY ([[id]])',
             ], $tableOptions);
+    }
+
+    /**
+     * @throws yii\base\InvalidConfigException
+     * @return DbCache
+     */
+    protected function getCache()
+    {
+        $cache = Yii::$app->getCache();
+        if (!$cache instanceof DbCache) {
+            throw new InvalidConfigException('You should configure "cache" component to use database before executing this migration.');
+        }
+        return $cache;
     }
 
     /**

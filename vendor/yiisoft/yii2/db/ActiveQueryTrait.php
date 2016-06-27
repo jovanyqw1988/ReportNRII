@@ -30,18 +30,6 @@ trait ActiveQueryTrait
      */
     public $asArray;
 
-
-    /**
-     * Sets the [[asArray]] property.
-     * @param boolean $value whether to return the query results in terms of arrays instead of Active Records.
-     * @return $this the query object itself
-     */
-    public function asArray($value = true)
-    {
-        $this->asArray = $value;
-        return $this;
-    }
-
     /**
      * Specifies the relations with which this query should be performed.
      *
@@ -104,54 +92,6 @@ trait ActiveQueryTrait
     }
 
     /**
-     * Converts found rows into model instances
-     * @param array $rows
-     * @return array|ActiveRecord[]
-     */
-    private function createModels($rows)
-    {
-        $models = [];
-        if ($this->asArray) {
-            if ($this->indexBy === null) {
-                return $rows;
-            }
-            foreach ($rows as $row) {
-                if (is_string($this->indexBy)) {
-                    $key = $row[$this->indexBy];
-                } else {
-                    $key = call_user_func($this->indexBy, $row);
-                }
-                $models[$key] = $row;
-            }
-        } else {
-            /* @var $class ActiveRecord */
-            $class = $this->modelClass;
-            if ($this->indexBy === null) {
-                foreach ($rows as $row) {
-                    $model = $class::instantiate($row);
-                    $modelClass = get_class($model);
-                    $modelClass::populateRecord($model, $row);
-                    $models[] = $model;
-                }
-            } else {
-                foreach ($rows as $row) {
-                    $model = $class::instantiate($row);
-                    $modelClass = get_class($model);
-                    $modelClass::populateRecord($model, $row);
-                    if (is_string($this->indexBy)) {
-                        $key = $model->{$this->indexBy};
-                    } else {
-                        $key = call_user_func($this->indexBy, $model);
-                    }
-                    $models[$key] = $model;
-                }
-            }
-        }
-
-        return $models;
-    }
-
-    /**
      * Finds records corresponding to one or multiple relations and populates them into the primary models.
      * @param array $with a list of relations that this query should be performed with. Please
      * refer to [[with()]] for details about specifying this parameter.
@@ -211,5 +151,64 @@ trait ActiveQueryTrait
         }
 
         return $relations;
+    }
+
+    /**
+     * Sets the [[asArray]] property.
+     * @param boolean $value whether to return the query results in terms of arrays instead of Active Records.
+     * @return $this the query object itself
+     */
+    public function asArray($value = true)
+    {
+        $this->asArray = $value;
+        return $this;
+    }
+
+    /**
+     * Converts found rows into model instances
+     * @param array $rows
+     * @return array|ActiveRecord[]
+     */
+    private function createModels($rows)
+    {
+        $models = [];
+        if ($this->asArray) {
+            if ($this->indexBy === null) {
+                return $rows;
+            }
+            foreach ($rows as $row) {
+                if (is_string($this->indexBy)) {
+                    $key = $row[$this->indexBy];
+                } else {
+                    $key = call_user_func($this->indexBy, $row);
+                }
+                $models[$key] = $row;
+            }
+        } else {
+            /* @var $class ActiveRecord */
+            $class = $this->modelClass;
+            if ($this->indexBy === null) {
+                foreach ($rows as $row) {
+                    $model = $class::instantiate($row);
+                    $modelClass = get_class($model);
+                    $modelClass::populateRecord($model, $row);
+                    $models[] = $model;
+                }
+            } else {
+                foreach ($rows as $row) {
+                    $model = $class::instantiate($row);
+                    $modelClass = get_class($model);
+                    $modelClass::populateRecord($model, $row);
+                    if (is_string($this->indexBy)) {
+                        $key = $model->{$this->indexBy};
+                    } else {
+                        $key = call_user_func($this->indexBy, $model);
+                    }
+                    $models[$key] = $model;
+                }
+            }
+        }
+
+        return $models;
     }
 }

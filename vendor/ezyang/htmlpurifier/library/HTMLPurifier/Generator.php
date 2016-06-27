@@ -11,54 +11,47 @@ class HTMLPurifier_Generator
 {
 
     /**
+     * Configuration for the generator
+     * @type HTMLPurifier_Config
+     */
+    protected $config;
+    /**
      * Whether or not generator should produce XML output.
      * @type bool
      */
     private $_xhtml = true;
-
     /**
      * :HACK: Whether or not generator should comment the insides of <script> tags.
      * @type bool
      */
     private $_scriptFix = false;
-
     /**
      * Cache of HTMLDefinition during HTML output to determine whether or
      * not attributes should be minimized.
      * @type HTMLPurifier_HTMLDefinition
      */
     private $_def;
-
     /**
      * Cache of %Output.SortAttr.
      * @type bool
      */
     private $_sortAttr;
-
     /**
      * Cache of %Output.FlashCompat.
      * @type bool
      */
     private $_flashCompat;
-
     /**
      * Cache of %Output.FixInnerHTML.
      * @type bool
      */
     private $_innerHTMLFix;
-
     /**
      * Stack for keeping track of object information when outputting IE
      * compatibility code.
      * @type array
      */
     private $_flashStack = array();
-
-    /**
-     * Configuration for the generator
-     * @type HTMLPurifier_Config
-     */
-    protected $config;
 
     /**
      * @param HTMLPurifier_Config $config
@@ -184,23 +177,6 @@ class HTMLPurifier_Generator
     }
 
     /**
-     * Special case processor for the contents of script tags
-     * @param HTMLPurifier_Token $token HTMLPurifier_Token object.
-     * @return string
-     * @warning This runs into problems if there's already a literal
-     *          --> somewhere inside the script contents.
-     */
-    public function generateScriptFromToken($token)
-    {
-        if (!$token instanceof HTMLPurifier_Token_Text) {
-            return $this->generateFromToken($token);
-        }
-        // Thanks <http://lachy.id.au/log/2005/05/script-comments>
-        $data = preg_replace('#//\s*$#', '', $token->data);
-        return '<!--//--><![CDATA[//><!--' . "\n" . trim($data) . "\n" . '//--><!]]>';
-    }
-
-    /**
      * Generates attribute declarations from attribute array.
      * @note This does not include the leading or trailing space.
      * @param array $assoc_array_of_attributes Attribute array
@@ -280,6 +256,23 @@ class HTMLPurifier_Generator
             $quote = ENT_COMPAT;
         }
         return htmlspecialchars($string, $quote, 'UTF-8');
+    }
+
+    /**
+     * Special case processor for the contents of script tags
+     * @param HTMLPurifier_Token $token HTMLPurifier_Token object.
+     * @return string
+     * @warning This runs into problems if there's already a literal
+     *          --> somewhere inside the script contents.
+     */
+    public function generateScriptFromToken($token)
+    {
+        if (!$token instanceof HTMLPurifier_Token_Text) {
+            return $this->generateFromToken($token);
+        }
+        // Thanks <http://lachy.id.au/log/2005/05/script-comments>
+        $data = preg_replace('#//\s*$#', '', $token->data);
+        return '<!--//--><![CDATA[//><!--' . "\n" . trim($data) . "\n" . '//--><!]]>';
     }
 }
 

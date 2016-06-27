@@ -8,8 +8,8 @@
 namespace yii\debug\panels;
 
 use Yii;
-use yii\helpers\Html;
 use yii\debug\Panel;
+use yii\helpers\Html;
 use yii\web\AssetBundle;
 use yii\web\AssetManager;
 

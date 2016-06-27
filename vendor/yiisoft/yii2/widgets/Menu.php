@@ -10,8 +10,8 @@ namespace yii\widgets;
 use Yii;
 use yii\base\Widget;
 use yii\helpers\ArrayHelper;
-use yii\helpers\Url;
 use yii\helpers\Html;
+use yii\helpers\Url;
 
 /**
  * Menu displays a multi-level menu using nested HTML lists.
@@ -181,73 +181,6 @@ class Menu extends Widget
     }
 
     /**
-     * Recursively renders the menu items (without the container tag).
-     * @param array $items the menu items to be rendered recursively
-     * @return string the rendering result
-     */
-    protected function renderItems($items)
-    {
-        $n = count($items);
-        $lines = [];
-        foreach ($items as $i => $item) {
-            $options = array_merge($this->itemOptions, ArrayHelper::getValue($item, 'options', []));
-            $tag = ArrayHelper::remove($options, 'tag', 'li');
-            $class = [];
-            if ($item['active']) {
-                $class[] = $this->activeCssClass;
-            }
-            if ($i === 0 && $this->firstItemCssClass !== null) {
-                $class[] = $this->firstItemCssClass;
-            }
-            if ($i === $n - 1 && $this->lastItemCssClass !== null) {
-                $class[] = $this->lastItemCssClass;
-            }
-            if (!empty($class)) {
-                if (empty($options['class'])) {
-                    $options['class'] = implode(' ', $class);
-                } else {
-                    $options['class'] .= ' ' . implode(' ', $class);
-                }
-            }
-
-            $menu = $this->renderItem($item);
-            if (!empty($item['items'])) {
-                $submenuTemplate = ArrayHelper::getValue($item, 'submenuTemplate', $this->submenuTemplate);
-                $menu .= strtr($submenuTemplate, [
-                    '{items}' => $this->renderItems($item['items']),
-                ]);
-            }
-            $lines[] = Html::tag($tag, $menu, $options);
-        }
-
-        return implode("\n", $lines);
-    }
-
-    /**
-     * Renders the content of a menu item.
-     * Note that the container and the sub-menus are not rendered here.
-     * @param array $item the menu item to be rendered. Please refer to [[items]] to see what data might be in the item.
-     * @return string the rendering result
-     */
-    protected function renderItem($item)
-    {
-        if (isset($item['url'])) {
-            $template = ArrayHelper::getValue($item, 'template', $this->linkTemplate);
-
-            return strtr($template, [
-                '{url}' => Html::encode(Url::to($item['url'])),
-                '{label}' => $item['label'],
-            ]);
-        } else {
-            $template = ArrayHelper::getValue($item, 'template', $this->labelTemplate);
-
-            return strtr($template, [
-                '{label}' => $item['label'],
-            ]);
-        }
-    }
-
-    /**
      * Normalizes the [[items]] property to remove invisible items and activate certain items.
      * @param array $items the items to be normalized.
      * @param boolean $active whether there is an active child menu item.
@@ -325,5 +258,72 @@ class Menu extends Widget
         }
 
         return false;
+    }
+
+    /**
+     * Recursively renders the menu items (without the container tag).
+     * @param array $items the menu items to be rendered recursively
+     * @return string the rendering result
+     */
+    protected function renderItems($items)
+    {
+        $n = count($items);
+        $lines = [];
+        foreach ($items as $i => $item) {
+            $options = array_merge($this->itemOptions, ArrayHelper::getValue($item, 'options', []));
+            $tag = ArrayHelper::remove($options, 'tag', 'li');
+            $class = [];
+            if ($item['active']) {
+                $class[] = $this->activeCssClass;
+            }
+            if ($i === 0 && $this->firstItemCssClass !== null) {
+                $class[] = $this->firstItemCssClass;
+            }
+            if ($i === $n - 1 && $this->lastItemCssClass !== null) {
+                $class[] = $this->lastItemCssClass;
+            }
+            if (!empty($class)) {
+                if (empty($options['class'])) {
+                    $options['class'] = implode(' ', $class);
+                } else {
+                    $options['class'] .= ' ' . implode(' ', $class);
+                }
+            }
+
+            $menu = $this->renderItem($item);
+            if (!empty($item['items'])) {
+                $submenuTemplate = ArrayHelper::getValue($item, 'submenuTemplate', $this->submenuTemplate);
+                $menu .= strtr($submenuTemplate, [
+                    '{items}' => $this->renderItems($item['items']),
+                ]);
+            }
+            $lines[] = Html::tag($tag, $menu, $options);
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Renders the content of a menu item.
+     * Note that the container and the sub-menus are not rendered here.
+     * @param array $item the menu item to be rendered. Please refer to [[items]] to see what data might be in the item.
+     * @return string the rendering result
+     */
+    protected function renderItem($item)
+    {
+        if (isset($item['url'])) {
+            $template = ArrayHelper::getValue($item, 'template', $this->linkTemplate);
+
+            return strtr($template, [
+                '{url}' => Html::encode(Url::to($item['url'])),
+                '{label}' => $item['label'],
+            ]);
+        } else {
+            $template = ArrayHelper::getValue($item, 'template', $this->labelTemplate);
+
+            return strtr($template, [
+                '{label}' => $item['label'],
+            ]);
+        }
     }
 }

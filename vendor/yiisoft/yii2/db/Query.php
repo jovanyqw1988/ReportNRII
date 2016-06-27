@@ -111,21 +111,30 @@ class Query extends Component implements QueryInterface
      */
     public $params = [];
 
-
     /**
-     * Creates a DB command that can be used to execute this query.
-     * @param Connection $db the database connection used to generate the SQL statement.
-     * If this parameter is not given, the `db` application component will be used.
-     * @return Command the created DB command instance.
+     * Creates a new Query object and copies its property values from an existing one.
+     * The properties being copies are the ones to be used by query builders.
+     * @param Query $from the source query object
+     * @return Query the new Query object
      */
-    public function createCommand($db = null)
+    public static function create($from)
     {
-        if ($db === null) {
-            $db = Yii::$app->getDb();
-        }
-        list ($sql, $params) = $db->getQueryBuilder()->build($this);
-
-        return $db->createCommand($sql, $params);
+        return new self([
+            'where' => $from->where,
+            'limit' => $from->limit,
+            'offset' => $from->offset,
+            'orderBy' => $from->orderBy,
+            'indexBy' => $from->indexBy,
+            'select' => $from->select,
+            'selectOption' => $from->selectOption,
+            'distinct' => $from->distinct,
+            'from' => $from->from,
+            'groupBy' => $from->groupBy,
+            'join' => $from->join,
+            'having' => $from->having,
+            'union' => $from->union,
+            'params' => $from->params,
+        ]);
     }
 
     /**
@@ -209,6 +218,22 @@ class Query extends Component implements QueryInterface
     {
         $rows = $this->createCommand($db)->queryAll();
         return $this->populate($rows);
+    }
+
+    /**
+     * Creates a DB command that can be used to execute this query.
+     * @param Connection $db the database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return Command the created DB command instance.
+     */
+    public function createCommand($db = null)
+    {
+        if ($db === null) {
+            $db = Yii::$app->getDb();
+        }
+        list ($sql, $params) = $db->getQueryBuilder()->build($this);
+
+        return $db->createCommand($sql, $params);
     }
 
     /**
@@ -301,6 +326,113 @@ class Query extends Component implements QueryInterface
     }
 
     /**
+     * Queries a scalar value by setting [[select]] first.
+     * Restores the value of select to make this query reusable.
+     * @param string|Expression $selectExpression
+     * @param Connection|null $db
+     * @return boolean|string
+     */
+    protected function queryScalar($selectExpression, $db)
+    {
+        $select = $this->select;
+        $limit = $this->limit;
+        $offset = $this->offset;
+
+        $this->select = [$selectExpression];
+        $this->limit = null;
+        $this->offset = null;
+        $command = $this->createCommand($db);
+
+        $this->select = $select;
+        $this->limit = $limit;
+        $this->offset = $offset;
+
+        if (empty($this->groupBy) && empty($this->having) && empty($this->union) && !$this->distinct) {
+            return $command->queryScalar();
+        } else {
+            return (new Query)->select([$selectExpression])
+                ->from(['c' => $this])
+                ->createCommand($command->db)
+                ->queryScalar();
+        }
+    }
+
+    /**
+     * Sets the FROM part of the query.
+     * @param string|array $tables the table(s) to be selected from. This can be either a string (e.g. `'user'`)
+     * or an array (e.g. `['user', 'profile']`) specifying one or several table names.
+     * Table names can contain schema prefixes (e.g. `'public.user'`) and/or table aliases (e.g. `'user u'`).
+     * The method will automatically quote the table names unless it contains some parenthesis
+     * (which means the table is given as a sub-query or DB expression).
+     *
+     * When the tables are specified as an array, you may also use the array keys as the table aliases
+     * (if a table does not need alias, do not use a string key).
+     *
+     * Use a Query object to represent a sub-query. In this case, the corresponding array key will be used
+     * as the alias for the sub-query.
+     *
+     * Here are some examples:
+     *
+     * ```php
+     * // SELECT * FROM  `user` `u`, `profile`;
+     * $query = (new \yii\db\Query)->from(['u' => 'user', 'profile']);
+     *
+     * // SELECT * FROM (SELECT * FROM `user` WHERE `active` = 1) `activeusers`;
+     * $subquery = (new \yii\db\Query)->from('user')->where(['active' => true])
+     * $query = (new \yii\db\Query)->from(['activeusers' => $subquery]);
+     *
+     * // subquery can also be a string with plain SQL wrapped in parenthesis
+     * // SELECT * FROM (SELECT * FROM `user` WHERE `active` = 1) `activeusers`;
+     * $subquery = "(SELECT * FROM `user` WHERE `active` = 1)";
+     * $query = (new \yii\db\Query)->from(['activeusers' => $subquery]);
+     * ```
+     *
+     * @return $this the query object itself
+     */
+    public function from($tables)
+    {
+        if (!is_array($tables)) {
+            $tables = preg_split('/\s*,\s*/', trim($tables), -1, PREG_SPLIT_NO_EMPTY);
+        }
+        $this->from = $tables;
+        return $this;
+    }
+
+    /**
+     * Sets the SELECT part of the query.
+     * @param string|array|Expression $columns the columns to be selected.
+     * Columns can be specified in either a string (e.g. "id, name") or an array (e.g. ['id', 'name']).
+     * Columns can be prefixed with table names (e.g. "user.id") and/or contain column aliases (e.g. "user.id AS user_id").
+     * The method will automatically quote the column names unless a column contains some parenthesis
+     * (which means the column contains a DB expression). A DB expression may also be passed in form of
+     * an [[Expression]] object.
+     *
+     * Note that if you are selecting an expression like `CONCAT(first_name, ' ', last_name)`, you should
+     * use an array to specify the columns. Otherwise, the expression may be incorrectly split into several parts.
+     *
+     * When the columns are specified as an array, you may also use array keys as the column aliases (if a column
+     * does not need alias, do not use a string key).
+     *
+     * Starting from version 2.0.1, you may also select sub-queries as columns by specifying each such column
+     * as a `Query` instance representing the sub-query.
+     *
+     * @param string $option additional option that should be appended to the 'SELECT' keyword. For example,
+     * in MySQL, the option 'SQL_CALC_FOUND_ROWS' can be used.
+     * @return $this the query object itself
+     */
+    public function select($columns, $option = null)
+    {
+        if ($columns instanceof Expression) {
+            $columns = [$columns];
+        } elseif (!is_array($columns)) {
+            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
+        }
+        $this->select = $columns;
+        $this->selectOption = $option;
+        return $this;
+    }
+
+    /**
      * Returns the sum of the specified column values.
      * @param string $q the column name or expression.
      * Make sure you properly [quote](guide:db-dao#quoting-table-and-column-names) column names in the expression.
@@ -368,72 +500,6 @@ class Query extends Component implements QueryInterface
     }
 
     /**
-     * Queries a scalar value by setting [[select]] first.
-     * Restores the value of select to make this query reusable.
-     * @param string|Expression $selectExpression
-     * @param Connection|null $db
-     * @return boolean|string
-     */
-    protected function queryScalar($selectExpression, $db)
-    {
-        $select = $this->select;
-        $limit = $this->limit;
-        $offset = $this->offset;
-
-        $this->select = [$selectExpression];
-        $this->limit = null;
-        $this->offset = null;
-        $command = $this->createCommand($db);
-
-        $this->select = $select;
-        $this->limit = $limit;
-        $this->offset = $offset;
-
-        if (empty($this->groupBy) && empty($this->having) && empty($this->union) && !$this->distinct) {
-            return $command->queryScalar();
-        } else {
-            return (new Query)->select([$selectExpression])
-                ->from(['c' => $this])
-                ->createCommand($command->db)
-                ->queryScalar();
-        }
-    }
-
-    /**
-     * Sets the SELECT part of the query.
-     * @param string|array|Expression $columns the columns to be selected.
-     * Columns can be specified in either a string (e.g. "id, name") or an array (e.g. ['id', 'name']).
-     * Columns can be prefixed with table names (e.g. "user.id") and/or contain column aliases (e.g. "user.id AS user_id").
-     * The method will automatically quote the column names unless a column contains some parenthesis
-     * (which means the column contains a DB expression). A DB expression may also be passed in form of
-     * an [[Expression]] object.
-     *
-     * Note that if you are selecting an expression like `CONCAT(first_name, ' ', last_name)`, you should
-     * use an array to specify the columns. Otherwise, the expression may be incorrectly split into several parts.
-     *
-     * When the columns are specified as an array, you may also use array keys as the column aliases (if a column
-     * does not need alias, do not use a string key).
-     *
-     * Starting from version 2.0.1, you may also select sub-queries as columns by specifying each such column
-     * as a `Query` instance representing the sub-query.
-     *
-     * @param string $option additional option that should be appended to the 'SELECT' keyword. For example,
-     * in MySQL, the option 'SQL_CALC_FOUND_ROWS' can be used.
-     * @return $this the query object itself
-     */
-    public function select($columns, $option = null)
-    {
-        if ($columns instanceof Expression) {
-            $columns = [$columns];
-        } elseif (!is_array($columns)) {
-            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-        }
-        $this->select = $columns;
-        $this->selectOption = $option;
-        return $this;
-    }
-
-    /**
      * Add more columns to the SELECT part of the query.
      *
      * Note, that if [[select]] has not been specified before, you should include `*` explicitly
@@ -475,47 +541,6 @@ class Query extends Component implements QueryInterface
     }
 
     /**
-     * Sets the FROM part of the query.
-     * @param string|array $tables the table(s) to be selected from. This can be either a string (e.g. `'user'`)
-     * or an array (e.g. `['user', 'profile']`) specifying one or several table names.
-     * Table names can contain schema prefixes (e.g. `'public.user'`) and/or table aliases (e.g. `'user u'`).
-     * The method will automatically quote the table names unless it contains some parenthesis
-     * (which means the table is given as a sub-query or DB expression).
-     *
-     * When the tables are specified as an array, you may also use the array keys as the table aliases
-     * (if a table does not need alias, do not use a string key).
-     *
-     * Use a Query object to represent a sub-query. In this case, the corresponding array key will be used
-     * as the alias for the sub-query.
-     *
-     * Here are some examples:
-     *
-     * ```php
-     * // SELECT * FROM  `user` `u`, `profile`;
-     * $query = (new \yii\db\Query)->from(['u' => 'user', 'profile']);
-     *
-     * // SELECT * FROM (SELECT * FROM `user` WHERE `active` = 1) `activeusers`;
-     * $subquery = (new \yii\db\Query)->from('user')->where(['active' => true])
-     * $query = (new \yii\db\Query)->from(['activeusers' => $subquery]);
-     *
-     * // subquery can also be a string with plain SQL wrapped in parenthesis
-     * // SELECT * FROM (SELECT * FROM `user` WHERE `active` = 1) `activeusers`;
-     * $subquery = "(SELECT * FROM `user` WHERE `active` = 1)";
-     * $query = (new \yii\db\Query)->from(['activeusers' => $subquery]);
-     * ```
-     *
-     * @return $this the query object itself
-     */
-    public function from($tables)
-    {
-        if (!is_array($tables)) {
-            $tables = preg_split('/\s*,\s*/', trim($tables), -1, PREG_SPLIT_NO_EMPTY);
-        }
-        $this->from = $tables;
-        return $this;
-    }
-
-    /**
      * Sets the WHERE part of the query.
      *
      * The method requires a `$condition` parameter, and optionally a `$params` parameter
@@ -536,6 +561,31 @@ class Query extends Component implements QueryInterface
     {
         $this->where = $condition;
         $this->addParams($params);
+        return $this;
+    }
+
+    /**
+     * Adds additional parameters to be bound to the query.
+     * @param array $params list of query parameter values indexed by parameter placeholders.
+     * For example, `[':name' => 'Dan', ':age' => 31]`.
+     * @return $this the query object itself
+     * @see params()
+     */
+    public function addParams($params)
+    {
+        if (!empty($params)) {
+            if (empty($this->params)) {
+                $this->params = $params;
+            } else {
+                foreach ($params as $name => $value) {
+                    if (is_int($name)) {
+                        $this->params[] = $value;
+                    } else {
+                        $this->params[$name] = $value;
+                    }
+                }
+            }
+        }
         return $this;
     }
 
@@ -853,56 +903,5 @@ class Query extends Component implements QueryInterface
     {
         $this->params = $params;
         return $this;
-    }
-
-    /**
-     * Adds additional parameters to be bound to the query.
-     * @param array $params list of query parameter values indexed by parameter placeholders.
-     * For example, `[':name' => 'Dan', ':age' => 31]`.
-     * @return $this the query object itself
-     * @see params()
-     */
-    public function addParams($params)
-    {
-        if (!empty($params)) {
-            if (empty($this->params)) {
-                $this->params = $params;
-            } else {
-                foreach ($params as $name => $value) {
-                    if (is_int($name)) {
-                        $this->params[] = $value;
-                    } else {
-                        $this->params[$name] = $value;
-                    }
-                }
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * Creates a new Query object and copies its property values from an existing one.
-     * The properties being copies are the ones to be used by query builders.
-     * @param Query $from the source query object
-     * @return Query the new Query object
-     */
-    public static function create($from)
-    {
-        return new self([
-            'where' => $from->where,
-            'limit' => $from->limit,
-            'offset' => $from->offset,
-            'orderBy' => $from->orderBy,
-            'indexBy' => $from->indexBy,
-            'select' => $from->select,
-            'selectOption' => $from->selectOption,
-            'distinct' => $from->distinct,
-            'from' => $from->from,
-            'groupBy' => $from->groupBy,
-            'join' => $from->join,
-            'having' => $from->having,
-            'union' => $from->union,
-            'params' => $from->params,
-        ]);
     }
 }

@@ -146,25 +146,6 @@ class CompareValidator extends Validator
     }
 
     /**
-     * @inheritdoc
-     */
-    protected function validateValue($value)
-    {
-        if ($this->compareValue === null) {
-            throw new InvalidConfigException('CompareValidator::compareValue must be set.');
-        }
-        if (!$this->compareValues($this->operator, $this->type, $value, $this->compareValue)) {
-            return [$this->message, [
-                'compareAttribute' => $this->compareValue,
-                'compareValue' => $this->compareValue,
-                'compareValueOrAttribute' => $this->compareValue,
-            ]];
-        } else {
-            return null;
-        }
-    }
-
-    /**
      * Compares two values with the specified operator.
      * @param string $operator the comparison operator
      * @param string $type the type of the values being compared
@@ -237,5 +218,24 @@ class CompareValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.compare(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        if ($this->compareValue === null) {
+            throw new InvalidConfigException('CompareValidator::compareValue must be set.');
+        }
+        if (!$this->compareValues($this->operator, $this->type, $value, $this->compareValue)) {
+            return [$this->message, [
+                'compareAttribute' => $this->compareValue,
+                'compareValue' => $this->compareValue,
+                'compareValueOrAttribute' => $this->compareValue,
+            ]];
+        } else {
+            return null;
+        }
     }
 }

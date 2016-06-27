@@ -35,7 +35,11 @@ abstract class Parser
 	];
 
 	private $_depth = 0;
-
+	private $_blockTypes;
+	/**
+	 * @var array the set of inline markers to use in different contexts.
+	 */
+	private $_inlineMarkers = [];
 
 	/**
 	 * Parses the given text considering the full language.
@@ -65,31 +69,6 @@ abstract class Parser
 	}
 
 	/**
-	 * Parses a paragraph without block elements (block elements are ignored).
-	 *
-	 * @param string $text the text to parse
-	 * @return string parsed markup
-	 */
-	public function parseParagraph($text)
-	{
-		$this->prepare();
-
-		if (ltrim($text) === '') {
-			return '';
-		}
-
-		$text = str_replace(["\r\n", "\n\r", "\r"], "\n", $text);
-
-		$this->prepareMarkers($text);
-
-		$absy = $this->parseInline($text);
-		$markup = $this->renderAbsy($absy);
-
-		$this->cleanup();
-		return $markup;
-	}
-
-	/**
 	 * This method will be called before `parse()` and `parseParagraph()`.
 	 * You can override it to do some initialization work.
 	 */
@@ -97,54 +76,66 @@ abstract class Parser
 	{
 	}
 
-	/**
-	 * This method will be called after `parse()` and `parseParagraph()`.
-	 * You can override it to do cleanup.
-	 */
-	protected function cleanup()
-	{
-	}
-
 
 	// block parsing
 
-	private $_blockTypes;
-
 	/**
-	 * @return array a list of block element types available.
+	 * Prepare markers that are used in the text to parse
+	 *
+	 * Add all markers that are present in markdown.
+	 * Check is done to avoid iterations in parseInline(), good for huge markdown files
+	 * @param string $text
 	 */
-	protected function blockTypes()
+	private function prepareMarkers($text)
 	{
-		if ($this->_blockTypes === null) {
-			// detect block types via "identify" functions
-			$reflection = new \ReflectionClass($this);
-			$this->_blockTypes = array_filter(array_map(function($method) {
-				$name = $method->getName();
-				return strncmp($name, 'identify', 8) === 0 ? strtolower(substr($name, 8)) : false;
-			}, $reflection->getMethods(ReflectionMethod::IS_PROTECTED)));
-
-			sort($this->_blockTypes);
+		$this->_inlineMarkers = [];
+		foreach ($this->inlineMarkers() as $marker => $method) {
+			if (strpos($text, $marker) !== false) {
+				$m = $marker[0];
+				// put the longest marker first
+				if (isset($this->_inlineMarkers[$m])) {
+					reset($this->_inlineMarkers[$m]);
+					if (strlen($marker) > strlen(key($this->_inlineMarkers[$m]))) {
+						$this->_inlineMarkers[$m] = array_merge([$marker => $method], $this->_inlineMarkers[$m]);
+						continue;
+					}
+				}
+				$this->_inlineMarkers[$m][$marker] = $method;
+			}
 		}
-		return $this->_blockTypes;
 	}
 
 	/**
-	 * Given a set of lines and an index of a current line it uses the registed block types to
-	 * detect the type of this line.
-	 * @param array $lines
-	 * @param integer $current
-	 * @return string name of the block type in lower case
+	 * Returns a map of inline markers to the corresponding parser methods.
+	 *
+	 * This array defines handler methods for inline markdown markers.
+	 * When a marker is found in the text, the handler method is called with the text
+	 * starting at the position of the marker.
+	 *
+	 * Note that markers starting with whitespace may slow down the parser,
+	 * you may want to use [[renderText]] to deal with them.
+	 *
+	 * You may override this method to define a set of markers and parsing methods.
+	 * The default implementation looks for protected methods starting with `parse` that
+	 * also have an `@marker` annotation in PHPDoc.
+	 *
+	 * @return array a map of markers to parser methods
 	 */
-	protected function detectLineType($lines, $current)
+	protected function inlineMarkers()
 	{
-		$line = $lines[$current];
-		$blockTypes = $this->blockTypes();
-		foreach($blockTypes as $blockType) {
-			if ($this->{'identify' . $blockType}($line, $lines, $current)) {
-				return $blockType;
+		$markers = [];
+		// detect "parse" functions
+		$reflection = new \ReflectionClass($this);
+		foreach ($reflection->getMethods(ReflectionMethod::IS_PROTECTED) as $method) {
+			$methodName = $method->getName();
+			if (strncmp($methodName, 'parse', 5) === 0) {
+				preg_match_all('/@marker ([^\s]+)/', $method->getDocComment(), $matches);
+				foreach ($matches[1] as $match) {
+					$markers[$match] = $methodName;
+				}
 			}
 		}
-		return 'paragraph';
+		return $markers;
 	}
 
 	/**
@@ -194,15 +185,22 @@ abstract class Parser
 		return $blocks;
 	}
 
-	protected function renderAbsy($blocks)
+	/**
+	 * @return array a list of block element types available.
+	 */
+	protected function blockTypes()
 	{
-		$output = '';
-		foreach ($blocks as $block) {
-			array_unshift($this->context, $block[0]);
-			$output .= $this->{'render' . $block[0]}($block);
-			array_shift($this->context);
+		if ($this->_blockTypes === null) {
+			// detect block types via "identify" functions
+			$reflection = new \ReflectionClass($this);
+			$this->_blockTypes = array_filter(array_map(function ($method) {
+				$name = $method->getName();
+				return strncmp($name, 'identify', 8) === 0 ? strtolower(substr($name, 8)) : false;
+			}, $reflection->getMethods(ReflectionMethod::IS_PROTECTED)));
+
+			sort($this->_blockTypes);
 		}
-		return $output;
+		return $this->_blockTypes;
 	}
 
 	/**
@@ -228,85 +226,6 @@ abstract class Parser
 			'content' => $this->parseInline(implode("\n", $content)),
 		];
 		return [$block, --$i];
-	}
-
-	/**
-	 * Render a paragraph block
-	 *
-	 * @param $block
-	 * @return string
-	 */
-	protected function renderParagraph($block)
-	{
-		return '<p>' . $this->renderAbsy($block['content']) . "</p>\n";
-	}
-
-
-	// inline parsing
-
-
-	/**
-	 * @var array the set of inline markers to use in different contexts.
-	 */
-	private $_inlineMarkers = [];
-
-	/**
-	 * Returns a map of inline markers to the corresponding parser methods.
-	 *
-	 * This array defines handler methods for inline markdown markers.
-	 * When a marker is found in the text, the handler method is called with the text
-	 * starting at the position of the marker.
-	 *
-	 * Note that markers starting with whitespace may slow down the parser,
-	 * you may want to use [[renderText]] to deal with them.
-	 *
-	 * You may override this method to define a set of markers and parsing methods.
-	 * The default implementation looks for protected methods starting with `parse` that
-	 * also have an `@marker` annotation in PHPDoc.
-	 *
-	 * @return array a map of markers to parser methods
-	 */
-	protected function inlineMarkers()
-	{
-		$markers = [];
-		// detect "parse" functions
-		$reflection = new \ReflectionClass($this);
-		foreach($reflection->getMethods(ReflectionMethod::IS_PROTECTED) as $method) {
-			$methodName = $method->getName();
-			if (strncmp($methodName, 'parse', 5) === 0) {
-				preg_match_all('/@marker ([^\s]+)/', $method->getDocComment(), $matches);
-				foreach($matches[1] as $match) {
-					$markers[$match] = $methodName;
-				}
-			}
-		}
-		return $markers;
-	}
-
-	/**
-	 * Prepare markers that are used in the text to parse
-	 *
-	 * Add all markers that are present in markdown.
-	 * Check is done to avoid iterations in parseInline(), good for huge markdown files
-	 * @param string $text
-	 */
-	private function prepareMarkers($text)
-	{
-		$this->_inlineMarkers = [];
-		foreach ($this->inlineMarkers() as $marker => $method) {
-			if (strpos($text, $marker) !== false) {
-				$m = $marker[0];
-				// put the longest marker first
-				if (isset($this->_inlineMarkers[$m])) {
-					reset($this->_inlineMarkers[$m]);
-					if (strlen($marker) > strlen(key($this->_inlineMarkers[$m]))) {
-						$this->_inlineMarkers[$m] = array_merge([$marker => $method], $this->_inlineMarkers[$m]);
-						continue;
-					}
-				}
-				$this->_inlineMarkers[$m][$marker] = $method;
-			}
-		}
 	}
 
 	/**
@@ -362,6 +281,83 @@ abstract class Parser
 		$this->_depth--;
 
 		return $paragraph;
+	}
+
+	protected function renderAbsy($blocks)
+	{
+		$output = '';
+		foreach ($blocks as $block) {
+			array_unshift($this->context, $block[0]);
+			$output .= $this->{'render' . $block[0]}($block);
+			array_shift($this->context);
+		}
+		return $output;
+	}
+
+
+	// inline parsing
+
+	/**
+	 * This method will be called after `parse()` and `parseParagraph()`.
+	 * You can override it to do cleanup.
+	 */
+	protected function cleanup()
+	{
+	}
+
+	/**
+	 * Parses a paragraph without block elements (block elements are ignored).
+	 *
+	 * @param string $text the text to parse
+	 * @return string parsed markup
+	 */
+	public function parseParagraph($text)
+	{
+		$this->prepare();
+
+		if (ltrim($text) === '') {
+			return '';
+		}
+
+		$text = str_replace(["\r\n", "\n\r", "\r"], "\n", $text);
+
+		$this->prepareMarkers($text);
+
+		$absy = $this->parseInline($text);
+		$markup = $this->renderAbsy($absy);
+
+		$this->cleanup();
+		return $markup;
+	}
+
+	/**
+	 * Given a set of lines and an index of a current line it uses the registed block types to
+	 * detect the type of this line.
+	 * @param array $lines
+	 * @param integer $current
+	 * @return string name of the block type in lower case
+	 */
+	protected function detectLineType($lines, $current)
+	{
+		$line = $lines[$current];
+		$blockTypes = $this->blockTypes();
+		foreach ($blockTypes as $blockType) {
+			if ($this->{'identify' . $blockType}($line, $lines, $current)) {
+				return $blockType;
+			}
+		}
+		return 'paragraph';
+	}
+
+	/**
+	 * Render a paragraph block
+	 *
+	 * @param $block
+	 * @return string
+	 */
+	protected function renderParagraph($block)
+	{
+		return '<p>' . $this->renderAbsy($block['content']) . "</p>\n";
 	}
 
 	/**

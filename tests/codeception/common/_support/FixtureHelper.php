@@ -2,8 +2,8 @@
 
 namespace tests\codeception\common\_support;
 
-use tests\codeception\common\fixtures\UserFixture;
 use Codeception\Module;
+use tests\codeception\common\fixtures\UserFixture;
 use yii\test\FixtureTrait;
 use yii\test\InitDbFixture;
 

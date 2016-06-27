@@ -7,8 +7,8 @@
 
 namespace yii\behaviors;
 
-use Yii;
 use Closure;
+use Yii;
 use yii\base\Behavior;
 use yii\base\Event;
 use yii\db\ActiveRecord;

@@ -53,21 +53,6 @@ class MessageSource extends Component
     }
 
     /**
-     * Loads the message translation for the specified language and category.
-     * If translation for specific locale code such as `en-US` isn't found it
-     * tries more generic `en`.
-     *
-     * @param string $category the message category
-     * @param string $language the target language
-     * @return array the loaded messages. The keys are original messages, and the values
-     * are translated messages.
-     */
-    protected function loadMessages($category, $language)
-    {
-        return [];
-    }
-
-    /**
      * Translates a message to the specified language.
      *
      * Note that unless [[forceTranslation]] is true, if the target language
@@ -121,5 +106,20 @@ class MessageSource extends Component
         }
 
         return $this->_messages[$key][$message] = false;
+    }
+
+    /**
+     * Loads the message translation for the specified language and category.
+     * If translation for specific locale code such as `en-US` isn't found it
+     * tries more generic `en`.
+     *
+     * @param string $category the message category
+     * @param string $language the target language
+     * @return array the loaded messages. The keys are original messages, and the values
+     * are translated messages.
+     */
+    protected function loadMessages($category, $language)
+    {
+        return [];
     }
 }

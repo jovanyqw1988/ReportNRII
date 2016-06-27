@@ -8,8 +8,8 @@
 namespace yii\validators;
 
 use Yii;
-use yii\web\JsExpression;
 use yii\helpers\Json;
+use yii\web\JsExpression;
 
 /**
  * NumberValidator validates that the attribute value is a number.
@@ -99,26 +99,6 @@ class NumberValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        if (is_array($value) || is_object($value)) {
-            return [Yii::t('yii', '{attribute} is invalid.'), []];
-        }
-        $pattern = $this->integerOnly ? $this->integerPattern : $this->numberPattern;
-        if (!preg_match($pattern, "$value")) {
-            return [$this->message, []];
-        } elseif ($this->min !== null && $value < $this->min) {
-            return [$this->tooSmall, ['min' => $this->min]];
-        } elseif ($this->max !== null && $value > $this->max) {
-            return [$this->tooBig, ['max' => $this->max]];
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         $label = $model->getAttributeLabel($attribute);
@@ -155,5 +135,25 @@ class NumberValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.number(value, messages, ' . Json::htmlEncode($options) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        if (is_array($value) || is_object($value)) {
+            return [Yii::t('yii', '{attribute} is invalid.'), []];
+        }
+        $pattern = $this->integerOnly ? $this->integerPattern : $this->numberPattern;
+        if (!preg_match($pattern, "$value")) {
+            return [$this->message, []];
+        } elseif ($this->min !== null && $value < $this->min) {
+            return [$this->tooSmall, ['min' => $this->min]];
+        } elseif ($this->max !== null && $value > $this->max) {
+            return [$this->tooBig, ['max' => $this->max]];
+        } else {
+            return null;
+        }
     }
 }

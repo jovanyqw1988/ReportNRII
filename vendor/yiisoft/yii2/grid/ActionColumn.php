@@ -7,8 +7,8 @@
 
 namespace yii\grid;
 
-use Yii;
 use Closure;
+use Yii;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -168,27 +168,6 @@ class ActionColumn extends Column
     }
 
     /**
-     * Creates a URL for the given action and model.
-     * This method is called for each button and each row.
-     * @param string $action the button name (or action ID)
-     * @param \yii\db\ActiveRecord $model the data model
-     * @param mixed $key the key associated with the data model
-     * @param integer $index the current row index
-     * @return string the created URL
-     */
-    public function createUrl($action, $model, $key, $index)
-    {
-        if (is_callable($this->urlCreator)) {
-            return call_user_func($this->urlCreator, $action, $model, $key, $index);
-        } else {
-            $params = is_array($key) ? $key : ['id' => (string) $key];
-            $params[0] = $this->controller ? $this->controller . '/' . $action : $action;
-
-            return Url::toRoute($params);
-        }
-    }
-
-    /**
      * @inheritdoc
      */
     protected function renderDataCellContent($model, $key, $index)
@@ -211,5 +190,26 @@ class ActionColumn extends Column
                 return '';
             }
         }, $this->template);
+    }
+
+    /**
+     * Creates a URL for the given action and model.
+     * This method is called for each button and each row.
+     * @param string $action the button name (or action ID)
+     * @param \yii\db\ActiveRecord $model the data model
+     * @param mixed $key the key associated with the data model
+     * @param integer $index the current row index
+     * @return string the created URL
+     */
+    public function createUrl($action, $model, $key, $index)
+    {
+        if (is_callable($this->urlCreator)) {
+            return call_user_func($this->urlCreator, $action, $model, $key, $index);
+        } else {
+            $params = is_array($key) ? $key : ['id' => (string)$key];
+            $params[0] = $this->controller ? $this->controller . '/' . $action : $action;
+
+            return Url::toRoute($params);
+        }
     }
 }

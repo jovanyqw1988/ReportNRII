@@ -104,20 +104,6 @@ class ActiveController extends Controller
     }
 
     /**
-     * @inheritdoc
-     */
-    protected function verbs()
-    {
-        return [
-            'index' => ['GET', 'HEAD'],
-            'view' => ['GET', 'HEAD'],
-            'create' => ['POST'],
-            'update' => ['PUT', 'PATCH'],
-            'delete' => ['DELETE'],
-        ];
-    }
-
-    /**
      * Checks the privilege of the current user.
      *
      * This method should be overridden to check whether the current user has the privilege
@@ -131,5 +117,19 @@ class ActiveController extends Controller
      */
     public function checkAccess($action, $model = null, $params = [])
     {
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function verbs()
+    {
+        return [
+            'index' => ['GET', 'HEAD'],
+            'view' => ['GET', 'HEAD'],
+            'create' => ['POST'],
+            'update' => ['PUT', 'PATCH'],
+            'delete' => ['DELETE'],
+        ];
     }
 }

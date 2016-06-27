@@ -96,43 +96,6 @@ class ActiveRecord extends BaseActiveRecord
      */
     const OP_ALL = 0x07;
 
-
-    /**
-     * Loads default values from database table schema
-     *
-     * You may call this method to load default values after creating a new instance:
-     *
-     * ```php
-     * // class Customer extends \yii\db\ActiveRecord
-     * $customer = new Customer();
-     * $customer->loadDefaultValues();
-     * ```
-     *
-     * @param boolean $skipIfSet whether existing value should be preserved.
-     * This will only set defaults for attributes that are `null`.
-     * @return $this the model instance itself.
-     */
-    public function loadDefaultValues($skipIfSet = true)
-    {
-        foreach (static::getTableSchema()->columns as $column) {
-            if ($column->defaultValue !== null && (!$skipIfSet || $this->{$column->name} === null)) {
-                $this->{$column->name} = $column->defaultValue;
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * Returns the database connection used by this AR class.
-     * By default, the "db" application component is used as the database connection.
-     * You may override this method if you want to use a different database connection.
-     * @return Connection the database connection used by this AR class.
-     */
-    public static function getDb()
-    {
-        return Yii::$app->getDb();
-    }
-
     /**
      * Creates an [[ActiveQuery]] instance with a given SQL statement.
      *
@@ -160,32 +123,12 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
-     * Finds ActiveRecord instance(s) by the given condition.
-     * This method is internally called by [[findOne()]] and [[findAll()]].
-     * @param mixed $condition please refer to [[findOne()]] for the explanation of this parameter
-     * @return ActiveQueryInterface the newly created [[ActiveQueryInterface|ActiveQuery]] instance.
-     * @throws InvalidConfigException if there is no primary key defined
-     * @internal
+     * @inheritdoc
+     * @return ActiveQuery the newly created [[ActiveQuery]] instance.
      */
-    protected static function findByCondition($condition)
+    public static function find()
     {
-        $query = static::find();
-
-        if (!ArrayHelper::isAssociative($condition)) {
-            // query by primary key
-            $primaryKey = static::primaryKey();
-            if (isset($primaryKey[0])) {
-                $pk = $primaryKey[0];
-                if (!empty($query->join) || !empty($query->joinWith)) {
-                    $pk = static::tableName() . '.' . $pk;
-                }
-                $condition = [$pk => $condition];
-            } else {
-                throw new InvalidConfigException('"' . get_called_class() . '" must have a primary key.');
-            }
-        }
-
-        return $query->andWhere($condition);
+        return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
     }
 
     /**
@@ -208,6 +151,30 @@ class ActiveRecord extends BaseActiveRecord
         $command->update(static::tableName(), $attributes, $condition, $params);
 
         return $command->execute();
+    }
+
+    /**
+     * Returns the database connection used by this AR class.
+     * By default, the "db" application component is used as the database connection.
+     * You may override this method if you want to use a different database connection.
+     * @return Connection the database connection used by this AR class.
+     */
+    public static function getDb()
+    {
+        return Yii::$app->getDb();
+    }
+
+    /**
+     * Declares the name of the database table associated with this AR class.
+     * By default this method returns the class name as the table name by calling [[Inflector::camel2id()]]
+     * with prefix [[Connection::tablePrefix]]. For example if [[Connection::tablePrefix]] is 'tbl_',
+     * 'Customer' becomes 'tbl_customer', and 'OrderItem' becomes 'tbl_order_item'. You may override this method
+     * if the table is not named after this convention.
+     * @return string the table name
+     */
+    public static function tableName()
+    {
+        return '{{%' . Inflector::camel2id(StringHelper::basename(get_called_class()), '_') . '}}';
     }
 
     /**
@@ -240,48 +207,17 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
-     * Deletes rows in the table using the provided conditions.
-     * WARNING: If you do not specify any condition, this method will delete ALL rows in the table.
-     *
-     * For example, to delete all customers whose status is 3:
-     *
-     * ```php
-     * Customer::deleteAll('status = 3');
-     * ```
-     *
-     * @param string|array $condition the conditions that will be put in the WHERE part of the DELETE SQL.
-     * Please refer to [[Query::where()]] on how to specify this parameter.
-     * @param array $params the parameters (name => value) to be bound to the query.
-     * @return integer the number of rows deleted
-     */
-    public static function deleteAll($condition = '', $params = [])
-    {
-        $command = static::getDb()->createCommand();
-        $command->delete(static::tableName(), $condition, $params);
-
-        return $command->execute();
-    }
-
-    /**
      * @inheritdoc
-     * @return ActiveQuery the newly created [[ActiveQuery]] instance.
      */
-    public static function find()
+    public static function populateRecord($record, $row)
     {
-        return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
-    }
-
-    /**
-     * Declares the name of the database table associated with this AR class.
-     * By default this method returns the class name as the table name by calling [[Inflector::camel2id()]]
-     * with prefix [[Connection::tablePrefix]]. For example if [[Connection::tablePrefix]] is 'tbl_',
-     * 'Customer' becomes 'tbl_customer', and 'OrderItem' becomes 'tbl_order_item'. You may override this method
-     * if the table is not named after this convention.
-     * @return string the table name
-     */
-    public static function tableName()
-    {
-        return '{{%' . Inflector::camel2id(StringHelper::basename(get_called_class()), '_') . '}}';
+        $columns = static::getTableSchema()->columns;
+        foreach ($row as $name => $value) {
+            if (isset($columns[$name])) {
+                $row[$name] = $columns[$name]->phpTypecast($value);
+            }
+        }
+        parent::populateRecord($record, $row);
     }
 
     /**
@@ -303,6 +239,35 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
+     * Finds ActiveRecord instance(s) by the given condition.
+     * This method is internally called by [[findOne()]] and [[findAll()]].
+     * @param mixed $condition please refer to [[findOne()]] for the explanation of this parameter
+     * @return ActiveQueryInterface the newly created [[ActiveQueryInterface|ActiveQuery]] instance.
+     * @throws InvalidConfigException if there is no primary key defined
+     * @internal
+     */
+    protected static function findByCondition($condition)
+    {
+        $query = static::find();
+
+        if (!ArrayHelper::isAssociative($condition)) {
+            // query by primary key
+            $primaryKey = static::primaryKey();
+            if (isset($primaryKey[0])) {
+                $pk = $primaryKey[0];
+                if (!empty($query->join) || !empty($query->joinWith)) {
+                    $pk = static::tableName() . '.' . $pk;
+                }
+                $condition = [$pk => $condition];
+            } else {
+                throw new InvalidConfigException('"' . get_called_class() . '" must have a primary key.');
+            }
+        }
+
+        return $query->andWhere($condition);
+    }
+
+    /**
      * Returns the primary key name(s) for this AR class.
      * The default implementation will return the primary key(s) as declared
      * in the DB table that is associated with this AR class.
@@ -321,6 +286,31 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
+     * Loads default values from database table schema
+     *
+     * You may call this method to load default values after creating a new instance:
+     *
+     * ```php
+     * // class Customer extends \yii\db\ActiveRecord
+     * $customer = new Customer();
+     * $customer->loadDefaultValues();
+     * ```
+     *
+     * @param boolean $skipIfSet whether existing value should be preserved.
+     * This will only set defaults for attributes that are `null`.
+     * @return $this the model instance itself.
+     */
+    public function loadDefaultValues($skipIfSet = true)
+    {
+        foreach (static::getTableSchema()->columns as $column) {
+            if ($column->defaultValue !== null && (!$skipIfSet || $this->{$column->name} === null)) {
+                $this->{$column->name} = $column->defaultValue;
+            }
+        }
+        return $this;
+    }
+
+    /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
      * @return array list of attribute names.
@@ -328,52 +318,6 @@ class ActiveRecord extends BaseActiveRecord
     public function attributes()
     {
         return array_keys(static::getTableSchema()->columns);
-    }
-
-    /**
-     * Declares which DB operations should be performed within a transaction in different scenarios.
-     * The supported DB operations are: [[OP_INSERT]], [[OP_UPDATE]] and [[OP_DELETE]],
-     * which correspond to the [[insert()]], [[update()]] and [[delete()]] methods, respectively.
-     * By default, these methods are NOT enclosed in a DB transaction.
-     *
-     * In some scenarios, to ensure data consistency, you may want to enclose some or all of them
-     * in transactions. You can do so by overriding this method and returning the operations
-     * that need to be transactional. For example,
-     *
-     * ```php
-     * return [
-     *     'admin' => self::OP_INSERT,
-     *     'api' => self::OP_INSERT | self::OP_UPDATE | self::OP_DELETE,
-     *     // the above is equivalent to the following:
-     *     // 'api' => self::OP_ALL,
-     *
-     * ];
-     * ```
-     *
-     * The above declaration specifies that in the "admin" scenario, the insert operation ([[insert()]])
-     * should be done in a transaction; and in the "api" scenario, all the operations should be done
-     * in a transaction.
-     *
-     * @return array the declarations of transactional operations. The array keys are scenarios names,
-     * and the array values are the corresponding transaction operations.
-     */
-    public function transactions()
-    {
-        return [];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public static function populateRecord($record, $row)
-    {
-        $columns = static::getTableSchema()->columns;
-        foreach ($row as $name => $value) {
-            if (isset($columns[$name])) {
-                $row[$name] = $columns[$name]->phpTypecast($value);
-            }
-        }
-        parent::populateRecord($record, $row);
     }
 
     /**
@@ -440,6 +384,51 @@ class ActiveRecord extends BaseActiveRecord
             $transaction->rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * Returns a value indicating whether the specified operation is transactional in the current [[scenario]].
+     * @param integer $operation the operation to check. Possible values are [[OP_INSERT]], [[OP_UPDATE]] and [[OP_DELETE]].
+     * @return boolean whether the specified operation is transactional in the current [[scenario]].
+     */
+    public function isTransactional($operation)
+    {
+        $scenario = $this->getScenario();
+        $transactions = $this->transactions();
+
+        return isset($transactions[$scenario]) && ($transactions[$scenario] & $operation);
+    }
+
+    /**
+     * Declares which DB operations should be performed within a transaction in different scenarios.
+     * The supported DB operations are: [[OP_INSERT]], [[OP_UPDATE]] and [[OP_DELETE]],
+     * which correspond to the [[insert()]], [[update()]] and [[delete()]] methods, respectively.
+     * By default, these methods are NOT enclosed in a DB transaction.
+     *
+     * In some scenarios, to ensure data consistency, you may want to enclose some or all of them
+     * in transactions. You can do so by overriding this method and returning the operations
+     * that need to be transactional. For example,
+     *
+     * ```php
+     * return [
+     *     'admin' => self::OP_INSERT,
+     *     'api' => self::OP_INSERT | self::OP_UPDATE | self::OP_DELETE,
+     *     // the above is equivalent to the following:
+     *     // 'api' => self::OP_ALL,
+     *
+     * ];
+     * ```
+     *
+     * The above declaration specifies that in the "admin" scenario, the insert operation ([[insert()]])
+     * should be done in a transaction; and in the "api" scenario, all the operations should be done
+     * in a transaction.
+     *
+     * @return array the declarations of transactional operations. The array keys are scenarios names,
+     * and the array values are the corresponding transaction operations.
+     */
+    public function transactions()
+    {
+        return [];
     }
 
     /**
@@ -618,6 +607,29 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
+     * Deletes rows in the table using the provided conditions.
+     * WARNING: If you do not specify any condition, this method will delete ALL rows in the table.
+     *
+     * For example, to delete all customers whose status is 3:
+     *
+     * ```php
+     * Customer::deleteAll('status = 3');
+     * ```
+     *
+     * @param string|array $condition the conditions that will be put in the WHERE part of the DELETE SQL.
+     * Please refer to [[Query::where()]] on how to specify this parameter.
+     * @param array $params the parameters (name => value) to be bound to the query.
+     * @return integer the number of rows deleted
+     */
+    public static function deleteAll($condition = '', $params = [])
+    {
+        $command = static::getDb()->createCommand();
+        $command->delete(static::tableName(), $condition, $params);
+
+        return $command->execute();
+    }
+
+    /**
      * Returns a value indicating whether the given active record is the same as the current one.
      * The comparison is made by comparing the table names and the primary key values of the two active records.
      * If one of the records [[isNewRecord|is new]] they are also considered not equal.
@@ -631,18 +643,5 @@ class ActiveRecord extends BaseActiveRecord
         }
 
         return static::tableName() === $record->tableName() && $this->getPrimaryKey() === $record->getPrimaryKey();
-    }
-
-    /**
-     * Returns a value indicating whether the specified operation is transactional in the current [[scenario]].
-     * @param integer $operation the operation to check. Possible values are [[OP_INSERT]], [[OP_UPDATE]] and [[OP_DELETE]].
-     * @return boolean whether the specified operation is transactional in the current [[scenario]].
-     */
-    public function isTransactional($operation)
-    {
-        $scenario = $this->getScenario();
-        $transactions = $this->transactions();
-
-        return isset($transactions[$scenario]) && ($transactions[$scenario] & $operation);
     }
 }

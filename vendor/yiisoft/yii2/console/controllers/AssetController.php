@@ -8,8 +8,8 @@
 namespace yii\console\controllers;
 
 use Yii;
-use yii\console\Exception;
 use yii\console\Controller;
+use yii\console\Exception;
 use yii\helpers\Console;
 use yii\helpers\FileHelper;
 use yii\helpers\VarDumper;
@@ -127,44 +127,6 @@ class AssetController extends Controller
      */
     private $_assetManager = [];
 
-
-    /**
-     * Returns the asset manager instance.
-     * @throws \yii\console\Exception on invalid configuration.
-     * @return \yii\web\AssetManager asset manager instance.
-     */
-    public function getAssetManager()
-    {
-        if (!is_object($this->_assetManager)) {
-            $options = $this->_assetManager;
-            if (!isset($options['class'])) {
-                $options['class'] = 'yii\\web\\AssetManager';
-            }
-            if (!isset($options['basePath'])) {
-                throw new Exception("Please specify 'basePath' for the 'assetManager' option.");
-            }
-            if (!isset($options['baseUrl'])) {
-                throw new Exception("Please specify 'baseUrl' for the 'assetManager' option.");
-            }
-            $this->_assetManager = Yii::createObject($options);
-        }
-
-        return $this->_assetManager;
-    }
-
-    /**
-     * Sets asset manager instance or configuration.
-     * @param \yii\web\AssetManager|array $assetManager asset manager instance or its array configuration.
-     * @throws \yii\console\Exception on invalid argument type.
-     */
-    public function setAssetManager($assetManager)
-    {
-        if (is_scalar($assetManager)) {
-            throw new Exception('"' . get_class($this) . '::assetManager" should be either object or array - "' . gettype($assetManager) . '" given.');
-        }
-        $this->_assetManager = $assetManager;
-    }
-
     /**
      * Combines and compresses the asset files according to the given configuration.
      * During the process new asset bundle configuration file will be created.
@@ -212,6 +174,43 @@ class AssetController extends Controller
     }
 
     /**
+     * Returns the asset manager instance.
+     * @throws \yii\console\Exception on invalid configuration.
+     * @return \yii\web\AssetManager asset manager instance.
+     */
+    public function getAssetManager()
+    {
+        if (!is_object($this->_assetManager)) {
+            $options = $this->_assetManager;
+            if (!isset($options['class'])) {
+                $options['class'] = 'yii\\web\\AssetManager';
+            }
+            if (!isset($options['basePath'])) {
+                throw new Exception("Please specify 'basePath' for the 'assetManager' option.");
+            }
+            if (!isset($options['baseUrl'])) {
+                throw new Exception("Please specify 'baseUrl' for the 'assetManager' option.");
+            }
+            $this->_assetManager = Yii::createObject($options);
+        }
+
+        return $this->_assetManager;
+    }
+
+    /**
+     * Sets asset manager instance or configuration.
+     * @param \yii\web\AssetManager|array $assetManager asset manager instance or its array configuration.
+     * @throws \yii\console\Exception on invalid argument type.
+     */
+    public function setAssetManager($assetManager)
+    {
+        if (is_scalar($assetManager)) {
+            throw new Exception('"' . get_class($this) . '::assetManager" should be either object or array - "' . gettype($assetManager) . '" given.');
+        }
+        $this->_assetManager = $assetManager;
+    }
+
+    /**
      * Creates full list of source asset bundles.
      * @param string[] $bundles list of asset bundle names
      * @return \yii\web\AssetBundle[] list of source asset bundles.
@@ -251,6 +250,28 @@ class AssetController extends Controller
                 throw new Exception("A circular dependency is detected for bundle '{$name}': " . $this->composeCircularDependencyTrace($name, $result) . '.');
             }
         }
+    }
+
+    /**
+     * Composes trace info for bundle circular dependency.
+     * @param string $circularDependencyName name of the bundle, which have circular dependency
+     * @param array $registered list of bundles registered while detecting circular dependency.
+     * @return string bundle circular dependency trace string.
+     */
+    private function composeCircularDependencyTrace($circularDependencyName, array $registered)
+    {
+        $dependencyTrace = [];
+        $startFound = false;
+        foreach ($registered as $name => $value) {
+            if ($name === $circularDependencyName) {
+                $startFound = true;
+            }
+            if ($startFound && $value === false) {
+                $dependencyTrace[] = $name;
+            }
+        }
+        $dependencyTrace[] = $circularDependencyName;
+        return implode(' -> ', $dependencyTrace);
     }
 
     /**
@@ -318,6 +339,28 @@ class AssetController extends Controller
     }
 
     /**
+     * Registers asset bundles including their dependencies.
+     * @param \yii\web\AssetBundle[] $bundles asset bundles list.
+     * @param string $name bundle name.
+     * @param array $registered stores already registered names.
+     * @throws Exception if circular dependency is detected.
+     */
+    protected function registerBundle($bundles, $name, &$registered)
+    {
+        if (!isset($registered[$name])) {
+            $registered[$name] = false;
+            $bundle = $bundles[$name];
+            foreach ($bundle->depends as $depend) {
+                $this->registerBundle($bundles, $depend, $registered);
+            }
+            unset($registered[$name]);
+            $registered[$name] = $bundle;
+        } elseif ($registered[$name] === false) {
+            throw new Exception("A circular dependency is detected for target '{$name}': " . $this->composeCircularDependencyTrace($name, $registered) . '.');
+        }
+    }
+
+    /**
      * Builds output asset bundle.
      * @param \yii\web\AssetBundle $target output asset bundle
      * @param string $type either 'js' or 'css'.
@@ -363,122 +406,12 @@ class AssetController extends Controller
     }
 
     /**
-     * Adjust dependencies between asset bundles in the way source bundles begin to depend on output ones.
-     * @param \yii\web\AssetBundle[] $targets output asset bundles.
-     * @param \yii\web\AssetBundle[] $bundles source asset bundles.
-     * @return \yii\web\AssetBundle[] output asset bundles.
+     * @param AssetBundle $bundle
+     * @return boolean whether asset bundle external or not.
      */
-    protected function adjustDependency($targets, $bundles)
+    private function isBundleExternal($bundle)
     {
-        $this->stdout("Creating new bundle configuration...\n");
-
-        $map = [];
-        foreach ($targets as $name => $target) {
-            foreach ($target->depends as $bundle) {
-                $map[$bundle] = $name;
-            }
-        }
-
-        foreach ($targets as $name => $target) {
-            $depends = [];
-            foreach ($target->depends as $bn) {
-                foreach ($bundles[$bn]->depends as $bundle) {
-                    $depends[$map[$bundle]] = true;
-                }
-            }
-            unset($depends[$name]);
-            $target->depends = array_keys($depends);
-        }
-
-        // detect possible circular dependencies
-        foreach ($targets as $name => $target) {
-            $registered = [];
-            $this->registerBundle($targets, $name, $registered);
-        }
-
-        foreach ($map as $bundle => $target) {
-            $sourceBundle = $bundles[$bundle];
-            $depends = $sourceBundle->depends;
-            if (!$this->isBundleExternal($sourceBundle)) {
-                $depends[] = $target;
-            }
-            $targets[$bundle] = Yii::createObject([
-                'class' => strpos($bundle, '\\') !== false ? $bundle : 'yii\\web\\AssetBundle',
-                'depends' => $depends,
-            ]);
-        }
-
-        return $targets;
-    }
-
-    /**
-     * Registers asset bundles including their dependencies.
-     * @param \yii\web\AssetBundle[] $bundles asset bundles list.
-     * @param string $name bundle name.
-     * @param array $registered stores already registered names.
-     * @throws Exception if circular dependency is detected.
-     */
-    protected function registerBundle($bundles, $name, &$registered)
-    {
-        if (!isset($registered[$name])) {
-            $registered[$name] = false;
-            $bundle = $bundles[$name];
-            foreach ($bundle->depends as $depend) {
-                $this->registerBundle($bundles, $depend, $registered);
-            }
-            unset($registered[$name]);
-            $registered[$name] = $bundle;
-        } elseif ($registered[$name] === false) {
-            throw new Exception("A circular dependency is detected for target '{$name}': " . $this->composeCircularDependencyTrace($name, $registered) . '.');
-        }
-    }
-
-    /**
-     * Saves new asset bundles configuration.
-     * @param \yii\web\AssetBundle[] $targets list of asset bundles to be saved.
-     * @param string $bundleFile output file name.
-     * @throws \yii\console\Exception on failure.
-     */
-    protected function saveTargets($targets, $bundleFile)
-    {
-        $array = [];
-        foreach ($targets as $name => $target) {
-            if (isset($this->targets[$name])) {
-                $array[$name] = [
-                    'class' => get_class($target),
-                    'basePath' => $this->targets[$name]['basePath'],
-                    'baseUrl' => $this->targets[$name]['baseUrl'],
-                    'js' => $target->js,
-                    'css' => $target->css,
-                ];
-            } else {
-                if ($this->isBundleExternal($target)) {
-                    $array[$name] = $this->composeBundleConfig($target);
-                } else {
-                    $array[$name] = [
-                        'sourcePath' => null,
-                        'js' => [],
-                        'css' => [],
-                        'depends' => $target->depends,
-                    ];
-                }
-            }
-        }
-        $array = VarDumper::export($array);
-        $version = date('Y-m-d H:i:s', time());
-        $bundleFileContent = <<<EOD
-<?php
-/**
- * This file is generated by the "yii {$this->id}" command.
- * DO NOT MODIFY THIS FILE DIRECTLY.
- * @version {$version}
- */
-return {$array};
-EOD;
-        if (!file_put_contents($bundleFile, $bundleFileContent)) {
-            throw new Exception("Unable to write output bundle configuration at '{$bundleFile}'.");
-        }
-        $this->stdout("Output bundle configuration created at '{$bundleFile}'.\n", Console::FG_GREEN);
+        return (empty($bundle->sourcePath) && empty($bundle->basePath));
     }
 
     /**
@@ -511,6 +444,25 @@ EOD;
     }
 
     /**
+     * Combines JavaScript files into a single one.
+     * @param array $inputFiles source file names.
+     * @param string $outputFile output file name.
+     * @throws \yii\console\Exception on failure.
+     */
+    public function combineJsFiles($inputFiles, $outputFile)
+    {
+        $content = '';
+        foreach ($inputFiles as $file) {
+            $content .= "/*** BEGIN FILE: $file ***/\n"
+                . file_get_contents($file)
+                . "/*** END FILE: $file ***/\n";
+        }
+        if (!file_put_contents($outputFile, $content)) {
+            throw new Exception("Unable to write output JavaScript file '{$outputFile}'.");
+        }
+    }
+
+    /**
      * Compresses given CSS files and combines them into the single one.
      * @param array $inputFiles list of source file names.
      * @param string $outputFile output file name.
@@ -540,25 +492,6 @@ EOD;
     }
 
     /**
-     * Combines JavaScript files into a single one.
-     * @param array $inputFiles source file names.
-     * @param string $outputFile output file name.
-     * @throws \yii\console\Exception on failure.
-     */
-    public function combineJsFiles($inputFiles, $outputFile)
-    {
-        $content = '';
-        foreach ($inputFiles as $file) {
-            $content .= "/*** BEGIN FILE: $file ***/\n"
-                . file_get_contents($file)
-                . "/*** END FILE: $file ***/\n";
-        }
-        if (!file_put_contents($outputFile, $content)) {
-            throw new Exception("Unable to write output JavaScript file '{$outputFile}'.");
-        }
-    }
-
-    /**
      * Combines CSS files into a single one.
      * @param array $inputFiles source file names.
      * @param string $outputFile output file name.
@@ -576,6 +509,28 @@ EOD;
         if (!file_put_contents($outputFile, $content)) {
             throw new Exception("Unable to write output CSS file '{$outputFile}'.");
         }
+    }
+
+    /**
+     * Returns canonicalized absolute pathname.
+     * Unlike regular `realpath()` this method does not expand symlinks and does not check path existence.
+     * @param string $path raw path
+     * @return string canonicalized absolute pathname
+     */
+    private function findRealPath($path)
+    {
+        $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        $pathParts = explode(DIRECTORY_SEPARATOR, $path);
+
+        $realPathParts = [];
+        foreach ($pathParts as $pathPart) {
+            if ($pathPart === '..') {
+                array_pop($realPathParts);
+            } else {
+                $realPathParts[] = $pathPart;
+            }
+        }
+        return implode(DIRECTORY_SEPARATOR, $realPathParts);
     }
 
     /**
@@ -658,6 +613,114 @@ EOD;
     }
 
     /**
+     * Adjust dependencies between asset bundles in the way source bundles begin to depend on output ones.
+     * @param \yii\web\AssetBundle[] $targets output asset bundles.
+     * @param \yii\web\AssetBundle[] $bundles source asset bundles.
+     * @return \yii\web\AssetBundle[] output asset bundles.
+     */
+    protected function adjustDependency($targets, $bundles)
+    {
+        $this->stdout("Creating new bundle configuration...\n");
+
+        $map = [];
+        foreach ($targets as $name => $target) {
+            foreach ($target->depends as $bundle) {
+                $map[$bundle] = $name;
+            }
+        }
+
+        foreach ($targets as $name => $target) {
+            $depends = [];
+            foreach ($target->depends as $bn) {
+                foreach ($bundles[$bn]->depends as $bundle) {
+                    $depends[$map[$bundle]] = true;
+                }
+            }
+            unset($depends[$name]);
+            $target->depends = array_keys($depends);
+        }
+
+        // detect possible circular dependencies
+        foreach ($targets as $name => $target) {
+            $registered = [];
+            $this->registerBundle($targets, $name, $registered);
+        }
+
+        foreach ($map as $bundle => $target) {
+            $sourceBundle = $bundles[$bundle];
+            $depends = $sourceBundle->depends;
+            if (!$this->isBundleExternal($sourceBundle)) {
+                $depends[] = $target;
+            }
+            $targets[$bundle] = Yii::createObject([
+                'class' => strpos($bundle, '\\') !== false ? $bundle : 'yii\\web\\AssetBundle',
+                'depends' => $depends,
+            ]);
+        }
+
+        return $targets;
+    }
+
+    /**
+     * Saves new asset bundles configuration.
+     * @param \yii\web\AssetBundle[] $targets list of asset bundles to be saved.
+     * @param string $bundleFile output file name.
+     * @throws \yii\console\Exception on failure.
+     */
+    protected function saveTargets($targets, $bundleFile)
+    {
+        $array = [];
+        foreach ($targets as $name => $target) {
+            if (isset($this->targets[$name])) {
+                $array[$name] = [
+                    'class' => get_class($target),
+                    'basePath' => $this->targets[$name]['basePath'],
+                    'baseUrl' => $this->targets[$name]['baseUrl'],
+                    'js' => $target->js,
+                    'css' => $target->css,
+                ];
+            } else {
+                if ($this->isBundleExternal($target)) {
+                    $array[$name] = $this->composeBundleConfig($target);
+                } else {
+                    $array[$name] = [
+                        'sourcePath' => null,
+                        'js' => [],
+                        'css' => [],
+                        'depends' => $target->depends,
+                    ];
+                }
+            }
+        }
+        $array = VarDumper::export($array);
+        $version = date('Y-m-d H:i:s', time());
+        $bundleFileContent = <<<EOD
+<?php
+/**
+ * This file is generated by the "yii {$this->id}" command.
+ * DO NOT MODIFY THIS FILE DIRECTLY.
+ * @version {$version}
+ */
+return {$array};
+EOD;
+        if (!file_put_contents($bundleFile, $bundleFileContent)) {
+            throw new Exception("Unable to write output bundle configuration at '{$bundleFile}'.");
+        }
+        $this->stdout("Output bundle configuration created at '{$bundleFile}'.\n", Console::FG_GREEN);
+    }
+
+    /**
+     * @param AssetBundle $bundle asset bundle instance.
+     * @return array bundle configuration.
+     */
+    private function composeBundleConfig($bundle)
+    {
+        $config = Yii::getObjectVars($bundle);
+        $config['class'] = get_class($bundle);
+        return $config;
+    }
+
+    /**
      * Creates template of configuration file for [[actionCompress]].
      * @param string $configFile output file name.
      * @return integer CLI exit code
@@ -717,69 +780,5 @@ EOD;
             $this->stdout("Configuration file template created at '{$configFile}'.\n\n", Console::FG_GREEN);
             return self::EXIT_CODE_NORMAL;
         }
-    }
-
-    /**
-     * Returns canonicalized absolute pathname.
-     * Unlike regular `realpath()` this method does not expand symlinks and does not check path existence.
-     * @param string $path raw path
-     * @return string canonicalized absolute pathname
-     */
-    private function findRealPath($path)
-    {
-        $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
-        $pathParts = explode(DIRECTORY_SEPARATOR, $path);
-
-        $realPathParts = [];
-        foreach ($pathParts as $pathPart) {
-            if ($pathPart === '..') {
-                array_pop($realPathParts);
-            } else {
-                $realPathParts[] = $pathPart;
-            }
-        }
-        return implode(DIRECTORY_SEPARATOR, $realPathParts);
-    }
-
-    /**
-     * @param AssetBundle $bundle
-     * @return boolean whether asset bundle external or not.
-     */
-    private function isBundleExternal($bundle)
-    {
-        return (empty($bundle->sourcePath) && empty($bundle->basePath));
-    }
-
-    /**
-     * @param AssetBundle $bundle asset bundle instance.
-     * @return array bundle configuration.
-     */
-    private function composeBundleConfig($bundle)
-    {
-        $config = Yii::getObjectVars($bundle);
-        $config['class'] = get_class($bundle);
-        return $config;
-    }
-
-    /**
-     * Composes trace info for bundle circular dependency.
-     * @param string $circularDependencyName name of the bundle, which have circular dependency
-     * @param array $registered list of bundles registered while detecting circular dependency.
-     * @return string bundle circular dependency trace string.
-     */
-    private function composeCircularDependencyTrace($circularDependencyName, array $registered)
-    {
-        $dependencyTrace = [];
-        $startFound = false;
-        foreach ($registered as $name => $value) {
-            if ($name === $circularDependencyName) {
-                $startFound = true;
-            }
-            if ($startFound && $value === false) {
-                $dependencyTrace[] = $name;
-            }
-        }
-        $dependencyTrace[] = $circularDependencyName;
-        return implode(' -> ', $dependencyTrace);
     }
 }

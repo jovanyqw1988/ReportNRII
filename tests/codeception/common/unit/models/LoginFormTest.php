@@ -2,11 +2,11 @@
 
 namespace tests\codeception\common\unit\models;
 
-use Yii;
-use tests\codeception\common\unit\DbTestCase;
 use Codeception\Specify;
 use common\models\LoginForm;
 use tests\codeception\common\fixtures\UserFixture;
+use tests\codeception\common\unit\DbTestCase;
+use Yii;
 
 /**
  * Login form test
@@ -28,12 +28,6 @@ class LoginFormTest extends DbTestCase
                 ],
             ],
         ]);
-    }
-
-    protected function tearDown()
-    {
-        Yii::$app->user->logout();
-        parent::tearDown();
     }
 
     public function testLoginNoUser()
@@ -89,5 +83,11 @@ class LoginFormTest extends DbTestCase
                 'dataFile' => '@tests/codeception/common/unit/fixtures/data/models/user.php'
             ],
         ];
+    }
+
+    protected function tearDown()
+    {
+        Yii::$app->user->logout();
+        parent::tearDown();
     }
 }

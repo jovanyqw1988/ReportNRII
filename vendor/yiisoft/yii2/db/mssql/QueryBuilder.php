@@ -43,7 +43,10 @@ class QueryBuilder extends \yii\db\QueryBuilder
         Schema::TYPE_BOOLEAN => 'bit',
         Schema::TYPE_MONEY => 'decimal(19,4)',
     ];
-
+    /**
+     * @var boolean whether MSSQL used is old.
+     */
+    private $_oldMssql;
 
     /**
      * @inheritdoc
@@ -63,30 +66,18 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * Builds the ORDER BY/LIMIT/OFFSET clauses for SQL SERVER 2012 or newer.
-     * @param string $sql the existing SQL (without ORDER BY/LIMIT/OFFSET)
-     * @param array $orderBy the order by columns. See [[Query::orderBy]] for more details on how to specify this parameter.
-     * @param integer $limit the limit number. See [[Query::limit]] for more details.
-     * @param integer $offset the offset number. See [[Query::offset]] for more details.
-     * @return string the SQL completed with ORDER BY/LIMIT/OFFSET (if any)
+     * @return boolean whether the version of the MSSQL being used is older than 2012.
+     * @throws \yii\base\InvalidConfigException
+     * @throws \yii\db\Exception
      */
-    protected function newBuildOrderByAndLimit($sql, $orderBy, $limit, $offset)
+    protected function isOldMssql()
     {
-        $orderBy = $this->buildOrderBy($orderBy);
-        if ($orderBy === '') {
-            // ORDER BY clause is required when FETCH and OFFSET are in the SQL
-            $orderBy = 'ORDER BY (SELECT NULL)';
+        if ($this->_oldMssql === null) {
+            $pdo = $this->db->getSlavePdo();
+            $version = explode('.', $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION));
+            $this->_oldMssql = $version[0] < 11;
         }
-        $sql .= $this->separator . $orderBy;
-
-        // http://technet.microsoft.com/en-us/library/gg699618.aspx
-        $offset = $this->hasOffset($offset) ? $offset : '0';
-        $sql .= $this->separator . "OFFSET $offset ROWS";
-        if ($this->hasLimit($limit)) {
-            $sql .= $this->separator . "FETCH NEXT $limit ROWS ONLY";
-        }
-
-        return $sql;
+        return $this->_oldMssql;
     }
 
     /**
@@ -114,6 +105,33 @@ class QueryBuilder extends \yii\db\QueryBuilder
         }
         if ($this->hasOffset($offset)) {
             $sql .= $this->separator . "WHERE rowNum > $offset";
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Builds the ORDER BY/LIMIT/OFFSET clauses for SQL SERVER 2012 or newer.
+     * @param string $sql the existing SQL (without ORDER BY/LIMIT/OFFSET)
+     * @param array $orderBy the order by columns. See [[Query::orderBy]] for more details on how to specify this parameter.
+     * @param integer $limit the limit number. See [[Query::limit]] for more details.
+     * @param integer $offset the offset number. See [[Query::offset]] for more details.
+     * @return string the SQL completed with ORDER BY/LIMIT/OFFSET (if any)
+     */
+    protected function newBuildOrderByAndLimit($sql, $orderBy, $limit, $offset)
+    {
+        $orderBy = $this->buildOrderBy($orderBy);
+        if ($orderBy === '') {
+            // ORDER BY clause is required when FETCH and OFFSET are in the SQL
+            $orderBy = 'ORDER BY (SELECT NULL)';
+        }
+        $sql .= $this->separator . $orderBy;
+
+        // http://technet.microsoft.com/en-us/library/gg699618.aspx
+        $offset = $this->hasOffset($offset) ? $offset : '0';
+        $sql .= $this->separator . "OFFSET $offset ROWS";
+        if ($this->hasLimit($limit)) {
+            $sql .= $this->separator . "FETCH NEXT $limit ROWS ONLY";
         }
 
         return $sql;
@@ -223,6 +241,15 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
+     * @inheritdoc
+     * @since 2.0.8
+     */
+    public function selectExists($rawSql)
+    {
+        return 'SELECT CASE WHEN EXISTS(' . $rawSql . ') THEN 1 ELSE 0 END';
+    }
+
+    /**
      * Returns an array of column names given model name
      *
      * @param string $modelClass name of the model class
@@ -238,26 +265,6 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $schema = $model->getTableSchema();
         $columns = array_keys($schema->columns);
         return $columns;
-    }
-
-    /**
-     * @var boolean whether MSSQL used is old.
-     */
-    private $_oldMssql;
-
-    /**
-     * @return boolean whether the version of the MSSQL being used is older than 2012.
-     * @throws \yii\base\InvalidConfigException
-     * @throws \yii\db\Exception
-     */
-    protected function isOldMssql()
-    {
-        if ($this->_oldMssql === null) {
-            $pdo = $this->db->getSlavePdo();
-            $version = explode('.', $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION));
-            $this->_oldMssql = $version[0] < 11;
-        }
-        return $this->_oldMssql;
     }
 
     /**
@@ -303,14 +310,5 @@ class QueryBuilder extends \yii\db\QueryBuilder
         }
 
         return '(' . implode($operator === 'IN' ? ' OR ' : ' AND ', $vss) . ')';
-    }
-
-    /**
-     * @inheritdoc
-     * @since 2.0.8
-     */
-    public function selectExists($rawSql)
-    {
-        return 'SELECT CASE WHEN EXISTS(' . $rawSql . ') THEN 1 ELSE 0 END';
     }
 }

@@ -95,43 +95,6 @@ class Mailer extends BaseMailer
      */
     private $_transport = [];
 
-
-    /**
-     * @return array|\Swift_Mailer Swift mailer instance or array configuration.
-     */
-    public function getSwiftMailer()
-    {
-        if (!is_object($this->_swiftMailer)) {
-            $this->_swiftMailer = $this->createSwiftMailer();
-        }
-
-        return $this->_swiftMailer;
-    }
-
-    /**
-     * @param array|\Swift_Transport $transport
-     * @throws InvalidConfigException on invalid argument.
-     */
-    public function setTransport($transport)
-    {
-        if (!is_array($transport) && !is_object($transport)) {
-            throw new InvalidConfigException('"' . get_class($this) . '::transport" should be either object or array, "' . gettype($transport) . '" given.');
-        }
-        $this->_transport = $transport;
-    }
-
-    /**
-     * @return array|\Swift_Transport
-     */
-    public function getTransport()
-    {
-        if (!is_object($this->_transport)) {
-            $this->_transport = $this->createTransport($this->_transport);
-        }
-
-        return $this->_transport;
-    }
-
     /**
      * @inheritdoc
      */
@@ -147,12 +110,48 @@ class Mailer extends BaseMailer
     }
 
     /**
+     * @return array|\Swift_Mailer Swift mailer instance or array configuration.
+     */
+    public function getSwiftMailer()
+    {
+        if (!is_object($this->_swiftMailer)) {
+            $this->_swiftMailer = $this->createSwiftMailer();
+        }
+
+        return $this->_swiftMailer;
+    }
+
+    /**
      * Creates Swift mailer instance.
      * @return \Swift_Mailer mailer instance.
      */
     protected function createSwiftMailer()
     {
         return \Swift_Mailer::newInstance($this->getTransport());
+    }
+
+    /**
+     * @return array|\Swift_Transport
+     */
+    public function getTransport()
+    {
+        if (!is_object($this->_transport)) {
+            $this->_transport = $this->createTransport($this->_transport);
+        }
+
+        return $this->_transport;
+    }
+
+    /**
+     * @param array|\Swift_Transport $transport
+     * @throws InvalidConfigException on invalid argument.
+     */
+    public function setTransport($transport)
+    {
+        if (!is_array($transport) && !is_object($transport)) {
+            throw new InvalidConfigException('"' . get_class($this) . '::transport" should be either object or array, "' . gettype($transport) . '" given.');
+        }
+        $this->_transport = $transport;
     }
 
     /**

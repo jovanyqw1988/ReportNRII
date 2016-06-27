@@ -43,20 +43,6 @@ trait LinkTrait
 	protected $references = [];
 
 	/**
-	 * Remove backslash from escaped characters
-	 * @param $text
-	 * @return string
-	 */
-	protected function replaceEscape($text)
-	{
-		$strtr = [];
-		foreach($this->escapeCharacters as $char) {
-			$strtr["\\$char"] = $char;
-		}
-		return strtr($text, $strtr);
-	}
-
-	/**
 	 * Parses a link indicated by `[`.
 	 * @marker [
 	 */
@@ -78,38 +64,6 @@ trait LinkTrait
 		} else {
 			// remove all starting [ markers to avoid next one to be parsed as link
 			$result = '[';
-			$i = 1;
-			while (isset($markdown[$i]) && $markdown[$i] == '[') {
-				$result .= '[';
-				$i++;
-			}
-			return [['text', $result], $i];
-		}
-	}
-
-	/**
-	 * Parses an image indicated by `![`.
-	 * @marker ![
-	 */
-	protected function parseImage($markdown)
-	{
-		if (($parts = $this->parseLinkOrImage(substr($markdown, 1))) !== false) {
-			list($text, $url, $title, $offset, $key) = $parts;
-
-			return [
-				[
-					'image',
-					'text' => $text,
-					'url' => $url,
-					'title' => $title,
-					'refkey' => $key,
-					'orig' => substr($markdown, 0, $offset + 1),
-				],
-				$offset + 1
-			];
-		} else {
-			// remove all starting [ markers to avoid next one to be parsed as link
-			$result = '!';
 			$i = 1;
 			while (isset($markdown[$i]) && $markdown[$i] == '[') {
 				$result .= '[';
@@ -162,6 +116,52 @@ REGEXP;
 	}
 
 	/**
+	 * Remove backslash from escaped characters
+	 * @param $text
+	 * @return string
+	 */
+	protected function replaceEscape($text)
+	{
+		$strtr = [];
+		foreach ($this->escapeCharacters as $char) {
+			$strtr["\\$char"] = $char;
+		}
+		return strtr($text, $strtr);
+	}
+
+	/**
+	 * Parses an image indicated by `![`.
+	 * @marker ![
+	 */
+	protected function parseImage($markdown)
+	{
+		if (($parts = $this->parseLinkOrImage(substr($markdown, 1))) !== false) {
+			list($text, $url, $title, $offset, $key) = $parts;
+
+			return [
+				[
+					'image',
+					'text' => $text,
+					'url' => $url,
+					'title' => $title,
+					'refkey' => $key,
+					'orig' => substr($markdown, 0, $offset + 1),
+				],
+				$offset + 1
+			];
+		} else {
+			// remove all starting [ markers to avoid next one to be parsed as link
+			$result = '!';
+			$i = 1;
+			while (isset($markdown[$i]) && $markdown[$i] == '[') {
+				$result .= '[';
+				$i++;
+			}
+			return [['text', $result], $i];
+		}
+	}
+
+	/**
 	 * Parses inline HTML.
 	 * @marker <
 	 */
@@ -204,15 +204,6 @@ REGEXP;
 		return "<a href=\"$url\">$text</a>";
 	}
 
-	protected function lookupReference($key)
-	{
-		$normalizedKey = preg_replace('/\s+/', ' ', $key);
-		if (isset($this->references[$key]) || isset($this->references[$key = $normalizedKey])) {
-			return $this->references[$key];
-		}
-		return false;
-	}
-
 	protected function renderLink($block)
 	{
 		if (isset($block['refkey'])) {
@@ -225,6 +216,15 @@ REGEXP;
 		return '<a href="' . htmlspecialchars($block['url'], ENT_COMPAT | ENT_HTML401, 'UTF-8') . '"'
 			. (empty($block['title']) ? '' : ' title="' . htmlspecialchars($block['title'], ENT_COMPAT | ENT_HTML401 | ENT_SUBSTITUTE, 'UTF-8') . '"')
 			. '>' . $this->renderAbsy($block['text']) . '</a>';
+	}
+
+	protected function lookupReference($key)
+	{
+		$normalizedKey = preg_replace('/\s+/', ' ', $key);
+		if (isset($this->references[$key]) || isset($this->references[$key = $normalizedKey])) {
+			return $this->references[$key];
+		}
+		return false;
 	}
 
 	protected function renderImage($block)

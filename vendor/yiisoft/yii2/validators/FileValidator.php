@@ -8,11 +8,11 @@
 namespace yii\validators;
 
 use Yii;
+use yii\helpers\FileHelper;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\web\JsExpression;
 use yii\web\UploadedFile;
-use yii\helpers\FileHelper;
 
 /**
  * FileValidator verifies if an attribute is receiving a valid uploaded file.
@@ -312,15 +312,6 @@ class FileValidator extends Validator
     }
 
     /**
-     * @inheritdoc
-     */
-    public function isEmpty($value, $trim = false)
-    {
-        $value = is_array($value) ? reset($value) : $value;
-        return !($value instanceof UploadedFile) || $value->error == UPLOAD_ERR_NO_FILE;
-    }
-
-    /**
      * Converts php.ini style size to bytes
      *
      * @param string $sizeStr $sizeStr
@@ -371,6 +362,53 @@ class FileValidator extends Validator
         }
 
         return true;
+    }
+
+    /**
+     * Checks the mimeType of the $file against the list in the [[mimeTypes]] property
+     *
+     * @param UploadedFile $file
+     * @return boolean whether the $file mimeType is allowed
+     * @throws \yii\base\InvalidConfigException
+     * @see mimeTypes
+     * @since 2.0.8
+     */
+    protected function validateMimeType($file)
+    {
+        $fileMimeType = FileHelper::getMimeType($file->tempName);
+
+        foreach ($this->mimeTypes as $mimeType) {
+            if ($mimeType === $fileMimeType) {
+                return true;
+            }
+
+            if (strpos($mimeType, '*') !== false && preg_match($this->buildMimeTypeRegexp($mimeType), $fileMimeType)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Builds the RegExp from the $mask
+     *
+     * @param string $mask
+     * @return string the regular expression
+     * @see mimeTypes
+     */
+    private function buildMimeTypeRegexp($mask)
+    {
+        return '/^' . str_replace('\*', '.*', preg_quote($mask, '/')) . '$/';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function isEmpty($value, $trim = false)
+    {
+        $value = is_array($value) ? reset($value) : $value;
+        return !($value instanceof UploadedFile) || $value->error == UPLOAD_ERR_NO_FILE;
     }
 
     /**
@@ -455,43 +493,5 @@ class FileValidator extends Validator
         }
 
         return $options;
-    }
-
-    /**
-     * Builds the RegExp from the $mask
-     *
-     * @param string $mask
-     * @return string the regular expression
-     * @see mimeTypes
-     */
-    private function buildMimeTypeRegexp($mask)
-    {
-        return '/^' . str_replace('\*', '.*', preg_quote($mask, '/')) . '$/';
-    }
-
-    /**
-     * Checks the mimeType of the $file against the list in the [[mimeTypes]] property
-     *
-     * @param UploadedFile $file
-     * @return boolean whether the $file mimeType is allowed
-     * @throws \yii\base\InvalidConfigException
-     * @see mimeTypes
-     * @since 2.0.8
-     */
-    protected function validateMimeType($file)
-    {
-        $fileMimeType = FileHelper::getMimeType($file->tempName);
-
-        foreach ($this->mimeTypes as $mimeType) {
-            if ($mimeType === $fileMimeType) {
-                return true;
-            }
-
-            if (strpos($mimeType, '*') !== false && preg_match($this->buildMimeTypeRegexp($mimeType), $fileMimeType)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

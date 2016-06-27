@@ -83,6 +83,21 @@ class ServeController extends Controller
     }
 
     /**
+     * @param string $address server address
+     * @return boolean if address is already in use
+     */
+    protected function isAddressTaken($address)
+    {
+        list($hostname, $port) = explode(':', $address);
+        $fp = @fsockopen($hostname, $port, $errno, $errstr, 3);
+        if ($fp === false) {
+            return false;
+        }
+        fclose($fp);
+        return true;
+    }
+
+    /**
      * @inheritdoc
      */
     public function options($actionID)
@@ -105,20 +120,5 @@ class ServeController extends Controller
             'p' => 'port',
             'r' => 'router'
         ]);
-    }
-
-    /**
-     * @param string $address server address
-     * @return boolean if address is already in use
-     */
-    protected function isAddressTaken($address)
-    {
-        list($hostname, $port) = explode(':', $address);
-        $fp = @fsockopen($hostname, $port, $errno, $errstr, 3);
-        if ($fp === false) {
-            return false;
-        }
-        fclose($fp);
-        return true;
     }
 }

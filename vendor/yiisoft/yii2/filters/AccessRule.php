@@ -7,11 +7,11 @@
 
 namespace yii\filters;
 
-use yii\base\Component;
 use yii\base\Action;
-use yii\web\User;
-use yii\web\Request;
+use yii\base\Component;
 use yii\base\Controller;
+use yii\web\Request;
+use yii\web\User;
 
 /**
  * This class represents an access rule defined by the [[AccessControl]] action filter
@@ -123,15 +123,6 @@ class AccessRule extends Component
     }
 
     /**
-     * @param Controller $controller the controller
-     * @return boolean whether the rule applies to the controller
-     */
-    protected function matchController($controller)
-    {
-        return empty($this->controllers) || in_array($controller->uniqueId, $this->controllers, true);
-    }
-
-    /**
      * @param User $user the user object
      * @return boolean whether the rule applies to the role
      */
@@ -182,6 +173,15 @@ class AccessRule extends Component
     protected function matchVerb($verb)
     {
         return empty($this->verbs) || in_array($verb, $this->verbs, true);
+    }
+
+    /**
+     * @param Controller $controller the controller
+     * @return boolean whether the rule applies to the controller
+     */
+    protected function matchController($controller)
+    {
+        return empty($this->controllers) || in_array($controller->uniqueId, $this->controllers, true);
     }
 
     /**

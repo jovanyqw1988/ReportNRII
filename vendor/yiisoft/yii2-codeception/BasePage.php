@@ -45,6 +45,20 @@ abstract class BasePage extends Component
     }
 
     /**
+     * Creates a page instance and sets the test guy to use [[url]].
+     * @param \Codeception\Actor $I the test guy instance
+     * @param array $params the GET parameters to be used to generate [[url]]
+     * @return static the page instance
+     */
+    public static function openBy($I, $params = [])
+    {
+        $page = new static($I);
+        $I->amOnPage($page->getUrl($params));
+
+        return $page;
+    }
+
+    /**
      * Returns the URL to this page.
      * The URL will be returned by calling the URL manager of the application
      * with [[route]] and the provided parameters.
@@ -63,19 +77,5 @@ abstract class BasePage extends Component
         } else {
             throw new InvalidConfigException('The "route" property must be set.');
         }
-    }
-
-    /**
-     * Creates a page instance and sets the test guy to use [[url]].
-     * @param \Codeception\Actor $I the test guy instance
-     * @param array $params the GET parameters to be used to generate [[url]]
-     * @return static the page instance
-     */
-    public static function openBy($I, $params = [])
-    {
-        $page = new static($I);
-        $I->amOnPage($page->getUrl($params));
-
-        return $page;
     }
 }

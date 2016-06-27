@@ -202,44 +202,6 @@ class Nav extends Widget
     }
 
     /**
-     * Renders the given items as a dropdown.
-     * This method is called to create sub-menus.
-     * @param array $items the given items. Please refer to [[Dropdown::items]] for the array structure.
-     * @param array $parentItem the parent item information. Please refer to [[items]] for the structure of this array.
-     * @return string the rendering result.
-     * @since 2.0.1
-     */
-    protected function renderDropdown($items, $parentItem)
-    {
-        return Dropdown::widget([
-            'options' => ArrayHelper::getValue($parentItem, 'dropDownOptions', []),
-            'items' => $items,
-            'encodeLabels' => $this->encodeLabels,
-            'clientOptions' => false,
-            'view' => $this->getView(),
-        ]);
-    }
-
-    /**
-     * Check to see if a child item is active optionally activating the parent.
-     * @param array $items @see items
-     * @param boolean $active should the parent be active too
-     * @return array @see items
-     */
-    protected function isChildActive($items, &$active)
-    {
-        foreach ($items as $i => $child) {
-            if (ArrayHelper::remove($items[$i], 'active', false) || $this->isItemActive($child)) {
-                Html::addCssClass($items[$i]['options'], 'active');
-                if ($this->activateParents) {
-                    $active = true;
-                }
-            }
-        }
-        return $items;
-    }
-
-    /**
      * Checks whether a menu item is active.
      * This is done by checking if [[route]] and [[params]] match that specified in the `url` option of the menu item.
      * When the `url` option of a menu item is specified in terms of an array, its first element is treated
@@ -274,5 +236,43 @@ class Nav extends Widget
         }
 
         return false;
+    }
+
+    /**
+     * Check to see if a child item is active optionally activating the parent.
+     * @param array $items @see items
+     * @param boolean $active should the parent be active too
+     * @return array @see items
+     */
+    protected function isChildActive($items, &$active)
+    {
+        foreach ($items as $i => $child) {
+            if (ArrayHelper::remove($items[$i], 'active', false) || $this->isItemActive($child)) {
+                Html::addCssClass($items[$i]['options'], 'active');
+                if ($this->activateParents) {
+                    $active = true;
+                }
+            }
+        }
+        return $items;
+    }
+
+    /**
+     * Renders the given items as a dropdown.
+     * This method is called to create sub-menus.
+     * @param array $items the given items. Please refer to [[Dropdown::items]] for the array structure.
+     * @param array $parentItem the parent item information. Please refer to [[items]] for the structure of this array.
+     * @return string the rendering result.
+     * @since 2.0.1
+     */
+    protected function renderDropdown($items, $parentItem)
+    {
+        return Dropdown::widget([
+            'options' => ArrayHelper::getValue($parentItem, 'dropDownOptions', []),
+            'items' => $items,
+            'encodeLabels' => $this->encodeLabels,
+            'clientOptions' => false,
+            'view' => $this->getView(),
+        ]);
     }
 }

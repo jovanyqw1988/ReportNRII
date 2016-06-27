@@ -120,6 +120,25 @@ class ExistValidator extends Validator
     }
 
     /**
+     * Creates a query instance with the given condition.
+     * @param string $targetClass the target AR class
+     * @param mixed $condition query condition
+     * @return \yii\db\ActiveQueryInterface the query instance
+     */
+    protected function createQuery($targetClass, $condition)
+    {
+        /* @var $targetClass \yii\db\ActiveRecordInterface */
+        $query = $targetClass::find()->andWhere($condition);
+        if ($this->filter instanceof \Closure) {
+            call_user_func($this->filter, $query);
+        } elseif ($this->filter !== null) {
+            $query->andWhere($this->filter);
+        }
+
+        return $query;
+    }
+
+    /**
      * @inheritdoc
      */
     protected function validateValue($value)
@@ -141,24 +160,5 @@ class ExistValidator extends Validator
         } else {
             return $query->exists() ? null : [$this->message, []];
         }
-    }
-
-    /**
-     * Creates a query instance with the given condition.
-     * @param string $targetClass the target AR class
-     * @param mixed $condition query condition
-     * @return \yii\db\ActiveQueryInterface the query instance
-     */
-    protected function createQuery($targetClass, $condition)
-    {
-        /* @var $targetClass \yii\db\ActiveRecordInterface */
-        $query = $targetClass::find()->andWhere($condition);
-        if ($this->filter instanceof \Closure) {
-            call_user_func($this->filter, $query);
-        } elseif ($this->filter !== null) {
-            $query->andWhere($this->filter);
-        }
-
-        return $query;
     }
 }

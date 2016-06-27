@@ -2,8 +2,6 @@
 
 namespace cebe\markdown;
 
-use cebe\markdown\block\TableTrait;
-
 // work around https://github.com/facebook/hhvm/issues/1120
 defined('ENT_HTML401') || define('ENT_HTML401', 0);
 
@@ -135,22 +133,6 @@ class MarkdownExtra extends Markdown
 			. "</code></pre>\n";
 	}
 
-	/**
-	 * Renders a headline
-	 */
-	protected function renderHeadline($block)
-	{
-		foreach($block['content'] as $i => $element) {
-			if ($element[0] === 'specialAttributes') {
-				unset($block['content'][$i]);
-				$block['attributes'] = $element[1];
-			}
-		}
-		$tag = 'h' . $block['level'];
-		$attributes = $this->renderAttributes($block);
-		return "<$tag$attributes>" . rtrim($this->renderAbsy($block['content']), "# \t") . "</$tag>\n";
-	}
-
 	protected function renderAttributes($block)
 	{
 		$html = [];
@@ -176,9 +158,24 @@ class MarkdownExtra extends Markdown
 		return $result;
 	}
 
+	/**
+	 * Renders a headline
+	 */
+	protected function renderHeadline($block)
+	{
+		foreach ($block['content'] as $i => $element) {
+			if ($element[0] === 'specialAttributes') {
+				unset($block['content'][$i]);
+				$block['attributes'] = $element[1];
+			}
+		}
+		$tag = 'h' . $block['level'];
+		$attributes = $this->renderAttributes($block);
+		return "<$tag$attributes>" . rtrim($this->renderAbsy($block['content']), "# \t") . "</$tag>\n";
+	}
+
 
 	// inline parsing
-
 
 	/**
 	 * @marker {

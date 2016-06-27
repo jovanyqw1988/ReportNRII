@@ -127,6 +127,16 @@ class Pjax extends Widget
     }
 
     /**
+     * @return boolean whether the current request requires pjax response from this widget
+     */
+    protected function requiresPjax()
+    {
+        $headers = Yii::$app->getRequest()->getHeaders();
+
+        return $headers->get('X-Pjax') && $headers->get('X-Pjax-Container') === '#' . $this->options['id'];
+    }
+
+    /**
      * @inheritdoc
      */
     public function run()
@@ -159,16 +169,6 @@ class Pjax extends Widget
         $response->send();
 
         Yii::$app->end();
-    }
-
-    /**
-     * @return boolean whether the current request requires pjax response from this widget
-     */
-    protected function requiresPjax()
-    {
-        $headers = Yii::$app->getRequest()->getHeaders();
-
-        return $headers->get('X-Pjax') && $headers->get('X-Pjax-Container') === '#' . $this->options['id'];
     }
 
     /**

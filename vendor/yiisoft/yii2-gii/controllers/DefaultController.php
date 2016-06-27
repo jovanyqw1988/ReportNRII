@@ -61,6 +61,25 @@ class DefaultController extends Controller
         return $this->render('view', $params);
     }
 
+    /**
+     * Loads the generator with the specified ID.
+     * @param string $id the ID of the generator to be loaded.
+     * @return \yii\gii\Generator the loaded generator
+     * @throws NotFoundHttpException
+     */
+    protected function loadGenerator($id)
+    {
+        if (isset($this->module->generators[$id])) {
+            $this->generator = $this->module->generators[$id];
+            $this->generator->loadStickyAttributes();
+            $this->generator->load(Yii::$app->request->post());
+
+            return $this->generator;
+        } else {
+            throw new NotFoundHttpException("Code generator not found: $id");
+        }
+    }
+
     public function actionPreview($id, $file)
     {
         $generator = $this->loadGenerator($id);
@@ -111,25 +130,6 @@ class DefaultController extends Controller
             return $generator->$method();
         } else {
             throw new NotFoundHttpException("Unknown generator action: $name");
-        }
-    }
-
-    /**
-     * Loads the generator with the specified ID.
-     * @param string $id the ID of the generator to be loaded.
-     * @return \yii\gii\Generator the loaded generator
-     * @throws NotFoundHttpException
-     */
-    protected function loadGenerator($id)
-    {
-        if (isset($this->module->generators[$id])) {
-            $this->generator = $this->module->generators[$id];
-            $this->generator->loadStickyAttributes();
-            $this->generator->load(Yii::$app->request->post());
-
-            return $this->generator;
-        } else {
-            throw new NotFoundHttpException("Code generator not found: $id");
         }
     }
 }

@@ -10,8 +10,8 @@ namespace yii;
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
 use yii\base\UnknownClassException;
-use yii\log\Logger;
 use yii\di\Container;
+use yii\log\Logger;
 
 /**
  * Gets the application start timestamp.
@@ -85,7 +85,7 @@ class BaseYii
      * @see Container
      */
     public static $container;
-
+    private static $_logger;
 
     /**
      * Returns a string representing the current version of the Yii framework.
@@ -94,65 +94,6 @@ class BaseYii
     public static function getVersion()
     {
         return '2.0.8';
-    }
-
-    /**
-     * Translates a path alias into an actual path.
-     *
-     * The translation is done according to the following procedure:
-     *
-     * 1. If the given alias does not start with '@', it is returned back without change;
-     * 2. Otherwise, look for the longest registered alias that matches the beginning part
-     *    of the given alias. If it exists, replace the matching part of the given alias with
-     *    the corresponding registered path.
-     * 3. Throw an exception or return false, depending on the `$throwException` parameter.
-     *
-     * For example, by default '@yii' is registered as the alias to the Yii framework directory,
-     * say '/path/to/yii'. The alias '@yii/web' would then be translated into '/path/to/yii/web'.
-     *
-     * If you have registered two aliases '@foo' and '@foo/bar'. Then translating '@foo/bar/config'
-     * would replace the part '@foo/bar' (instead of '@foo') with the corresponding registered path.
-     * This is because the longest alias takes precedence.
-     *
-     * However, if the alias to be translated is '@foo/barbar/config', then '@foo' will be replaced
-     * instead of '@foo/bar', because '/' serves as the boundary character.
-     *
-     * Note, this method does not check if the returned path exists or not.
-     *
-     * @param string $alias the alias to be translated.
-     * @param boolean $throwException whether to throw an exception if the given alias is invalid.
-     * If this is false and an invalid alias is given, false will be returned by this method.
-     * @return string|boolean the path corresponding to the alias, false if the root alias is not previously registered.
-     * @throws InvalidParamException if the alias is invalid while $throwException is true.
-     * @see setAlias()
-     */
-    public static function getAlias($alias, $throwException = true)
-    {
-        if (strncmp($alias, '@', 1)) {
-            // not an alias
-            return $alias;
-        }
-
-        $pos = strpos($alias, '/');
-        $root = $pos === false ? $alias : substr($alias, 0, $pos);
-
-        if (isset(static::$aliases[$root])) {
-            if (is_string(static::$aliases[$root])) {
-                return $pos === false ? static::$aliases[$root] : static::$aliases[$root] . substr($alias, $pos);
-            } else {
-                foreach (static::$aliases[$root] as $name => $path) {
-                    if (strpos($alias . '/', $name . '/') === 0) {
-                        return $path . substr($alias, strlen($name));
-                    }
-                }
-            }
-        }
-
-        if ($throwException) {
-            throw new InvalidParamException("Invalid path alias: $alias");
-        } else {
-            return false;
-        }
     }
 
     /**
@@ -248,6 +189,65 @@ class BaseYii
     }
 
     /**
+     * Translates a path alias into an actual path.
+     *
+     * The translation is done according to the following procedure:
+     *
+     * 1. If the given alias does not start with '@', it is returned back without change;
+     * 2. Otherwise, look for the longest registered alias that matches the beginning part
+     *    of the given alias. If it exists, replace the matching part of the given alias with
+     *    the corresponding registered path.
+     * 3. Throw an exception or return false, depending on the `$throwException` parameter.
+     *
+     * For example, by default '@yii' is registered as the alias to the Yii framework directory,
+     * say '/path/to/yii'. The alias '@yii/web' would then be translated into '/path/to/yii/web'.
+     *
+     * If you have registered two aliases '@foo' and '@foo/bar'. Then translating '@foo/bar/config'
+     * would replace the part '@foo/bar' (instead of '@foo') with the corresponding registered path.
+     * This is because the longest alias takes precedence.
+     *
+     * However, if the alias to be translated is '@foo/barbar/config', then '@foo' will be replaced
+     * instead of '@foo/bar', because '/' serves as the boundary character.
+     *
+     * Note, this method does not check if the returned path exists or not.
+     *
+     * @param string $alias the alias to be translated.
+     * @param boolean $throwException whether to throw an exception if the given alias is invalid.
+     * If this is false and an invalid alias is given, false will be returned by this method.
+     * @return string|boolean the path corresponding to the alias, false if the root alias is not previously registered.
+     * @throws InvalidParamException if the alias is invalid while $throwException is true.
+     * @see setAlias()
+     */
+    public static function getAlias($alias, $throwException = true)
+    {
+        if (strncmp($alias, '@', 1)) {
+            // not an alias
+            return $alias;
+        }
+
+        $pos = strpos($alias, '/');
+        $root = $pos === false ? $alias : substr($alias, 0, $pos);
+
+        if (isset(static::$aliases[$root])) {
+            if (is_string(static::$aliases[$root])) {
+                return $pos === false ? static::$aliases[$root] : static::$aliases[$root] . substr($alias, $pos);
+            } else {
+                foreach (static::$aliases[$root] as $name => $path) {
+                    if (strpos($alias . '/', $name . '/') === 0) {
+                        return $path . substr($alias, strlen($name));
+                    }
+                }
+            }
+        }
+
+        if ($throwException) {
+            throw new InvalidParamException("Invalid path alias: $alias");
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Class autoload loader.
      * This method is invoked automatically when PHP sees an unknown class.
      * The method will attempt to include the class file according to the following procedure:
@@ -290,6 +290,41 @@ class BaseYii
         if (YII_DEBUG && !class_exists($className, false) && !interface_exists($className, false) && !trait_exists($className, false)) {
             throw new UnknownClassException("Unable to find '$className' in file: $classFile. Namespace missing?");
         }
+    }
+
+    /**
+     * Logs a trace message.
+     * Trace messages are logged mainly for development purpose to see
+     * the execution work flow of some code.
+     * @param string $message the message to be logged.
+     * @param string $category the category of the message.
+     */
+    public static function trace($message, $category = 'application')
+    {
+        if (YII_DEBUG) {
+            static::getLogger()->log($message, Logger::LEVEL_TRACE, $category);
+        }
+    }
+
+    /**
+     * @return Logger message logger
+     */
+    public static function getLogger()
+    {
+        if (self::$_logger !== null) {
+            return self::$_logger;
+        } else {
+            return self::$_logger = static::createObject('yii\log\Logger');
+        }
+    }
+
+    /**
+     * Sets the logger object.
+     * @param Logger $logger the logger object.
+     */
+    public static function setLogger($logger)
+    {
+        self::$_logger = $logger;
     }
 
     /**
@@ -348,43 +383,6 @@ class BaseYii
             throw new InvalidConfigException('Object configuration must be an array containing a "class" element.');
         } else {
             throw new InvalidConfigException('Unsupported configuration type: ' . gettype($type));
-        }
-    }
-
-    private static $_logger;
-
-    /**
-     * @return Logger message logger
-     */
-    public static function getLogger()
-    {
-        if (self::$_logger !== null) {
-            return self::$_logger;
-        } else {
-            return self::$_logger = static::createObject('yii\log\Logger');
-        }
-    }
-
-    /**
-     * Sets the logger object.
-     * @param Logger $logger the logger object.
-     */
-    public static function setLogger($logger)
-    {
-        self::$_logger = $logger;
-    }
-
-    /**
-     * Logs a trace message.
-     * Trace messages are logged mainly for development purpose to see
-     * the execution work flow of some code.
-     * @param string $message the message to be logged.
-     * @param string $category the category of the message.
-     */
-    public static function trace($message, $category = 'application')
-    {
-        if (YII_DEBUG) {
-            static::getLogger()->log($message, Logger::LEVEL_TRACE, $category);
         }
     }
 

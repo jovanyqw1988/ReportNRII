@@ -82,13 +82,6 @@ abstract class Target extends Component
 
     private $_levels = 0;
 
-
-    /**
-     * Exports log [[messages]] to a specific destination.
-     * Child classes must implement this method.
-     */
-    abstract public function export();
-
     /**
      * Processes the given log messages.
      * This method will filter the given messages with [[levels]] and [[categories]].
@@ -116,20 +109,46 @@ abstract class Target extends Component
     }
 
     /**
-     * Generates the context information to be logged.
-     * The default implementation will dump user information, system variables, etc.
-     * @return string the context information. If an empty string, it means no context information.
+     * Filters the given messages according to their categories and levels.
+     * @param array $messages messages to be filtered.
+     * The message structure follows that in [[Logger::messages]].
+     * @param integer $levels the message levels to filter by. This is a bitmap of
+     * level values. Value 0 means allowing all levels.
+     * @param array $categories the message categories to filter by. If empty, it means all categories are allowed.
+     * @param array $except the message categories to exclude. If empty, it means all categories are allowed.
+     * @return array the filtered messages.
      */
-    protected function getContextMessage()
+    public static function filterMessages($messages, $levels = 0, $categories = [], $except = [])
     {
-        $context = [];
-        foreach ($this->logVars as $name) {
-            if (!empty($GLOBALS[$name])) {
-                $context[] = "\${$name} = " . VarDumper::dumpAsString($GLOBALS[$name]);
+        foreach ($messages as $i => $message) {
+            if ($levels && !($levels & $message[1])) {
+                unset($messages[$i]);
+                continue;
+            }
+
+            $matched = empty($categories);
+            foreach ($categories as $category) {
+                if ($message[2] === $category || !empty($category) && substr_compare($category, '*', -1, 1) === 0 && strpos($message[2], rtrim($category, '*')) === 0) {
+                    $matched = true;
+                    break;
+                }
+            }
+
+            if ($matched) {
+                foreach ($except as $category) {
+                    $prefix = rtrim($category, '*');
+                    if (($message[2] === $category || $prefix !== $category) && strpos($message[2], $prefix) === 0) {
+                        $matched = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!$matched) {
+                unset($messages[$i]);
             }
         }
-
-        return implode("\n\n", $context);
+        return $messages;
     }
 
     /**
@@ -185,47 +204,27 @@ abstract class Target extends Component
     }
 
     /**
-     * Filters the given messages according to their categories and levels.
-     * @param array $messages messages to be filtered.
-     * The message structure follows that in [[Logger::messages]].
-     * @param integer $levels the message levels to filter by. This is a bitmap of
-     * level values. Value 0 means allowing all levels.
-     * @param array $categories the message categories to filter by. If empty, it means all categories are allowed.
-     * @param array $except the message categories to exclude. If empty, it means all categories are allowed.
-     * @return array the filtered messages.
+     * Generates the context information to be logged.
+     * The default implementation will dump user information, system variables, etc.
+     * @return string the context information. If an empty string, it means no context information.
      */
-    public static function filterMessages($messages, $levels = 0, $categories = [], $except = [])
+    protected function getContextMessage()
     {
-        foreach ($messages as $i => $message) {
-            if ($levels && !($levels & $message[1])) {
-                unset($messages[$i]);
-                continue;
-            }
-
-            $matched = empty($categories);
-            foreach ($categories as $category) {
-                if ($message[2] === $category || !empty($category) && substr_compare($category, '*', -1, 1) === 0 && strpos($message[2], rtrim($category, '*')) === 0) {
-                    $matched = true;
-                    break;
-                }
-            }
-
-            if ($matched) {
-                foreach ($except as $category) {
-                    $prefix = rtrim($category, '*');
-                    if (($message[2] === $category || $prefix !== $category) && strpos($message[2], $prefix) === 0) {
-                        $matched = false;
-                        break;
-                    }
-                }
-            }
-
-            if (!$matched) {
-                unset($messages[$i]);
+        $context = [];
+        foreach ($this->logVars as $name) {
+            if (!empty($GLOBALS[$name])) {
+                $context[] = "\${$name} = " . VarDumper::dumpAsString($GLOBALS[$name]);
             }
         }
-        return $messages;
+
+        return implode("\n\n", $context);
     }
+
+    /**
+     * Exports log [[messages]] to a specific destination.
+     * Child classes must implement this method.
+     */
+    abstract public function export();
 
     /**
      * Formats a log message for display as a string.

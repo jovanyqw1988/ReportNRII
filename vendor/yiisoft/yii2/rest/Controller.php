@@ -11,8 +11,8 @@ use Yii;
 use yii\filters\auth\CompositeAuth;
 use yii\filters\ContentNegotiator;
 use yii\filters\RateLimiter;
-use yii\web\Response;
 use yii\filters\VerbFilter;
+use yii\web\Response;
 
 /**
  * Controller is the base class for RESTful API controller classes.
@@ -67,15 +67,6 @@ class Controller extends \yii\web\Controller
     }
 
     /**
-     * @inheritdoc
-     */
-    public function afterAction($action, $result)
-    {
-        $result = parent::afterAction($action, $result);
-        return $this->serializeData($result);
-    }
-
-    /**
      * Declares the allowed HTTP verbs.
      * Please refer to [[VerbFilter::actions]] on how to declare the allowed verbs.
      * @return array the allowed HTTP verbs.
@@ -83,6 +74,15 @@ class Controller extends \yii\web\Controller
     protected function verbs()
     {
         return [];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function afterAction($action, $result)
+    {
+        $result = parent::afterAction($action, $result);
+        return $this->serializeData($result);
     }
 
     /**

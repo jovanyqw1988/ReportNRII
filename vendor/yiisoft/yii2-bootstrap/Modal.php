@@ -112,108 +112,6 @@ class Modal extends Widget
     }
 
     /**
-     * Renders the widget.
-     */
-    public function run()
-    {
-        echo "\n" . $this->renderBodyEnd();
-        echo "\n" . $this->renderFooter();
-        echo "\n" . Html::endTag('div'); // modal-content
-        echo "\n" . Html::endTag('div'); // modal-dialog
-        echo "\n" . Html::endTag('div');
-
-        $this->registerPlugin('modal');
-    }
-
-    /**
-     * Renders the header HTML markup of the modal
-     * @return string the rendering result
-     */
-    protected function renderHeader()
-    {
-        $button = $this->renderCloseButton();
-        if ($button !== null) {
-            $this->header = $button . "\n" . $this->header;
-        }
-        if ($this->header !== null) {
-            Html::addCssClass($this->headerOptions, ['widget' => 'modal-header']);
-            return Html::tag('div', "\n" . $this->header . "\n", $this->headerOptions);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Renders the opening tag of the modal body.
-     * @return string the rendering result
-     */
-    protected function renderBodyBegin()
-    {
-        return Html::beginTag('div', ['class' => 'modal-body']);
-    }
-
-    /**
-     * Renders the closing tag of the modal body.
-     * @return string the rendering result
-     */
-    protected function renderBodyEnd()
-    {
-        return Html::endTag('div');
-    }
-
-    /**
-     * Renders the HTML markup for the footer of the modal
-     * @return string the rendering result
-     */
-    protected function renderFooter()
-    {
-        if ($this->footer !== null) {
-            Html::addCssClass($this->footerOptions, ['widget' => 'modal-footer']);
-            return Html::tag('div', "\n" . $this->footer . "\n", $this->footerOptions);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Renders the toggle button.
-     * @return string the rendering result
-     */
-    protected function renderToggleButton()
-    {
-        if (($toggleButton = $this->toggleButton) !== false) {
-            $tag = ArrayHelper::remove($toggleButton, 'tag', 'button');
-            $label = ArrayHelper::remove($toggleButton, 'label', 'Show');
-            if ($tag === 'button' && !isset($toggleButton['type'])) {
-                $toggleButton['type'] = 'button';
-            }
-
-            return Html::tag($tag, $label, $toggleButton);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Renders the close button.
-     * @return string the rendering result
-     */
-    protected function renderCloseButton()
-    {
-        if (($closeButton = $this->closeButton) !== false) {
-            $tag = ArrayHelper::remove($closeButton, 'tag', 'button');
-            $label = ArrayHelper::remove($closeButton, 'label', '&times;');
-            if ($tag === 'button' && !isset($closeButton['type'])) {
-                $closeButton['type'] = 'button';
-            }
-
-            return Html::tag($tag, $label, $closeButton);
-        } else {
-            return null;
-        }
-    }
-
-    /**
      * Initializes the widget options.
      * This method sets the default values for various options.
      */
@@ -245,6 +143,108 @@ class Modal extends Widget
             if (!isset($this->toggleButton['data-target']) && !isset($this->toggleButton['href'])) {
                 $this->toggleButton['data-target'] = '#' . $this->options['id'];
             }
+        }
+    }
+
+    /**
+     * Renders the toggle button.
+     * @return string the rendering result
+     */
+    protected function renderToggleButton()
+    {
+        if (($toggleButton = $this->toggleButton) !== false) {
+            $tag = ArrayHelper::remove($toggleButton, 'tag', 'button');
+            $label = ArrayHelper::remove($toggleButton, 'label', 'Show');
+            if ($tag === 'button' && !isset($toggleButton['type'])) {
+                $toggleButton['type'] = 'button';
+            }
+
+            return Html::tag($tag, $label, $toggleButton);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Renders the header HTML markup of the modal
+     * @return string the rendering result
+     */
+    protected function renderHeader()
+    {
+        $button = $this->renderCloseButton();
+        if ($button !== null) {
+            $this->header = $button . "\n" . $this->header;
+        }
+        if ($this->header !== null) {
+            Html::addCssClass($this->headerOptions, ['widget' => 'modal-header']);
+            return Html::tag('div', "\n" . $this->header . "\n", $this->headerOptions);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Renders the close button.
+     * @return string the rendering result
+     */
+    protected function renderCloseButton()
+    {
+        if (($closeButton = $this->closeButton) !== false) {
+            $tag = ArrayHelper::remove($closeButton, 'tag', 'button');
+            $label = ArrayHelper::remove($closeButton, 'label', '&times;');
+            if ($tag === 'button' && !isset($closeButton['type'])) {
+                $closeButton['type'] = 'button';
+            }
+
+            return Html::tag($tag, $label, $closeButton);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Renders the opening tag of the modal body.
+     * @return string the rendering result
+     */
+    protected function renderBodyBegin()
+    {
+        return Html::beginTag('div', ['class' => 'modal-body']);
+    }
+
+    /**
+     * Renders the widget.
+     */
+    public function run()
+    {
+        echo "\n" . $this->renderBodyEnd();
+        echo "\n" . $this->renderFooter();
+        echo "\n" . Html::endTag('div'); // modal-content
+        echo "\n" . Html::endTag('div'); // modal-dialog
+        echo "\n" . Html::endTag('div');
+
+        $this->registerPlugin('modal');
+    }
+
+    /**
+     * Renders the closing tag of the modal body.
+     * @return string the rendering result
+     */
+    protected function renderBodyEnd()
+    {
+        return Html::endTag('div');
+    }
+
+    /**
+     * Renders the HTML markup for the footer of the modal
+     * @return string the rendering result
+     */
+    protected function renderFooter()
+    {
+        if ($this->footer !== null) {
+            Html::addCssClass($this->footerOptions, ['widget' => 'modal-footer']);
+            return Html::tag('div', "\n" . $this->footer . "\n", $this->footerOptions);
+        } else {
+            return null;
         }
     }
 }

@@ -141,6 +141,18 @@ class Cors extends ActionFilter
     }
 
     /**
+     * Convert any string (including php headers with HTTP prefix) to header format like :
+     *  * X-Pingother -> HTTP_X_PINGOTHER
+     *  * X PINGOTHER -> HTTP_X_PINGOTHER
+     * @param string $string string to convert
+     * @return string the result in "php $_SERVER header" format
+     */
+    protected function headerizeToPhp($string)
+    {
+        return 'HTTP_' . strtoupper(str_replace([' ', '-'], ['_', '_'], $string));
+    }
+
+    /**
      * For each CORS headers create the specific response
      * @param array $requestHeaders CORS headers we have detected
      * @return array CORS headers ready to be sent
@@ -201,21 +213,6 @@ class Cors extends ActionFilter
     }
 
     /**
-     * Adds the CORS headers to the response
-     * @param Response $response
-     * @param array CORS headers which have been computed
-     */
-    public function addCorsHeaders($response, $headers)
-    {
-        if (empty($headers) === false) {
-            $responseHeaders = $response->getHeaders();
-            foreach ($headers as $field => $value) {
-                $responseHeaders->set($field, $value);
-            }
-        }
-    }
-
-    /**
      * Convert any string (including php headers with HTTP prefix) to header format like :
      *  * X-PINGOTHER -> X-Pingother
      *  * X_PINGOTHER -> X-Pingother
@@ -232,14 +229,17 @@ class Cors extends ActionFilter
     }
 
     /**
-     * Convert any string (including php headers with HTTP prefix) to header format like :
-     *  * X-Pingother -> HTTP_X_PINGOTHER
-     *  * X PINGOTHER -> HTTP_X_PINGOTHER
-     * @param string $string string to convert
-     * @return string the result in "php $_SERVER header" format
+     * Adds the CORS headers to the response
+     * @param Response $response
+     * @param array CORS headers which have been computed
      */
-    protected function headerizeToPhp($string)
+    public function addCorsHeaders($response, $headers)
     {
-        return 'HTTP_' . strtoupper(str_replace([' ', '-'], ['_', '_'], $string));
+        if (empty($headers) === false) {
+            $responseHeaders = $response->getHeaders();
+            foreach ($headers as $field => $value) {
+                $responseHeaders->set($field, $value);
+            }
+        }
     }
 }

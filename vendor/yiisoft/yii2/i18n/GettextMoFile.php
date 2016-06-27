@@ -126,6 +126,49 @@ class GettextMoFile extends GettextFile
     }
 
     /**
+     * Reads one or several bytes.
+     * @param resource $fileHandle to read from
+     * @param integer $byteCount to be read
+     * @return string bytes
+     */
+    protected function readBytes($fileHandle, $byteCount = 1)
+    {
+        if ($byteCount > 0) {
+            return fread($fileHandle, $byteCount);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Reads a 4-byte integer.
+     * @param resource $fileHandle to read from
+     * @return integer the result
+     */
+    protected function readInteger($fileHandle)
+    {
+        $array = unpack($this->useBigEndian ? 'N' : 'V', $this->readBytes($fileHandle, 4));
+
+        return current($array);
+    }
+
+    /**
+     * Reads a string.
+     * @param resource $fileHandle file handle
+     * @param integer $length of the string
+     * @param integer $offset of the string in the file. If null, it reads from the current position.
+     * @return string the result
+     */
+    protected function readString($fileHandle, $length, $offset = null)
+    {
+        if ($offset !== null) {
+            fseek($fileHandle, $offset);
+        }
+
+        return $this->readBytes($fileHandle, $length);
+    }
+
+    /**
      * Saves messages to an MO file.
      * @param string $filePath file path
      * @param array $messages message translations. Array keys are source messages and array values are
@@ -198,21 +241,6 @@ class GettextMoFile extends GettextFile
     }
 
     /**
-     * Reads one or several bytes.
-     * @param resource $fileHandle to read from
-     * @param integer $byteCount to be read
-     * @return string bytes
-     */
-    protected function readBytes($fileHandle, $byteCount = 1)
-    {
-        if ($byteCount > 0) {
-            return fread($fileHandle, $byteCount);
-        } else {
-            return null;
-        }
-    }
-
-    /**
      * Write bytes.
      * @param resource $fileHandle to write to
      * @param string $bytes to be written
@@ -224,18 +252,6 @@ class GettextMoFile extends GettextFile
     }
 
     /**
-     * Reads a 4-byte integer.
-     * @param resource $fileHandle to read from
-     * @return integer the result
-     */
-    protected function readInteger($fileHandle)
-    {
-        $array = unpack($this->useBigEndian ? 'N' : 'V', $this->readBytes($fileHandle, 4));
-
-        return current($array);
-    }
-
-    /**
      * Writes a 4-byte integer.
      * @param resource $fileHandle to write to
      * @param integer $integer to be written
@@ -244,22 +260,6 @@ class GettextMoFile extends GettextFile
     protected function writeInteger($fileHandle, $integer)
     {
         return $this->writeBytes($fileHandle, pack($this->useBigEndian ? 'N' : 'V', (int) $integer));
-    }
-
-    /**
-     * Reads a string.
-     * @param resource $fileHandle file handle
-     * @param integer $length of the string
-     * @param integer $offset of the string in the file. If null, it reads from the current position.
-     * @return string the result
-     */
-    protected function readString($fileHandle, $length, $offset = null)
-    {
-        if ($offset !== null) {
-            fseek($fileHandle, $offset);
-        }
-
-        return $this->readBytes($fileHandle, $length);
     }
 
     /**

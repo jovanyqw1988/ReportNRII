@@ -53,28 +53,6 @@ class HTMLPurifier_StringHashParser
     }
 
     /**
-     * Parses a file that contains multiple string-hashes delimited by '----'
-     * @param string $file
-     * @return array
-     */
-    public function parseMultiFile($file)
-    {
-        if (!file_exists($file)) {
-            return false;
-        }
-        $ret = array();
-        $fh = fopen($file, 'r');
-        if (!$fh) {
-            return false;
-        }
-        while (!feof($fh)) {
-            $ret[] = $this->parseHandle($fh);
-        }
-        fclose($fh);
-        return $ret;
-    }
-
-    /**
      * Internal parser that acepts a file handle.
      * @note While it's possible to simulate in-memory parsing by using
      *       custom stream wrappers, if such a use-case arises we should
@@ -129,6 +107,28 @@ class HTMLPurifier_StringHashParser
                 $ret[$state] .= "$line\n";
             }
         } while (!feof($fh));
+        return $ret;
+    }
+
+    /**
+     * Parses a file that contains multiple string-hashes delimited by '----'
+     * @param string $file
+     * @return array
+     */
+    public function parseMultiFile($file)
+    {
+        if (!file_exists($file)) {
+            return false;
+        }
+        $ret = array();
+        $fh = fopen($file, 'r');
+        if (!$fh) {
+            return false;
+        }
+        while (!feof($fh)) {
+            $ret[] = $this->parseHandle($fh);
+        }
+        fclose($fh);
         return $ret;
     }
 }

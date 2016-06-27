@@ -7,13 +7,12 @@
 
 namespace yii\codeception;
 
+use Codeception\TestCase\Test;
 use Yii;
 use yii\base\InvalidConfigException;
-use Codeception\TestCase\Test;
 use yii\base\UnknownMethodException;
 use yii\base\UnknownPropertyException;
 use yii\di\Container;
-use yii\test\ActiveFixture;
 use yii\test\BaseActiveFixture;
 use yii\test\FixtureTrait;
 
@@ -87,15 +86,6 @@ class TestCase extends Test
     }
 
     /**
-     * @inheritdoc
-     */
-    protected function tearDown()
-    {
-        $this->destroyApplication();
-        parent::tearDown();
-    }
-
-    /**
      * Mocks up the application instance.
      * @param array $config the configuration that should be used to generate the application instance.
      * If null, [[appConfig]] will be used.
@@ -124,6 +114,15 @@ class TestCase extends Test
         } else {
             throw new InvalidConfigException('Please provide a configuration array to mock up an application.');
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function tearDown()
+    {
+        $this->destroyApplication();
+        parent::tearDown();
     }
 
     /**

@@ -76,6 +76,22 @@ class HTMLPurifier_ContentSets
     }
 
     /**
+     * Converts a string list of elements separated by pipes into
+     * a lookup array.
+     * @param string $string List of elements
+     * @return array Lookup array of elements
+     */
+    protected function convertToLookup($string)
+    {
+        $array = explode('|', str_replace(' ', '', $string));
+        $ret = array();
+        foreach ($array as $k) {
+            $ret[$k] = true;
+        }
+        return $ret;
+    }
+
+    /**
      * Accepts a definition; generates and assigns a ChildDef for it
      * @param HTMLPurifier_ElementDef $def HTMLPurifier_ElementDef reference
      * @param HTMLPurifier_HTMLModule $module Module that defined the ElementDef
@@ -97,11 +113,6 @@ class HTMLPurifier_ContentSets
             //    $this->keys, $this->values, $content_model);
         }
         $def->child = $this->getChildDef($def, $module);
-    }
-
-    public function generateChildDefCallback($matches)
-    {
-        return $this->info[$matches[0]];
     }
 
     /**
@@ -150,20 +161,9 @@ class HTMLPurifier_ContentSets
         return false;
     }
 
-    /**
-     * Converts a string list of elements separated by pipes into
-     * a lookup array.
-     * @param string $string List of elements
-     * @return array Lookup array of elements
-     */
-    protected function convertToLookup($string)
+    public function generateChildDefCallback($matches)
     {
-        $array = explode('|', str_replace(' ', '', $string));
-        $ret = array();
-        foreach ($array as $k) {
-            $ret[$k] = true;
-        }
-        return $ret;
+        return $this->info[$matches[0]];
     }
 }
 

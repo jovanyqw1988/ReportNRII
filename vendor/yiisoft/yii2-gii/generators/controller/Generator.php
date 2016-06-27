@@ -149,6 +149,27 @@ class Generator extends \yii\gii\Generator
     }
 
     /**
+     * Normalizes [[actions]] into an array of action IDs.
+     * @return array an array of action IDs entered by the user
+     */
+    public function getActionIDs()
+    {
+        $actions = array_unique(preg_split('/[\s,]+/', $this->actions, -1, PREG_SPLIT_NO_EMPTY));
+        sort($actions);
+
+        return $actions;
+    }
+
+    /**
+     * @return string the controller ID
+     */
+    public function getControllerID()
+    {
+        $name = StringHelper::basename($this->controllerClass);
+        return Inflector::camel2id(substr($name, 0, strlen($name) - 10));
+    }
+
+    /**
      * @inheritdoc
      */
     public function generate()
@@ -171,32 +192,11 @@ class Generator extends \yii\gii\Generator
     }
 
     /**
-     * Normalizes [[actions]] into an array of action IDs.
-     * @return array an array of action IDs entered by the user
-     */
-    public function getActionIDs()
-    {
-        $actions = array_unique(preg_split('/[\s,]+/', $this->actions, -1, PREG_SPLIT_NO_EMPTY));
-        sort($actions);
-
-        return $actions;
-    }
-
-    /**
      * @return string the controller class file path
      */
     public function getControllerFile()
     {
         return Yii::getAlias('@' . str_replace('\\', '/', $this->controllerClass)) . '.php';
-    }
-
-    /**
-     * @return string the controller ID
-     */
-    public function getControllerID()
-    {
-        $name = StringHelper::basename($this->controllerClass);
-        return Inflector::camel2id(substr($name, 0, strlen($name) - 10));
     }
 
     /**

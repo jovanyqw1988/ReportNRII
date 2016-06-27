@@ -50,20 +50,6 @@ class XCache extends Cache
     }
 
     /**
-     * Stores a value identified by a key in cache.
-     * This is the implementation of the method declared in the parent class.
-     *
-     * @param string $key the key identifying the value to be cached
-     * @param string $value the value to be cached
-     * @param integer $duration the number of seconds in which the cached value will expire. 0 means never expire.
-     * @return boolean true if the value is successfully stored into cache, false otherwise
-     */
-    protected function setValue($key, $value, $duration)
-    {
-        return xcache_set($key, $value, $duration);
-    }
-
-    /**
      * Stores a value identified by a key into cache if the cache does not contain this key.
      * This is the implementation of the method declared in the parent class.
      *
@@ -75,6 +61,20 @@ class XCache extends Cache
     protected function addValue($key, $value, $duration)
     {
         return !xcache_isset($key) ? $this->setValue($key, $value, $duration) : false;
+    }
+
+    /**
+     * Stores a value identified by a key in cache.
+     * This is the implementation of the method declared in the parent class.
+     *
+     * @param string $key the key identifying the value to be cached
+     * @param string $value the value to be cached
+     * @param integer $duration the number of seconds in which the cached value will expire. 0 means never expire.
+     * @return boolean true if the value is successfully stored into cache, false otherwise
+     */
+    protected function setValue($key, $value, $duration)
+    {
+        return xcache_set($key, $value, $duration);
     }
 
     /**

@@ -2,32 +2,16 @@
 
 namespace tests\codeception\frontend\models;
 
-use Yii;
-use tests\codeception\frontend\unit\DbTestCase;
+use Codeception\Specify;
+use common\models\User;
 use frontend\models\PasswordResetRequestForm;
 use tests\codeception\common\fixtures\UserFixture;
-use common\models\User;
-use Codeception\Specify;
+use tests\codeception\frontend\unit\DbTestCase;
+use Yii;
 
 class PasswordResetRequestFormTest extends DbTestCase
 {
     use Specify;
-
-    protected function setUp()
-    {
-        parent::setUp();
-
-        Yii::$app->mailer->fileTransportCallback = function ($mailer, $message) {
-            return 'testing_message.eml';
-        };
-    }
-
-    protected function tearDown()
-    {
-        @unlink($this->getMessageFile());
-
-        parent::tearDown();
-    }
 
     public function testSendEmailWrongUser()
     {
@@ -70,6 +54,11 @@ class PasswordResetRequestFormTest extends DbTestCase
         });
     }
 
+    private function getMessageFile()
+    {
+        return Yii::getAlias(Yii::$app->mailer->fileTransportPath) . '/testing_message.eml';
+    }
+
     public function fixtures()
     {
         return [
@@ -80,8 +69,19 @@ class PasswordResetRequestFormTest extends DbTestCase
         ];
     }
 
-    private function getMessageFile()
+    protected function setUp()
     {
-        return Yii::getAlias(Yii::$app->mailer->fileTransportPath) . '/testing_message.eml';
+        parent::setUp();
+
+        Yii::$app->mailer->fileTransportCallback = function ($mailer, $message) {
+            return 'testing_message.eml';
+        };
+    }
+
+    protected function tearDown()
+    {
+        @unlink($this->getMessageFile());
+
+        parent::tearDown();
     }
 }

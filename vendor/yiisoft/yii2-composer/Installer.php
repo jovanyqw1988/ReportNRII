@@ -7,10 +7,9 @@
 
 namespace yii\composer;
 
-use Composer\Package\PackageInterface;
 use Composer\Installer\LibraryInstaller;
+use Composer\Package\PackageInterface;
 use Composer\Repository\InstalledRepositoryInterface;
-use Composer\Script\CommandEvent;
 use Composer\Util\Filesystem;
 
 /**
@@ -22,6 +21,63 @@ class Installer extends LibraryInstaller
     const EXTRA_BOOTSTRAP = 'bootstrap';
     const EXTENSION_FILE = 'yiisoft/extensions.php';
 
+    public static function postCreateProject($event)
+    {
+        $params = $event->getComposer()->getPackage()->getExtra();
+        if (isset($params[__METHOD__]) && is_array($params[__METHOD__])) {
+            foreach ($params[__METHOD__] as $method => $args) {
+                call_user_func_array([__CLASS__, $method], (array)$args);
+            }
+        }
+    }
+
+    /**
+     * Sets the correct permission for the files and directories listed in the extra section.
+     * @param array $paths the paths (keys) and the corresponding permission octal strings (values)
+     */
+    public static function setPermission(array $paths)
+    {
+        foreach ($paths as $path => $permission) {
+            echo "chmod('$path', $permission)...";
+            if (is_dir($path) || is_file($path)) {
+                try {
+                    if (chmod($path, octdec($permission))) {
+                        echo "done.\n";
+                    };
+                } catch (\Exception $e) {
+                    echo $e->getMessage() . "\n";
+                }
+            } else {
+                echo "file not found.\n";
+            }
+        }
+    }
+
+    /**
+     * Generates a cookie validation key for every app config listed in "config" in extra section.
+     * You can provide one or multiple parameters as the configuration files which need to have validation key inserted.
+     */
+    public static function generateCookieValidationKey()
+    {
+        $configs = func_get_args();
+        $key = self::generateRandomString();
+        foreach ($configs as $config) {
+            if (is_file($config)) {
+                $content = preg_replace('/(("|\')cookieValidationKey("|\')\s*=>\s*)(""|\'\')/', "\\1'$key'", file_get_contents($config));
+                file_put_contents($config, $content);
+            }
+        }
+    }
+
+    protected static function generateRandomString()
+    {
+        if (!extension_loaded('openssl')) {
+            throw new \Exception('The OpenSSL PHP extension is required by Yii2.');
+        }
+        $length = 32;
+        $bytes = openssl_random_pseudo_bytes($length);
+        return strtr(substr(base64_encode($bytes), 0, $length), '+/=', '_-.');
+    }
 
     /**
      * @inheritdoc
@@ -43,35 +99,6 @@ class Installer extends LibraryInstaller
         // ensure the yii2-dev package also provides Yii.php in the same place as yii2 does
         if ($package->getName() == 'yiisoft/yii2-dev') {
             $this->linkBaseYiiFiles();
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
-    {
-        parent::update($repo, $initial, $target);
-        $this->removePackage($initial);
-        $this->addPackage($target);
-        // ensure the yii2-dev package also provides Yii.php in the same place as yii2 does
-        if ($initial->getName() == 'yiisoft/yii2-dev') {
-            $this->linkBaseYiiFiles();
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
-    {
-        // uninstall the package the normal composer way
-        parent::uninstall($repo, $package);
-        // remove the package from yiisoft/extensions.php
-        $this->removePackage($package);
-        // remove links for Yii.php
-        if ($package->getName() == 'yiisoft/yii2-dev') {
-            $this->removeBaseYiiFiles();
         }
     }
 
@@ -142,13 +169,6 @@ class Installer extends LibraryInstaller
         return $aliases;
     }
 
-    protected function removePackage(PackageInterface $package)
-    {
-        $packages = $this->loadExtensions();
-        unset($packages[$package->getName()]);
-        $this->saveExtensions($packages);
-    }
-
     protected function loadExtensions()
     {
         $file = $this->vendorDir . '/' . static::EXTENSION_FILE;
@@ -216,6 +236,42 @@ EOF
         }
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
+    {
+        parent::update($repo, $initial, $target);
+        $this->removePackage($initial);
+        $this->addPackage($target);
+        // ensure the yii2-dev package also provides Yii.php in the same place as yii2 does
+        if ($initial->getName() == 'yiisoft/yii2-dev') {
+            $this->linkBaseYiiFiles();
+        }
+    }
+
+    protected function removePackage(PackageInterface $package)
+    {
+        $packages = $this->loadExtensions();
+        unset($packages[$package->getName()]);
+        $this->saveExtensions($packages);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
+    {
+        // uninstall the package the normal composer way
+        parent::uninstall($repo, $package);
+        // remove the package from yiisoft/extensions.php
+        $this->removePackage($package);
+        // remove links for Yii.php
+        if ($package->getName() == 'yiisoft/yii2-dev') {
+            $this->removeBaseYiiFiles();
+        }
+    }
+
     protected function removeBaseYiiFiles()
     {
         $yiiDir = $this->vendorDir . '/yiisoft/yii2';
@@ -227,63 +283,5 @@ EOF
         if (file_exists($yiiDir)) {
             rmdir($yiiDir);
         }
-    }
-    
-    public static function postCreateProject($event)
-    {
-        $params = $event->getComposer()->getPackage()->getExtra();
-        if (isset($params[__METHOD__]) && is_array($params[__METHOD__])) {
-            foreach ($params[__METHOD__] as $method => $args) {
-                call_user_func_array([__CLASS__, $method], (array) $args);
-            }
-        }
-    }
-
-    /**
-     * Sets the correct permission for the files and directories listed in the extra section.
-     * @param array $paths the paths (keys) and the corresponding permission octal strings (values)
-     */
-    public static function setPermission(array $paths)
-    {
-        foreach ($paths as $path => $permission) {
-            echo "chmod('$path', $permission)...";
-            if (is_dir($path) || is_file($path)) {
-                try {
-                    if (chmod($path, octdec($permission))) {
-                        echo "done.\n";
-                    };
-                } catch (\Exception $e) {
-                    echo $e->getMessage() . "\n";
-                }
-            } else {
-                echo "file not found.\n";
-            }
-        }
-    }
-
-    /**
-     * Generates a cookie validation key for every app config listed in "config" in extra section.
-     * You can provide one or multiple parameters as the configuration files which need to have validation key inserted.
-     */
-    public static function generateCookieValidationKey()
-    {
-        $configs = func_get_args();
-        $key = self::generateRandomString();
-        foreach ($configs as $config) {
-            if (is_file($config)) {
-                $content = preg_replace('/(("|\')cookieValidationKey("|\')\s*=>\s*)(""|\'\')/', "\\1'$key'", file_get_contents($config));
-                file_put_contents($config, $content);
-            }
-        }
-    }
-
-    protected static function generateRandomString()
-    {
-        if (!extension_loaded('openssl')) {
-            throw new \Exception('The OpenSSL PHP extension is required by Yii2.');
-        }
-        $length = 32;
-        $bytes = openssl_random_pseudo_bytes($length);
-        return strtr(substr(base64_encode($bytes), 0, $length), '+/=', '_-.');
     }
 }

@@ -7,8 +7,8 @@
 
 namespace yii\gii;
 
-use Yii;
 use ReflectionClass;
+use Yii;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
 use yii\helpers\VarDumper;
@@ -87,6 +87,19 @@ abstract class Generator extends Model
     }
 
     /**
+     * Returns the root path to the default code template files.
+     * The default implementation will return the "templates" subdirectory of the
+     * directory containing the generator class file.
+     * @return string the root path to the default code template files.
+     */
+    public function defaultTemplate()
+    {
+        $class = new ReflectionClass($this);
+
+        return dirname($class->getFileName()) . '/default';
+    }
+
+    /**
      * @inheritdoc
      */
     public function attributeLabels()
@@ -95,29 +108,6 @@ abstract class Generator extends Model
             'enableI18N' => 'Enable I18N',
             'messageCategory' => 'Message Category',
         ];
-    }
-
-    /**
-     * Returns a list of code template files that are required.
-     * Derived classes usually should override this method if they require the existence of
-     * certain template files.
-     * @return array list of code template files that are required. They should be file paths
-     * relative to [[templatePath]].
-     */
-    public function requiredTemplates()
-    {
-        return [];
-    }
-
-    /**
-     * Returns the list of sticky attributes.
-     * A sticky attribute will remember its value and will initialize the attribute with this value
-     * when the generator is restarted.
-     * @return array list of sticky attributes
-     */
-    public function stickyAttributes()
-    {
-        return ['template', 'enableI18N', 'messageCategory'];
     }
 
     /**
@@ -170,19 +160,6 @@ abstract class Generator extends Model
     }
 
     /**
-     * Returns the root path to the default code template files.
-     * The default implementation will return the "templates" subdirectory of the
-     * directory containing the generator class file.
-     * @return string the root path to the default code template files.
-     */
-    public function defaultTemplate()
-    {
-        $class = new ReflectionClass($this);
-
-        return dirname($class->getFileName()) . '/default';
-    }
-
-    /**
      * @return string the detailed description of the generator.
      */
     public function getDescription()
@@ -231,6 +208,26 @@ abstract class Generator extends Model
     }
 
     /**
+     * Returns the list of sticky attributes.
+     * A sticky attribute will remember its value and will initialize the attribute with this value
+     * when the generator is restarted.
+     * @return array list of sticky attributes
+     */
+    public function stickyAttributes()
+    {
+        return ['template', 'enableI18N', 'messageCategory'];
+    }
+
+    /**
+     * @return string the file path that stores the sticky attribute values.
+     * @internal
+     */
+    public function getStickyDataFile()
+    {
+        return Yii::$app->getRuntimePath() . '/gii-' . Yii::getVersion() . '/' . str_replace('\\', '-', get_class($this)) . '.json';
+    }
+
+    /**
      * Saves sticky attributes into an internal file.
      * @internal
      */
@@ -245,15 +242,6 @@ abstract class Generator extends Model
         $path = $this->getStickyDataFile();
         @mkdir(dirname($path), 0755, true);
         file_put_contents($path, json_encode($values));
-    }
-
-    /**
-     * @return string the file path that stores the sticky attribute values.
-     * @internal
-     */
-    public function getStickyDataFile()
-    {
-        return Yii::$app->getRuntimePath() . '/gii-' . Yii::getVersion() . '/' . str_replace('\\', '-', get_class($this)) . '.json';
     }
 
     /**
@@ -335,6 +323,18 @@ abstract class Generator extends Model
                 }
             }
         }
+    }
+
+    /**
+     * Returns a list of code template files that are required.
+     * Derived classes usually should override this method if they require the existence of
+     * certain template files.
+     * @return array list of code template files that are required. They should be file paths
+     * relative to [[templatePath]].
+     */
+    public function requiredTemplates()
+    {
+        return [];
     }
 
     /**

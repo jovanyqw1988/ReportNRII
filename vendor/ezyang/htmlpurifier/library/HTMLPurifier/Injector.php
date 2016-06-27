@@ -21,31 +21,6 @@ abstract class HTMLPurifier_Injector
      * @type string
      */
     public $name;
-
-    /**
-     * @type HTMLPurifier_HTMLDefinition
-     */
-    protected $htmlDefinition;
-
-    /**
-     * Reference to CurrentNesting variable in Context. This is an array
-     * list of tokens that we are currently "inside"
-     * @type array
-     */
-    protected $currentNesting;
-
-    /**
-     * Reference to current token.
-     * @type HTMLPurifier_Token
-     */
-    protected $currentToken;
-
-    /**
-     * Reference to InputZipper variable in Context.
-     * @type HTMLPurifier_Zipper
-     */
-    protected $inputZipper;
-
     /**
      * Array of elements and attributes this injector creates and therefore
      * need to be allowed by the definition. Takes form of
@@ -53,7 +28,26 @@ abstract class HTMLPurifier_Injector
      * @type array
      */
     public $needed = array();
-
+    /**
+     * @type HTMLPurifier_HTMLDefinition
+     */
+    protected $htmlDefinition;
+    /**
+     * Reference to CurrentNesting variable in Context. This is an array
+     * list of tokens that we are currently "inside"
+     * @type array
+     */
+    protected $currentNesting;
+    /**
+     * Reference to current token.
+     * @type HTMLPurifier_Token
+     */
+    protected $currentToken;
+    /**
+     * Reference to InputZipper variable in Context.
+     * @type HTMLPurifier_Zipper
+     */
+    protected $inputZipper;
     /**
      * Number of elements to rewind backwards (relative).
      * @type bool|int
@@ -168,27 +162,35 @@ abstract class HTMLPurifier_Injector
     }
 
     /**
-     * Iterator function, which starts with the next token and continues until
-     * you reach the end of the input tokens.
-     * @warning Please prevent previous references from interfering with this
-     *          functions by setting $i = null beforehand!
-     * @param int $i Current integer index variable for inputTokens
-     * @param HTMLPurifier_Token $current Current token variable.
-     *          Do NOT use $token, as that variable is also a reference
-     * @return bool
+     * Handler that is called when a text token is processed
      */
-    protected function forward(&$i, &$current)
+    public function handleText(&$token)
     {
-        if ($i === null) {
-            $i = count($this->inputZipper->back) - 1;
-        } else {
-            $i--;
-        }
-        if ($i < 0) {
-            return false;
-        }
-        $current = $this->inputZipper->back[$i];
-        return true;
+    }
+
+    /**
+     * Handler that is called when a start or empty token is processed
+     */
+    public function handleElement(&$token)
+    {
+    }
+
+    /**
+     * Handler that is called when an end token is processed
+     */
+    public function handleEnd(&$token)
+    {
+        $this->notifyEnd($token);
+    }
+
+    /**
+     * Notifier that is called when an end token is processed
+     * @param HTMLPurifier_Token $token Current token variable.
+     * @note This differs from handlers in that the token is read-only
+     * @deprecated
+     */
+    public function notifyEnd($token)
+    {
     }
 
     /**
@@ -222,6 +224,30 @@ abstract class HTMLPurifier_Injector
     }
 
     /**
+     * Iterator function, which starts with the next token and continues until
+     * you reach the end of the input tokens.
+     * @warning Please prevent previous references from interfering with this
+     *          functions by setting $i = null beforehand!
+     * @param int $i Current integer index variable for inputTokens
+     * @param HTMLPurifier_Token $current Current token variable.
+     *          Do NOT use $token, as that variable is also a reference
+     * @return bool
+     */
+    protected function forward(&$i, &$current)
+    {
+        if ($i === null) {
+            $i = count($this->inputZipper->back) - 1;
+        } else {
+            $i--;
+        }
+        if ($i < 0) {
+            return false;
+        }
+        $current = $this->inputZipper->back[$i];
+        return true;
+    }
+
+    /**
      * Iterator function, starts with the previous token and continues until
      * you reach the beginning of input tokens.
      * @warning Please prevent previous references from interfering with this
@@ -243,38 +269,6 @@ abstract class HTMLPurifier_Injector
         }
         $current = $this->inputZipper->front[$i];
         return true;
-    }
-
-    /**
-     * Handler that is called when a text token is processed
-     */
-    public function handleText(&$token)
-    {
-    }
-
-    /**
-     * Handler that is called when a start or empty token is processed
-     */
-    public function handleElement(&$token)
-    {
-    }
-
-    /**
-     * Handler that is called when an end token is processed
-     */
-    public function handleEnd(&$token)
-    {
-        $this->notifyEnd($token);
-    }
-
-    /**
-     * Notifier that is called when an end token is processed
-     * @param HTMLPurifier_Token $token Current token variable.
-     * @note This differs from handlers in that the token is read-only
-     * @deprecated
-     */
-    public function notifyEnd($token)
-    {
     }
 }
 

@@ -103,6 +103,8 @@ trait TableTrait
 		return "<table>\n$content</tbody>\n</table>\n";
 	}
 
+	abstract protected function renderAbsy($absy);
+
 	/**
 	 * @marker |
 	 */
@@ -116,5 +118,4 @@ trait TableTrait
 	}
 
 	abstract protected function parseInline($text);
-	abstract protected function renderAbsy($absy);
 }

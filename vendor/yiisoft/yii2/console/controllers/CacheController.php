@@ -8,10 +8,10 @@
 namespace yii\console\controllers;
 
 use Yii;
-use yii\console\Controller;
 use yii\caching\Cache;
-use yii\helpers\Console;
+use yii\console\Controller;
 use yii\console\Exception;
+use yii\helpers\Console;
 
 /**
  * Allows you to flush cache.
@@ -50,6 +50,67 @@ class CacheController extends Controller
         } else {
             $this->notifyNoCachesFound();
         }
+    }
+
+    /**
+     * Returns array of caches in the system, keys are cache components names, values are class names.
+     * @param array $cachesNames caches to be found
+     * @return array
+     */
+    private function findCaches(array $cachesNames = [])
+    {
+        $caches = [];
+        $components = Yii::$app->getComponents();
+        $findAll = ($cachesNames === []);
+
+        foreach ($components as $name => $component) {
+            if (!$findAll && !in_array($name, $cachesNames)) {
+                continue;
+            }
+
+            if ($component instanceof Cache) {
+                $caches[$name] = get_class($component);
+            } elseif (is_array($component) && isset($component['class']) && $this->isCacheClass($component['class'])) {
+                $caches[$name] = $component['class'];
+            } elseif (is_string($component) && $this->isCacheClass($component)) {
+                $caches[$name] = $component;
+            }
+        }
+
+        return $caches;
+    }
+
+    /**
+     * Checks if given class is a Cache class.
+     * @param string $className class name.
+     * @return boolean
+     */
+    private function isCacheClass($className)
+    {
+        return is_subclass_of($className, Cache::className());
+    }
+
+    /**
+     * Notifies user that given caches are found and can be flushed.
+     * @param array $caches array of cache component classes
+     */
+    private function notifyCachesCanBeFlushed($caches)
+    {
+        $this->stdout("The following caches were found in the system:\n\n", Console::FG_YELLOW);
+
+        foreach ($caches as $name => $class) {
+            $this->stdout("\t* $name ($class)\n", Console::FG_GREEN);
+        }
+
+        $this->stdout("\n");
+    }
+
+    /**
+     * Notifies user that there was not found any cache in the system.
+     */
+    private function notifyNoCachesFound()
+    {
+        $this->stdout("No cache components were found in the system.\n", Console::FG_RED);
     }
 
     /**
@@ -98,6 +159,58 @@ class CacheController extends Controller
         }
 
         $this->notifyFlushed($cachesInfo);
+    }
+
+    /**
+     * Notifies user that given cache components were not found in the system.
+     * @param array $cachesNames
+     */
+    private function notifyNotFoundCaches($cachesNames)
+    {
+        $this->stdout("The following cache components were NOT found:\n\n", Console::FG_RED);
+
+        foreach ($cachesNames as $name) {
+            $this->stdout("\t* $name \n", Console::FG_GREEN);
+        }
+
+        $this->stdout("\n");
+    }
+
+    /**
+     * Prompts user with confirmation if caches should be flushed.
+     * @param array $cachesNames
+     * @return boolean
+     */
+    private function confirmFlush($cachesNames)
+    {
+        $this->stdout("The following cache components will be flushed:\n\n", Console::FG_YELLOW);
+
+        foreach ($cachesNames as $name) {
+            $this->stdout("\t* $name \n", Console::FG_GREEN);
+        }
+
+        return $this->confirm("\nFlush above cache components?");
+    }
+
+    /**
+     *
+     * @param array $caches
+     */
+    private function notifyFlushed($caches)
+    {
+        $this->stdout("The following cache components were processed:\n\n", Console::FG_YELLOW);
+
+        foreach ($caches as $cache) {
+            $this->stdout("\t* " . $cache['name'] . ' (' . $cache['class'] . ')', Console::FG_GREEN);
+
+            if (!$cache['is_flushed']) {
+                $this->stdout(" - not flushed\n", Console::FG_RED);
+            } else {
+                $this->stdout("\n");
+            }
+        }
+
+        $this->stdout("\n");
     }
 
     /**
@@ -161,118 +274,5 @@ class CacheController extends Controller
         } catch (\Exception $e) {
             $this->stdout($e->getMessage() . "\n\n", Console::FG_RED);
         }
-    }
-
-    /**
-     * Notifies user that given caches are found and can be flushed.
-     * @param array $caches array of cache component classes
-     */
-    private function notifyCachesCanBeFlushed($caches)
-    {
-        $this->stdout("The following caches were found in the system:\n\n", Console::FG_YELLOW);
-
-        foreach ($caches as $name => $class) {
-            $this->stdout("\t* $name ($class)\n", Console::FG_GREEN);
-        }
-
-        $this->stdout("\n");
-    }
-
-    /**
-     * Notifies user that there was not found any cache in the system.
-     */
-    private function notifyNoCachesFound()
-    {
-        $this->stdout("No cache components were found in the system.\n", Console::FG_RED);
-    }
-
-    /**
-     * Notifies user that given cache components were not found in the system.
-     * @param array $cachesNames
-     */
-    private function notifyNotFoundCaches($cachesNames)
-    {
-        $this->stdout("The following cache components were NOT found:\n\n", Console::FG_RED);
-
-        foreach ($cachesNames as $name) {
-            $this->stdout("\t* $name \n", Console::FG_GREEN);
-        }
-
-        $this->stdout("\n");
-    }
-
-    /**
-     *
-     * @param array $caches
-     */
-    private function notifyFlushed($caches)
-    {
-        $this->stdout("The following cache components were processed:\n\n", Console::FG_YELLOW);
-
-        foreach ($caches as $cache) {
-            $this->stdout("\t* " . $cache['name'] .' (' . $cache['class'] . ')', Console::FG_GREEN);
-
-            if (!$cache['is_flushed']) {
-                $this->stdout(" - not flushed\n", Console::FG_RED);
-            } else {
-                $this->stdout("\n");
-            }
-        }
-
-        $this->stdout("\n");
-    }
-
-    /**
-     * Prompts user with confirmation if caches should be flushed.
-     * @param array $cachesNames
-     * @return boolean
-     */
-    private function confirmFlush($cachesNames)
-    {
-        $this->stdout("The following cache components will be flushed:\n\n", Console::FG_YELLOW);
-
-        foreach ($cachesNames as $name) {
-            $this->stdout("\t* $name \n", Console::FG_GREEN);
-        }
-
-        return $this->confirm("\nFlush above cache components?");
-    }
-
-    /**
-     * Returns array of caches in the system, keys are cache components names, values are class names.
-     * @param array $cachesNames caches to be found
-     * @return array
-     */
-    private function findCaches(array $cachesNames = [])
-    {
-        $caches = [];
-        $components = Yii::$app->getComponents();
-        $findAll = ($cachesNames === []);
-
-        foreach ($components as $name => $component) {
-            if (!$findAll && !in_array($name, $cachesNames)) {
-                continue;
-            }
-
-            if ($component instanceof Cache) {
-                $caches[$name] = get_class($component);
-            } elseif (is_array($component) && isset($component['class']) && $this->isCacheClass($component['class'])) {
-                $caches[$name] = $component['class'];
-            } elseif (is_string($component) && $this->isCacheClass($component)) {
-                $caches[$name] = $component;
-            }
-        }
-
-        return $caches;
-    }
-
-    /**
-     * Checks if given class is a Cache class.
-     * @param string $className class name.
-     * @return boolean
-     */
-    private function isCacheClass($className)
-    {
-        return is_subclass_of($className, Cache::className());
     }
 }

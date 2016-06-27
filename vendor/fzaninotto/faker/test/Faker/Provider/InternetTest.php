@@ -51,18 +51,6 @@ class InternetTest extends \PHPUnit_Framework_TestCase
         $this->assertRegExp($pattern, $emailAddress);
     }
     
-    /**
-     * @requires PHP 5.4
-     * @dataProvider localeDataProvider
-     */
-    public function testUsernameIsValid($locale)
-    {
-        $this->loadLocalProviders($locale);
-        $pattern = '/^[A-Za-z0-9._]+$/';
-        $username = $this->faker->username();
-        $this->assertRegExp($pattern, $username);
-    }
-
     public function loadLocalProviders($locale)
     {
         $providerPath = realpath(__DIR__ . '/../../../src/Faker/Provider');
@@ -78,6 +66,18 @@ class InternetTest extends \PHPUnit_Framework_TestCase
             $company = "\\Faker\\Provider\\$locale\\Company";
             $this->faker->addProvider(new $company($this->faker));
         }
+    }
+
+    /**
+     * @requires PHP 5.4
+     * @dataProvider localeDataProvider
+     */
+    public function testUsernameIsValid($locale)
+    {
+        $this->loadLocalProviders($locale);
+        $pattern = '/^[A-Za-z0-9._]+$/';
+        $username = $this->faker->username();
+        $this->assertRegExp($pattern, $username);
     }
 
     public function testPasswordIsValid()

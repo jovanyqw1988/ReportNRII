@@ -16,20 +16,30 @@ use rmrevin\yii\fontawesome\component;
 class FontAwesome
 {
 
+    /**
+     * Size values
+     * @see rmrevin\yii\fontawesome\component\Icon::size
+     */
+    const SIZE_LARGE = 'lg';
+    const SIZE_2X = '2x';
+    const SIZE_3X = '3x';
+    const SIZE_4X = '4x';
+    const SIZE_5X = '5x';
+    /**
+     * Rotate values
+     * @see rmrevin\yii\fontawesome\component\Icon::rotate
+     */
+    const ROTATE_90 = '90';
+    const ROTATE_180 = '180';
+    const ROTATE_270 = '270';
+    /**
+     * Flip values
+     * @see rmrevin\yii\fontawesome\component\Icon::flip
+     */
+    const FLIP_HORIZONTAL = 'horizontal';
+    const FLIP_VERTICAL = 'vertical';
     /** @var string CSS Class prefix */
     public static $cssPrefix = 'fa';
-
-    /**
-     * Creates an `Icon` component that can be used to FontAwesome html icon
-     *
-     * @param string $name
-     * @param array $options
-     * @return component\Icon
-     */
-    public static function icon($name, $options = [])
-    {
-        return new component\Icon($name, $options);
-    }
 
     /**
      * Shortcut for `icon()` method
@@ -45,14 +55,15 @@ class FontAwesome
     }
 
     /**
-     * Creates an `Stack` component that can be used to FontAwesome html icon
+     * Creates an `Icon` component that can be used to FontAwesome html icon
      *
+     * @param string $name
      * @param array $options
-     * @return component\Stack
+     * @return component\Icon
      */
-    public static function stack($options = [])
+    public static function icon($name, $options = [])
     {
-        return new component\Stack($options);
+        return new component\Icon($name, $options);
     }
 
     /**
@@ -68,27 +79,13 @@ class FontAwesome
     }
 
     /**
-     * Size values
-     * @see rmrevin\yii\fontawesome\component\Icon::size
+     * Creates an `Stack` component that can be used to FontAwesome html icon
+     *
+     * @param array $options
+     * @return component\Stack
      */
-    const SIZE_LARGE = 'lg';
-    const SIZE_2X = '2x';
-    const SIZE_3X = '3x';
-    const SIZE_4X = '4x';
-    const SIZE_5X = '5x';
-
-    /**
-     * Rotate values
-     * @see rmrevin\yii\fontawesome\component\Icon::rotate
-     */
-    const ROTATE_90 = '90';
-    const ROTATE_180 = '180';
-    const ROTATE_270 = '270';
-
-    /**
-     * Flip values
-     * @see rmrevin\yii\fontawesome\component\Icon::flip
-     */
-    const FLIP_HORIZONTAL = 'horizontal';
-    const FLIP_VERTICAL = 'vertical';
+    public static function stack($options = [])
+    {
+        return new component\Stack($options);
+    }
 }

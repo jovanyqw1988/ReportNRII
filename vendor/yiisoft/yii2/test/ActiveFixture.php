@@ -83,28 +83,6 @@ class ActiveFixture extends BaseActiveFixture
     }
 
     /**
-     * Returns the fixture data.
-     *
-     * The default implementation will try to return the fixture data by including the external file specified by [[dataFile]].
-     * The file should return an array of data rows (column name => column value), each corresponding to a row in the table.
-     *
-     * If the data file does not exist, an empty array will be returned.
-     *
-     * @return array the data rows to be inserted into the database table.
-     */
-    protected function getData()
-    {
-        if ($this->dataFile === null) {
-            $class = new \ReflectionClass($this);
-            $dataFile = dirname($class->getFileName()) . '/data/' . $this->getTableSchema()->fullName . '.php';
-
-            return is_file($dataFile) ? require($dataFile) : [];
-        } else {
-            return parent::getData();
-        }
-    }
-
-    /**
      * Removes all existing data from the specified table and resets sequence number to 1 (if any).
      * This method is called before populating fixture data into the table associated with this fixture.
      */
@@ -141,5 +119,27 @@ class ActiveFixture extends BaseActiveFixture
         }
 
         return $this->_table;
+    }
+
+    /**
+     * Returns the fixture data.
+     *
+     * The default implementation will try to return the fixture data by including the external file specified by [[dataFile]].
+     * The file should return an array of data rows (column name => column value), each corresponding to a row in the table.
+     *
+     * If the data file does not exist, an empty array will be returned.
+     *
+     * @return array the data rows to be inserted into the database table.
+     */
+    protected function getData()
+    {
+        if ($this->dataFile === null) {
+            $class = new \ReflectionClass($this);
+            $dataFile = dirname($class->getFileName()) . '/data/' . $this->getTableSchema()->fullName . '.php';
+
+            return is_file($dataFile) ? require($dataFile) : [];
+        } else {
+            return parent::getData();
+        }
     }
 }

@@ -35,15 +35,6 @@ class HTMLPurifier_Filter_YouTube extends HTMLPurifier_Filter
     }
 
     /**
-     * @param $url
-     * @return string
-     */
-    protected function armorUrl($url)
-    {
-        return str_replace('--', '-&#45;', $url);
-    }
-
-    /**
      * @param array $matches
      * @return string
      */
@@ -59,6 +50,15 @@ class HTMLPurifier_Filter_YouTube extends HTMLPurifier_Filter
         'wmode="transparent" width="425" height="350" />' .
         '<![endif]-->' .
         '</object>';
+    }
+
+    /**
+     * @param $url
+     * @return string
+     */
+    protected function armorUrl($url)
+    {
+        return str_replace('--', '-&#45;', $url);
     }
 }
 

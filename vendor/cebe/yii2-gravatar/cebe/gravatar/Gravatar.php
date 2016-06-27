@@ -73,7 +73,7 @@ class Gravatar extends Widget
 	 * @var array html options for the image tag
 	 */
 	public $options = [];
-
+	private $_emailHash;
 
 	public function run()
 	{
@@ -105,8 +105,6 @@ class Gravatar extends Widget
 		$url .= '?' . http_build_query($params);
 		return $url;
 	}
-
-	private $_emailHash;
 
 	/**
 	 * Generates email hash for gravatar url

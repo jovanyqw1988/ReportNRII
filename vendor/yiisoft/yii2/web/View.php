@@ -8,9 +8,9 @@
 namespace yii\web;
 
 use Yii;
+use yii\base\InvalidConfigException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
-use yii\base\InvalidConfigException;
 
 /**
  * View represents a view object in the MVC pattern.
@@ -130,58 +130,6 @@ class View extends \yii\base\View
 
     private $_assetManager;
 
-
-    /**
-     * Marks the position of an HTML head section.
-     */
-    public function head()
-    {
-        echo self::PH_HEAD;
-    }
-
-    /**
-     * Marks the beginning of an HTML body section.
-     */
-    public function beginBody()
-    {
-        echo self::PH_BODY_BEGIN;
-        $this->trigger(self::EVENT_BEGIN_BODY);
-    }
-
-    /**
-     * Marks the ending of an HTML body section.
-     */
-    public function endBody()
-    {
-        $this->trigger(self::EVENT_END_BODY);
-        echo self::PH_BODY_END;
-
-        foreach (array_keys($this->assetBundles) as $bundle) {
-            $this->registerAssetFiles($bundle);
-        }
-    }
-
-    /**
-     * Marks the ending of an HTML page.
-     * @param boolean $ajaxMode whether the view is rendering in AJAX mode.
-     * If true, the JS scripts registered at [[POS_READY]] and [[POS_LOAD]] positions
-     * will be rendered at the end of the view like normal scripts.
-     */
-    public function endPage($ajaxMode = false)
-    {
-        $this->trigger(self::EVENT_END_PAGE);
-
-        $content = ob_get_clean();
-
-        echo strtr($content, [
-            self::PH_HEAD => $this->renderHeadHtml(),
-            self::PH_BODY_BEGIN => $this->renderBodyBeginHtml(),
-            self::PH_BODY_END => $this->renderBodyEndHtml($ajaxMode),
-        ]);
-
-        $this->clear();
-    }
-
     /**
      * Renders a view in response to an AJAX request.
      *
@@ -215,35 +163,33 @@ class View extends \yii\base\View
     }
 
     /**
-     * Registers the asset manager being used by this view object.
-     * @return \yii\web\AssetManager the asset manager. Defaults to the "assetManager" application component.
+     * Marks the position of an HTML head section.
      */
-    public function getAssetManager()
+    public function head()
     {
-        return $this->_assetManager ?: Yii::$app->getAssetManager();
+        echo self::PH_HEAD;
     }
 
     /**
-     * Sets the asset manager.
-     * @param \yii\web\AssetManager $value the asset manager
+     * Marks the beginning of an HTML body section.
      */
-    public function setAssetManager($value)
+    public function beginBody()
     {
-        $this->_assetManager = $value;
+        echo self::PH_BODY_BEGIN;
+        $this->trigger(self::EVENT_BEGIN_BODY);
     }
 
     /**
-     * Clears up the registered meta tags, link tags, css/js scripts and files.
+     * Marks the ending of an HTML body section.
      */
-    public function clear()
+    public function endBody()
     {
-        $this->metaTags = null;
-        $this->linkTags = null;
-        $this->css = null;
-        $this->cssFiles = null;
-        $this->js = null;
-        $this->jsFiles = null;
-        $this->assetBundles = [];
+        $this->trigger(self::EVENT_END_BODY);
+        echo self::PH_BODY_END;
+
+        foreach (array_keys($this->assetBundles) as $bundle) {
+            $this->registerAssetFiles($bundle);
+        }
     }
 
     /**
@@ -267,48 +213,134 @@ class View extends \yii\base\View
     }
 
     /**
-     * Registers the named asset bundle.
-     * All dependent asset bundles will be registered.
-     * @param string $name the class name of the asset bundle (without the leading backslash)
-     * @param integer|null $position if set, this forces a minimum position for javascript files.
-     * This will adjust depending assets javascript file position or fail if requirement can not be met.
-     * If this is null, asset bundles position settings will not be changed.
-     * See [[registerJsFile]] for more details on javascript position.
-     * @return AssetBundle the registered asset bundle instance
-     * @throws InvalidConfigException if the asset bundle does not exist or a circular dependency is detected
+     * Marks the ending of an HTML page.
+     * @param boolean $ajaxMode whether the view is rendering in AJAX mode.
+     * If true, the JS scripts registered at [[POS_READY]] and [[POS_LOAD]] positions
+     * will be rendered at the end of the view like normal scripts.
      */
-    public function registerAssetBundle($name, $position = null)
+    public function endPage($ajaxMode = false)
     {
-        if (!isset($this->assetBundles[$name])) {
-            $am = $this->getAssetManager();
-            $bundle = $am->getBundle($name);
-            $this->assetBundles[$name] = false;
-            // register dependencies
-            $pos = isset($bundle->jsOptions['position']) ? $bundle->jsOptions['position'] : null;
-            foreach ($bundle->depends as $dep) {
-                $this->registerAssetBundle($dep, $pos);
+        $this->trigger(self::EVENT_END_PAGE);
+
+        $content = ob_get_clean();
+
+        echo strtr($content, [
+            self::PH_HEAD => $this->renderHeadHtml(),
+            self::PH_BODY_BEGIN => $this->renderBodyBeginHtml(),
+            self::PH_BODY_END => $this->renderBodyEndHtml($ajaxMode),
+        ]);
+
+        $this->clear();
+    }
+
+    /**
+     * Renders the content to be inserted in the head section.
+     * The content is rendered using the registered meta tags, link tags, CSS/JS code blocks and files.
+     * @return string the rendered content
+     */
+    protected function renderHeadHtml()
+    {
+        $lines = [];
+        if (!empty($this->metaTags)) {
+            $lines[] = implode("\n", $this->metaTags);
+        }
+
+        if (!empty($this->linkTags)) {
+            $lines[] = implode("\n", $this->linkTags);
+        }
+        if (!empty($this->cssFiles)) {
+            $lines[] = implode("\n", $this->cssFiles);
+        }
+        if (!empty($this->css)) {
+            $lines[] = implode("\n", $this->css);
+        }
+        if (!empty($this->jsFiles[self::POS_HEAD])) {
+            $lines[] = implode("\n", $this->jsFiles[self::POS_HEAD]);
+        }
+        if (!empty($this->js[self::POS_HEAD])) {
+            $lines[] = Html::script(implode("\n", $this->js[self::POS_HEAD]), ['type' => 'text/javascript']);
+        }
+
+        return empty($lines) ? '' : implode("\n", $lines);
+    }
+
+    /**
+     * Renders the content to be inserted at the beginning of the body section.
+     * The content is rendered using the registered JS code blocks and files.
+     * @return string the rendered content
+     */
+    protected function renderBodyBeginHtml()
+    {
+        $lines = [];
+        if (!empty($this->jsFiles[self::POS_BEGIN])) {
+            $lines[] = implode("\n", $this->jsFiles[self::POS_BEGIN]);
+        }
+        if (!empty($this->js[self::POS_BEGIN])) {
+            $lines[] = Html::script(implode("\n", $this->js[self::POS_BEGIN]), ['type' => 'text/javascript']);
+        }
+
+        return empty($lines) ? '' : implode("\n", $lines);
+    }
+
+    /**
+     * Renders the content to be inserted at the end of the body section.
+     * The content is rendered using the registered JS code blocks and files.
+     * @param boolean $ajaxMode whether the view is rendering in AJAX mode.
+     * If true, the JS scripts registered at [[POS_READY]] and [[POS_LOAD]] positions
+     * will be rendered at the end of the view like normal scripts.
+     * @return string the rendered content
+     */
+    protected function renderBodyEndHtml($ajaxMode)
+    {
+        $lines = [];
+
+        if (!empty($this->jsFiles[self::POS_END])) {
+            $lines[] = implode("\n", $this->jsFiles[self::POS_END]);
+        }
+
+        if ($ajaxMode) {
+            $scripts = [];
+            if (!empty($this->js[self::POS_END])) {
+                $scripts[] = implode("\n", $this->js[self::POS_END]);
             }
-            $this->assetBundles[$name] = $bundle;
-        } elseif ($this->assetBundles[$name] === false) {
-            throw new InvalidConfigException("A circular dependency is detected for bundle '$name'.");
+            if (!empty($this->js[self::POS_READY])) {
+                $scripts[] = implode("\n", $this->js[self::POS_READY]);
+            }
+            if (!empty($this->js[self::POS_LOAD])) {
+                $scripts[] = implode("\n", $this->js[self::POS_LOAD]);
+            }
+            if (!empty($scripts)) {
+                $lines[] = Html::script(implode("\n", $scripts), ['type' => 'text/javascript']);
+            }
         } else {
-            $bundle = $this->assetBundles[$name];
-        }
-
-        if ($position !== null) {
-            $pos = isset($bundle->jsOptions['position']) ? $bundle->jsOptions['position'] : null;
-            if ($pos === null) {
-                $bundle->jsOptions['position'] = $pos = $position;
-            } elseif ($pos > $position) {
-                throw new InvalidConfigException("An asset bundle that depends on '$name' has a higher javascript file position configured than '$name'.");
+            if (!empty($this->js[self::POS_END])) {
+                $lines[] = Html::script(implode("\n", $this->js[self::POS_END]), ['type' => 'text/javascript']);
             }
-            // update position for all dependencies
-            foreach ($bundle->depends as $dep) {
-                $this->registerAssetBundle($dep, $pos);
+            if (!empty($this->js[self::POS_READY])) {
+                $js = "jQuery(document).ready(function () {\n" . implode("\n", $this->js[self::POS_READY]) . "\n});";
+                $lines[] = Html::script($js, ['type' => 'text/javascript']);
+            }
+            if (!empty($this->js[self::POS_LOAD])) {
+                $js = "jQuery(window).load(function () {\n" . implode("\n", $this->js[self::POS_LOAD]) . "\n});";
+                $lines[] = Html::script($js, ['type' => 'text/javascript']);
             }
         }
 
-        return $bundle;
+        return empty($lines) ? '' : implode("\n", $lines);
+    }
+
+    /**
+     * Clears up the registered meta tags, link tags, css/js scripts and files.
+     */
+    public function clear()
+    {
+        $this->metaTags = null;
+        $this->linkTags = null;
+        $this->css = null;
+        $this->cssFiles = null;
+        $this->js = null;
+        $this->jsFiles = null;
+        $this->assetBundles = [];
     }
 
     /**
@@ -414,6 +446,69 @@ class View extends \yii\base\View
     }
 
     /**
+     * Registers the asset manager being used by this view object.
+     * @return \yii\web\AssetManager the asset manager. Defaults to the "assetManager" application component.
+     */
+    public function getAssetManager()
+    {
+        return $this->_assetManager ?: Yii::$app->getAssetManager();
+    }
+
+    /**
+     * Sets the asset manager.
+     * @param \yii\web\AssetManager $value the asset manager
+     */
+    public function setAssetManager($value)
+    {
+        $this->_assetManager = $value;
+    }
+
+    /**
+     * Registers the named asset bundle.
+     * All dependent asset bundles will be registered.
+     * @param string $name the class name of the asset bundle (without the leading backslash)
+     * @param integer|null $position if set, this forces a minimum position for javascript files.
+     * This will adjust depending assets javascript file position or fail if requirement can not be met.
+     * If this is null, asset bundles position settings will not be changed.
+     * See [[registerJsFile]] for more details on javascript position.
+     * @return AssetBundle the registered asset bundle instance
+     * @throws InvalidConfigException if the asset bundle does not exist or a circular dependency is detected
+     */
+    public function registerAssetBundle($name, $position = null)
+    {
+        if (!isset($this->assetBundles[$name])) {
+            $am = $this->getAssetManager();
+            $bundle = $am->getBundle($name);
+            $this->assetBundles[$name] = false;
+            // register dependencies
+            $pos = isset($bundle->jsOptions['position']) ? $bundle->jsOptions['position'] : null;
+            foreach ($bundle->depends as $dep) {
+                $this->registerAssetBundle($dep, $pos);
+            }
+            $this->assetBundles[$name] = $bundle;
+        } elseif ($this->assetBundles[$name] === false) {
+            throw new InvalidConfigException("A circular dependency is detected for bundle '$name'.");
+        } else {
+            $bundle = $this->assetBundles[$name];
+        }
+
+        if ($position !== null) {
+            $pos = isset($bundle->jsOptions['position']) ? $bundle->jsOptions['position'] : null;
+            if ($pos === null) {
+                $bundle->jsOptions['position'] = $pos = $position;
+            } elseif ($pos > $position) {
+                throw new InvalidConfigException("An asset bundle that depends on '$name' has a higher javascript file position configured than '$name'.");
+            }
+            // update position for all dependencies
+            foreach ($bundle->depends as $dep) {
+                $this->registerAssetBundle($dep, $pos);
+            }
+        }
+
+        return $bundle;
+    }
+
+    /**
      * Registers a JS code block.
      * @param string $js the JS code block to be registered
      * @param integer $position the position at which the JS script tag should be inserted
@@ -476,101 +571,5 @@ class View extends \yii\base\View
             ]);
             $this->registerAssetBundle($key);
         }
-    }
-
-    /**
-     * Renders the content to be inserted in the head section.
-     * The content is rendered using the registered meta tags, link tags, CSS/JS code blocks and files.
-     * @return string the rendered content
-     */
-    protected function renderHeadHtml()
-    {
-        $lines = [];
-        if (!empty($this->metaTags)) {
-            $lines[] = implode("\n", $this->metaTags);
-        }
-
-        if (!empty($this->linkTags)) {
-            $lines[] = implode("\n", $this->linkTags);
-        }
-        if (!empty($this->cssFiles)) {
-            $lines[] = implode("\n", $this->cssFiles);
-        }
-        if (!empty($this->css)) {
-            $lines[] = implode("\n", $this->css);
-        }
-        if (!empty($this->jsFiles[self::POS_HEAD])) {
-            $lines[] = implode("\n", $this->jsFiles[self::POS_HEAD]);
-        }
-        if (!empty($this->js[self::POS_HEAD])) {
-            $lines[] = Html::script(implode("\n", $this->js[self::POS_HEAD]), ['type' => 'text/javascript']);
-        }
-
-        return empty($lines) ? '' : implode("\n", $lines);
-    }
-
-    /**
-     * Renders the content to be inserted at the beginning of the body section.
-     * The content is rendered using the registered JS code blocks and files.
-     * @return string the rendered content
-     */
-    protected function renderBodyBeginHtml()
-    {
-        $lines = [];
-        if (!empty($this->jsFiles[self::POS_BEGIN])) {
-            $lines[] = implode("\n", $this->jsFiles[self::POS_BEGIN]);
-        }
-        if (!empty($this->js[self::POS_BEGIN])) {
-            $lines[] = Html::script(implode("\n", $this->js[self::POS_BEGIN]), ['type' => 'text/javascript']);
-        }
-
-        return empty($lines) ? '' : implode("\n", $lines);
-    }
-
-    /**
-     * Renders the content to be inserted at the end of the body section.
-     * The content is rendered using the registered JS code blocks and files.
-     * @param boolean $ajaxMode whether the view is rendering in AJAX mode.
-     * If true, the JS scripts registered at [[POS_READY]] and [[POS_LOAD]] positions
-     * will be rendered at the end of the view like normal scripts.
-     * @return string the rendered content
-     */
-    protected function renderBodyEndHtml($ajaxMode)
-    {
-        $lines = [];
-
-        if (!empty($this->jsFiles[self::POS_END])) {
-            $lines[] = implode("\n", $this->jsFiles[self::POS_END]);
-        }
-
-        if ($ajaxMode) {
-            $scripts = [];
-            if (!empty($this->js[self::POS_END])) {
-                $scripts[] = implode("\n", $this->js[self::POS_END]);
-            }
-            if (!empty($this->js[self::POS_READY])) {
-                $scripts[] = implode("\n", $this->js[self::POS_READY]);
-            }
-            if (!empty($this->js[self::POS_LOAD])) {
-                $scripts[] = implode("\n", $this->js[self::POS_LOAD]);
-            }
-            if (!empty($scripts)) {
-                $lines[] = Html::script(implode("\n", $scripts), ['type' => 'text/javascript']);
-            }
-        } else {
-            if (!empty($this->js[self::POS_END])) {
-                $lines[] = Html::script(implode("\n", $this->js[self::POS_END]), ['type' => 'text/javascript']);
-            }
-            if (!empty($this->js[self::POS_READY])) {
-                $js = "jQuery(document).ready(function () {\n" . implode("\n", $this->js[self::POS_READY]) . "\n});";
-                $lines[] = Html::script($js, ['type' => 'text/javascript']);
-            }
-            if (!empty($this->js[self::POS_LOAD])) {
-                $js = "jQuery(window).load(function () {\n" . implode("\n", $this->js[self::POS_LOAD]) . "\n});";
-                $lines[] = Html::script($js, ['type' => 'text/javascript']);
-            }
-        }
-
-        return empty($lines) ? '' : implode("\n", $lines);
     }
 }

@@ -10,8 +10,8 @@ namespace yii\validators;
 use Yii;
 use yii\base\InvalidConfigException;
 use yii\helpers\Html;
-use yii\web\JsExpression;
 use yii\helpers\Json;
+use yii\web\JsExpression;
 
 /**
  * RegularExpressionValidator validates that the attribute value matches the specified [[pattern]].
@@ -51,18 +51,6 @@ class RegularExpressionValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        $valid = !is_array($value) &&
-            (!$this->not && preg_match($this->pattern, $value)
-            || $this->not && !preg_match($this->pattern, $value));
-
-        return $valid ? null : [$this->message, []];
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         $pattern = Html::escapeJsRegularExpression($this->pattern);
@@ -81,5 +69,17 @@ class RegularExpressionValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.regularExpression(value, messages, ' . Json::htmlEncode($options) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        $valid = !is_array($value) &&
+            (!$this->not && preg_match($this->pattern, $value)
+                || $this->not && !preg_match($this->pattern, $value));
+
+        return $valid ? null : [$this->message, []];
     }
 }

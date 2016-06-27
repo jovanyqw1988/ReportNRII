@@ -100,17 +100,6 @@ class ViewAction extends Action
     }
 
     /**
-     * Renders a view
-     *
-     * @param string $viewName view name
-     * @return string result of the rendering
-     */
-    protected function render($viewName)
-    {
-        return $this->controller->render($viewName);
-    }
-
-    /**
      * Resolves the view name currently being requested.
      *
      * @return string the resolved view name
@@ -129,5 +118,16 @@ class ViewAction extends Action
         }
 
         return empty($this->viewPrefix) ? $viewName : $this->viewPrefix . '/' . $viewName;
+    }
+
+    /**
+     * Renders a view
+     *
+     * @param string $viewName view name
+     * @return string result of the rendering
+     */
+    protected function render($viewName)
+    {
+        return $this->controller->render($viewName);
     }
 }

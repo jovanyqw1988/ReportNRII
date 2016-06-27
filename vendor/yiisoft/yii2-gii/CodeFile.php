@@ -114,18 +114,6 @@ class CodeFile extends Object
     }
 
     /**
-     * @return string the code file extension (e.g. php, txt)
-     */
-    public function getType()
-    {
-        if (($pos = strrpos($this->path, '.')) !== false) {
-            return substr($this->path, $pos + 1);
-        } else {
-            return 'unknown';
-        }
-    }
-
-    /**
      * Returns preview or false if it cannot be rendered
      *
      * @return boolean|string
@@ -161,6 +149,18 @@ class CodeFile extends Object
             return $this->renderDiff(file($this->path), $this->content);
         } else {
             return '';
+        }
+    }
+
+    /**
+     * @return string the code file extension (e.g. php, txt)
+     */
+    public function getType()
+    {
+        if (($pos = strrpos($this->path, '.')) !== false) {
+            return substr($this->path, $pos + 1);
+        } else {
+            return 'unknown';
         }
     }
 

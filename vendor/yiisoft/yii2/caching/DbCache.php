@@ -201,6 +201,20 @@ class DbCache extends Cache
     }
 
     /**
+     * Removes the expired data values.
+     * @param boolean $force whether to enforce the garbage collection regardless of [[gcProbability]].
+     * Defaults to false, meaning the actual deletion happens with the probability as specified by [[gcProbability]].
+     */
+    public function gc($force = false)
+    {
+        if ($force || mt_rand(0, 1000000) < $this->gcProbability) {
+            $this->db->createCommand()
+                ->delete($this->cacheTable, '[[expire]] > 0 AND [[expire]] < ' . time())
+                ->execute();
+        }
+    }
+
+    /**
      * Stores a value identified by a key into cache if the cache does not contain this key.
      * This is the implementation of the method declared in the parent class.
      *
@@ -240,20 +254,6 @@ class DbCache extends Cache
             ->execute();
 
         return true;
-    }
-
-    /**
-     * Removes the expired data values.
-     * @param boolean $force whether to enforce the garbage collection regardless of [[gcProbability]].
-     * Defaults to false, meaning the actual deletion happens with the probability as specified by [[gcProbability]].
-     */
-    public function gc($force = false)
-    {
-        if ($force || mt_rand(0, 1000000) < $this->gcProbability) {
-            $this->db->createCommand()
-                ->delete($this->cacheTable, '[[expire]] > 0 AND [[expire]] < ' . time())
-                ->execute();
-        }
     }
 
     /**

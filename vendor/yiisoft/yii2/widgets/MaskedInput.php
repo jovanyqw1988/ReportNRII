@@ -132,40 +132,6 @@ class MaskedInput extends InputWidget
     }
 
     /**
-     * Generates a hashed variable to store the plugin `clientOptions`. Helps in reusing the variable for similar
-     * options passed for other widgets on the same page. The following special data attribute will also be
-     * added to the input field to allow accessing the client options via javascript:
-     *
-     * - 'data-plugin-inputmask' will store the hashed variable storing the plugin options.
-     *
-     * @param View $view the view instance
-     * @author [Thiago Talma](https://github.com/thiagotalma)
-     */
-    protected function hashPluginOptions($view)
-    {
-        $encOptions = empty($this->clientOptions) ? '{}' : Json::htmlEncode($this->clientOptions);
-        $this->_hashVar = self::PLUGIN_NAME . '_' . hash('crc32', $encOptions);
-        $this->options['data-plugin-' . self::PLUGIN_NAME] = $this->_hashVar;
-        $view->registerJs("var {$this->_hashVar} = {$encOptions};", View::POS_READY);
-    }
-
-    /**
-     * Initializes client options
-     */
-    protected function initClientOptions()
-    {
-        $options = $this->clientOptions;
-        foreach ($options as $key => $value) {
-            if (!$value instanceof JsExpression && in_array($key, ['oncomplete', 'onincomplete', 'oncleared', 'onKeyUp',
-                    'onKeyDown', 'onBeforeMask', 'onBeforePaste', 'onUnMask', 'isComplete', 'determineActiveMasksetIndex'], true)
-            ) {
-                $options[$key] = new JsExpression($value);
-            }
-        }
-        $this->clientOptions = $options;
-    }
-
-    /**
      * Registers the needed client script and options.
      */
     public function registerClientScript()
@@ -187,5 +153,39 @@ class MaskedInput extends InputWidget
         $js .= '$("#' . $id . '").' . self::PLUGIN_NAME . '(' . $this->_hashVar . ');';
         MaskedInputAsset::register($view);
         $view->registerJs($js);
+    }
+
+    /**
+     * Initializes client options
+     */
+    protected function initClientOptions()
+    {
+        $options = $this->clientOptions;
+        foreach ($options as $key => $value) {
+            if (!$value instanceof JsExpression && in_array($key, ['oncomplete', 'onincomplete', 'oncleared', 'onKeyUp',
+                    'onKeyDown', 'onBeforeMask', 'onBeforePaste', 'onUnMask', 'isComplete', 'determineActiveMasksetIndex'], true)
+            ) {
+                $options[$key] = new JsExpression($value);
+            }
+        }
+        $this->clientOptions = $options;
+    }
+
+    /**
+     * Generates a hashed variable to store the plugin `clientOptions`. Helps in reusing the variable for similar
+     * options passed for other widgets on the same page. The following special data attribute will also be
+     * added to the input field to allow accessing the client options via javascript:
+     *
+     * - 'data-plugin-inputmask' will store the hashed variable storing the plugin options.
+     *
+     * @param View $view the view instance
+     * @author [Thiago Talma](https://github.com/thiagotalma)
+     */
+    protected function hashPluginOptions($view)
+    {
+        $encOptions = empty($this->clientOptions) ? '{}' : Json::htmlEncode($this->clientOptions);
+        $this->_hashVar = self::PLUGIN_NAME . '_' . hash('crc32', $encOptions);
+        $this->options['data-plugin-' . self::PLUGIN_NAME] = $this->_hashVar;
+        $view->registerJs("var {$this->_hashVar} = {$encOptions};", View::POS_READY);
     }
 }

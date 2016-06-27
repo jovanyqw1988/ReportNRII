@@ -75,7 +75,10 @@ class FragmentCache extends Widget
      * is used internally to implement the content caching feature. Do not modify it.
      */
     public $dynamicPlaceholders;
-
+    /**
+     * @var string|boolean the cached content. False if the content is not cached.
+     */
+    private $_content;
 
     /**
      * Initializes the FragmentCache object.
@@ -92,41 +95,6 @@ class FragmentCache extends Widget
             ob_implicit_flush(false);
         }
     }
-
-    /**
-     * Marks the end of content to be cached.
-     * Content displayed before this method call and after [[init()]]
-     * will be captured and saved in cache.
-     * This method does nothing if valid content is already found in cache.
-     */
-    public function run()
-    {
-        if (($content = $this->getCachedContent()) !== false) {
-            echo $content;
-        } elseif ($this->cache instanceof Cache) {
-            array_pop($this->getView()->cacheStack);
-            
-            $content = ob_get_clean();
-            if ($content === false || $content === '') {
-                return;
-            }
-            if (is_array($this->dependency)) {
-                $this->dependency = Yii::createObject($this->dependency);
-            }
-            $data = [$content, $this->dynamicPlaceholders];
-            $this->cache->set($this->calculateKey(), $data, $this->duration, $this->dependency);
-
-            if (empty($this->getView()->cacheStack) && !empty($this->dynamicPlaceholders)) {
-                $content = $this->updateDynamicContent($content, $this->dynamicPlaceholders);
-            }
-            echo $content;
-        }
-    }
-
-    /**
-     * @var string|boolean the cached content. False if the content is not cached.
-     */
-    private $_content;
 
     /**
      * Returns the cached content if available.
@@ -159,6 +127,23 @@ class FragmentCache extends Widget
     }
 
     /**
+     * Generates a unique key used for storing the content in cache.
+     * The key generated depends on both [[id]] and [[variations]].
+     * @return mixed a valid cache key
+     */
+    protected function calculateKey()
+    {
+        $factors = [__CLASS__, $this->getId()];
+        if (is_array($this->variations)) {
+            foreach ($this->variations as $factor) {
+                $factors[] = $factor;
+            }
+        }
+
+        return $factors;
+    }
+
+    /**
      * Replaces placeholders in content by results of evaluated dynamic statements.
      *
      * @param string $content
@@ -175,19 +160,32 @@ class FragmentCache extends Widget
     }
 
     /**
-     * Generates a unique key used for storing the content in cache.
-     * The key generated depends on both [[id]] and [[variations]].
-     * @return mixed a valid cache key
+     * Marks the end of content to be cached.
+     * Content displayed before this method call and after [[init()]]
+     * will be captured and saved in cache.
+     * This method does nothing if valid content is already found in cache.
      */
-    protected function calculateKey()
+    public function run()
     {
-        $factors = [__CLASS__, $this->getId()];
-        if (is_array($this->variations)) {
-            foreach ($this->variations as $factor) {
-                $factors[] = $factor;
-            }
-        }
+        if (($content = $this->getCachedContent()) !== false) {
+            echo $content;
+        } elseif ($this->cache instanceof Cache) {
+            array_pop($this->getView()->cacheStack);
 
-        return $factors;
+            $content = ob_get_clean();
+            if ($content === false || $content === '') {
+                return;
+            }
+            if (is_array($this->dependency)) {
+                $this->dependency = Yii::createObject($this->dependency);
+            }
+            $data = [$content, $this->dynamicPlaceholders];
+            $this->cache->set($this->calculateKey(), $data, $this->duration, $this->dependency);
+
+            if (empty($this->getView()->cacheStack) && !empty($this->dynamicPlaceholders)) {
+                $content = $this->updateDynamicContent($content, $this->dynamicPlaceholders);
+            }
+            echo $content;
+        }
     }
 }

@@ -171,57 +171,58 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Loads the column information into a [[ColumnSchema]] object.
-     * @param array $info column information
-     * @return ColumnSchema the column schema object
+     * Collects the primary key column details for the given table.
+     * @param TableSchema $table the table metadata
      */
-    protected function loadColumnSchema($info)
+    protected function findPrimaryKeys($table)
     {
-        $column = $this->createColumnSchema();
-
-        $column->name = $info['column_name'];
-        $column->allowNull = $info['is_nullable'] === 'YES';
-        $column->dbType = $info['data_type'];
-        $column->enumValues = []; // mssql has only vague equivalents to enum
-        $column->isPrimaryKey = null; // primary key will be determined in findColumns() method
-        $column->autoIncrement = $info['is_identity'] == 1;
-        $column->unsigned = stripos($column->dbType, 'unsigned') !== false;
-        $column->comment = $info['comment'] === null ? '' : $info['comment'];
-
-        $column->type = self::TYPE_STRING;
-        if (preg_match('/^(\w+)(?:\(([^\)]+)\))?/', $column->dbType, $matches)) {
-            $type = $matches[1];
-            if (isset($this->typeMap[$type])) {
-                $column->type = $this->typeMap[$type];
-            }
-            if (!empty($matches[2])) {
-                $values = explode(',', $matches[2]);
-                $column->size = $column->precision = (int) $values[0];
-                if (isset($values[1])) {
-                    $column->scale = (int) $values[1];
-                }
-                if ($column->size === 1 && ($type === 'tinyint' || $type === 'bit')) {
-                    $column->type = 'boolean';
-                } elseif ($type === 'bit') {
-                    if ($column->size > 32) {
-                        $column->type = 'bigint';
-                    } elseif ($column->size === 32) {
-                        $column->type = 'integer';
-                    }
-                }
-            }
+        $result = [];
+        foreach ($this->findTableConstraints($table, 'PRIMARY KEY') as $row) {
+            $result[] = $row['field_name'];
         }
+        $table->primaryKey = $result;
+    }
 
-        $column->phpType = $this->getColumnPhpType($column);
-
-        if ($info['column_default'] === '(NULL)') {
-            $info['column_default'] = null;
+    /**
+     * Collects the constraint details for the given table and constraint type.
+     * @param TableSchema $table
+     * @param string $type either PRIMARY KEY or UNIQUE
+     * @return array each entry contains index_name and field_name
+     * @since 2.0.4
+     */
+    protected function findTableConstraints($table, $type)
+    {
+        $keyColumnUsageTableName = 'INFORMATION_SCHEMA.KEY_COLUMN_USAGE';
+        $tableConstraintsTableName = 'INFORMATION_SCHEMA.TABLE_CONSTRAINTS';
+        if ($table->catalogName !== null) {
+            $keyColumnUsageTableName = $table->catalogName . '.' . $keyColumnUsageTableName;
+            $tableConstraintsTableName = $table->catalogName . '.' . $tableConstraintsTableName;
         }
-        if (!$column->isPrimaryKey && ($column->type !== 'timestamp' || $info['column_default'] !== 'CURRENT_TIMESTAMP')) {
-            $column->defaultValue = $column->phpTypecast($info['column_default']);
-        }
+        $keyColumnUsageTableName = $this->quoteTableName($keyColumnUsageTableName);
+        $tableConstraintsTableName = $this->quoteTableName($tableConstraintsTableName);
 
-        return $column;
+        $sql = <<<SQL
+SELECT
+    [kcu].[constraint_name] AS [index_name],
+    [kcu].[column_name] AS [field_name]
+FROM {$keyColumnUsageTableName} AS [kcu]
+LEFT JOIN {$tableConstraintsTableName} AS [tc] ON
+    [kcu].[table_schema] = [tc].[table_schema] AND
+    [kcu].[table_name] = [tc].[table_name] AND
+    [kcu].[constraint_name] = [tc].[constraint_name]
+WHERE
+    [tc].[constraint_type] = :type AND
+    [kcu].[table_name] = :tableName AND
+    [kcu].[table_schema] = :schemaName
+SQL;
+
+        return $this->db
+            ->createCommand($sql, [
+                ':tableName' => $table->name,
+                ':schemaName' => $table->schemaName,
+                ':type' => $type,
+            ])
+            ->queryAll();
     }
 
     /**
@@ -283,58 +284,57 @@ SQL;
     }
 
     /**
-     * Collects the constraint details for the given table and constraint type.
-     * @param TableSchema $table
-     * @param string $type either PRIMARY KEY or UNIQUE
-     * @return array each entry contains index_name and field_name
-     * @since 2.0.4
+     * Loads the column information into a [[ColumnSchema]] object.
+     * @param array $info column information
+     * @return ColumnSchema the column schema object
      */
-    protected function findTableConstraints($table, $type)
+    protected function loadColumnSchema($info)
     {
-        $keyColumnUsageTableName = 'INFORMATION_SCHEMA.KEY_COLUMN_USAGE';
-        $tableConstraintsTableName = 'INFORMATION_SCHEMA.TABLE_CONSTRAINTS';
-        if ($table->catalogName !== null) {
-            $keyColumnUsageTableName = $table->catalogName . '.' . $keyColumnUsageTableName;
-            $tableConstraintsTableName = $table->catalogName . '.' . $tableConstraintsTableName;
+        $column = $this->createColumnSchema();
+
+        $column->name = $info['column_name'];
+        $column->allowNull = $info['is_nullable'] === 'YES';
+        $column->dbType = $info['data_type'];
+        $column->enumValues = []; // mssql has only vague equivalents to enum
+        $column->isPrimaryKey = null; // primary key will be determined in findColumns() method
+        $column->autoIncrement = $info['is_identity'] == 1;
+        $column->unsigned = stripos($column->dbType, 'unsigned') !== false;
+        $column->comment = $info['comment'] === null ? '' : $info['comment'];
+
+        $column->type = self::TYPE_STRING;
+        if (preg_match('/^(\w+)(?:\(([^\)]+)\))?/', $column->dbType, $matches)) {
+            $type = $matches[1];
+            if (isset($this->typeMap[$type])) {
+                $column->type = $this->typeMap[$type];
+            }
+            if (!empty($matches[2])) {
+                $values = explode(',', $matches[2]);
+                $column->size = $column->precision = (int)$values[0];
+                if (isset($values[1])) {
+                    $column->scale = (int)$values[1];
+                }
+                if ($column->size === 1 && ($type === 'tinyint' || $type === 'bit')) {
+                    $column->type = 'boolean';
+                } elseif ($type === 'bit') {
+                    if ($column->size > 32) {
+                        $column->type = 'bigint';
+                    } elseif ($column->size === 32) {
+                        $column->type = 'integer';
+                    }
+                }
+            }
         }
-        $keyColumnUsageTableName = $this->quoteTableName($keyColumnUsageTableName);
-        $tableConstraintsTableName = $this->quoteTableName($tableConstraintsTableName);
 
-        $sql = <<<SQL
-SELECT
-    [kcu].[constraint_name] AS [index_name],
-    [kcu].[column_name] AS [field_name]
-FROM {$keyColumnUsageTableName} AS [kcu]
-LEFT JOIN {$tableConstraintsTableName} AS [tc] ON
-    [kcu].[table_schema] = [tc].[table_schema] AND
-    [kcu].[table_name] = [tc].[table_name] AND
-    [kcu].[constraint_name] = [tc].[constraint_name]
-WHERE
-    [tc].[constraint_type] = :type AND
-    [kcu].[table_name] = :tableName AND
-    [kcu].[table_schema] = :schemaName
-SQL;
+        $column->phpType = $this->getColumnPhpType($column);
 
-        return $this->db
-            ->createCommand($sql, [
-                ':tableName' => $table->name,
-                ':schemaName' => $table->schemaName,
-                ':type' => $type,
-            ])
-            ->queryAll();
-    }
-
-    /**
-     * Collects the primary key column details for the given table.
-     * @param TableSchema $table the table metadata
-     */
-    protected function findPrimaryKeys($table)
-    {
-        $result = [];
-        foreach ($this->findTableConstraints($table, 'PRIMARY KEY') as $row) {
-            $result[] = $row['field_name'];
+        if ($info['column_default'] === '(NULL)') {
+            $info['column_default'] = null;
         }
-        $table->primaryKey = $result;
+        if (!$column->isPrimaryKey && ($column->type !== 'timestamp' || $info['column_default'] !== 'CURRENT_TIMESTAMP')) {
+            $column->defaultValue = $column->phpTypecast($info['column_default']);
+        }
+
+        return $column;
     }
 
     /**
@@ -383,27 +383,6 @@ SQL;
     }
 
     /**
-     * Returns all table names in the database.
-     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
-     * @return array all table names in the database. The names have NO schema name prefix.
-     */
-    protected function findTableNames($schema = '')
-    {
-        if ($schema === '') {
-            $schema = $this->defaultSchema;
-        }
-
-        $sql = <<<SQL
-SELECT [t].[table_name]
-FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
-WHERE [t].[table_schema] = :schema AND [t].[table_type] IN ('BASE TABLE', 'VIEW')
-ORDER BY [t].[table_name]
-SQL;
-
-        return $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
-    }
-
-    /**
      * Returns all unique indexes for the given table.
      * Each array element is of the following structure:
      *
@@ -425,5 +404,26 @@ SQL;
             $result[$row['index_name']][] = $row['field_name'];
         }
         return $result;
+    }
+
+    /**
+     * Returns all table names in the database.
+     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
+     * @return array all table names in the database. The names have NO schema name prefix.
+     */
+    protected function findTableNames($schema = '')
+    {
+        if ($schema === '') {
+            $schema = $this->defaultSchema;
+        }
+
+        $sql = <<<SQL
+SELECT [t].[table_name]
+FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
+WHERE [t].[table_schema] = :schema AND [t].[table_type] IN ('BASE TABLE', 'VIEW')
+ORDER BY [t].[table_name]
+SQL;
+
+        return $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
     }
 }

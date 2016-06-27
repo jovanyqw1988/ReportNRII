@@ -189,6 +189,18 @@ class DataColumn extends Column
     }
 
     /**
+     * @inheritdoc
+     */
+    protected function renderDataCellContent($model, $key, $index)
+    {
+        if ($this->content === null) {
+            return $this->grid->formatter->format($this->getDataCellValue($model, $key, $index), $this->format);
+        } else {
+            return parent::renderDataCellContent($model, $key, $index);
+        }
+    }
+
+    /**
      * Returns the data cell value.
      * @param mixed $model the data model
      * @param mixed $key the key associated with the data model
@@ -207,17 +219,5 @@ class DataColumn extends Column
             return ArrayHelper::getValue($model, $this->attribute);
         }
         return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function renderDataCellContent($model, $key, $index)
-    {
-        if ($this->content === null) {
-            return $this->grid->formatter->format($this->getDataCellValue($model, $key, $index), $this->format);
-        } else {
-            return parent::renderDataCellContent($model, $key, $index);
-        }
     }
 }

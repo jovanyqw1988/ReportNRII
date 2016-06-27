@@ -46,6 +46,22 @@ class GettextPoFile extends GettextFile
     }
 
     /**
+     * Decodes special characters in a message.
+     * @param string $string message to be decoded
+     * @return string the decoded message
+     */
+    protected function decode($string)
+    {
+        $string = preg_replace(
+            ['/"\s+"/', '/\\\\n/', '/\\\\r/', '/\\\\t/', '/\\\\"/'],
+            ['', "\n", "\r", "\t", '"'],
+            $string
+        );
+
+        return substr(rtrim($string), 1, -1);
+    }
+
+    /**
      * Saves messages to a PO file.
      * @param string $filePath file path
      * @param array $messages message translations. Array keys are source messages and array values are
@@ -79,21 +95,5 @@ class GettextPoFile extends GettextFile
             ['\\"', '\\n', '\\t', '\\r'],
             $string
         );
-    }
-
-    /**
-     * Decodes special characters in a message.
-     * @param string $string message to be decoded
-     * @return string the decoded message
-     */
-    protected function decode($string)
-    {
-        $string = preg_replace(
-            ['/"\s+"/', '/\\\\n/', '/\\\\r/', '/\\\\t/', '/\\\\"/'],
-            ['', "\n", "\r", "\t", '"'],
-            $string
-        );
-
-        return substr(rtrim($string), 1, -1);
     }
 }

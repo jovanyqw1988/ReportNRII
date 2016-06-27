@@ -127,30 +127,6 @@ class StringValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        if (!is_string($value)) {
-            return [$this->message, []];
-        }
-
-        $length = mb_strlen($value, $this->encoding);
-
-        if ($this->min !== null && $length < $this->min) {
-            return [$this->tooShort, ['min' => $this->min]];
-        }
-        if ($this->max !== null && $length > $this->max) {
-            return [$this->tooLong, ['max' => $this->max]];
-        }
-        if ($this->length !== null && $length !== $this->length) {
-            return [$this->notEqual, ['length' => $this->length]];
-        }
-
-        return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         $label = $model->getAttributeLabel($attribute);
@@ -189,5 +165,29 @@ class StringValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.string(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        if (!is_string($value)) {
+            return [$this->message, []];
+        }
+
+        $length = mb_strlen($value, $this->encoding);
+
+        if ($this->min !== null && $length < $this->min) {
+            return [$this->tooShort, ['min' => $this->min]];
+        }
+        if ($this->max !== null && $length > $this->max) {
+            return [$this->tooLong, ['max' => $this->max]];
+        }
+        if ($this->length !== null && $length !== $this->length) {
+            return [$this->notEqual, ['length' => $this->length]];
+        }
+
+        return null;
     }
 }

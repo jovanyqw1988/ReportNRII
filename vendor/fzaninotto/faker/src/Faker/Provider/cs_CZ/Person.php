@@ -425,7 +425,10 @@ class Person extends \Faker\Provider\Person
         'Bc.', 'Ing.', 'MUDr.', 'MVDr.', 'Mgr.', 'JUDr.', 'PhDr.', 'RNDr.', 'doc.', 'Dr.'
     );
 
-    public function title($gender = null)
+    /**
+     * replaced by specific unisex Czech title
+     */
+    public static function titleFemale()
     {
         return static::titleMale();
     }
@@ -438,10 +441,7 @@ class Person extends \Faker\Provider\Person
         return static::randomElement(static::$title);
     }
 
-    /**
-     * replaced by specific unisex Czech title
-     */
-    public static function titleFemale()
+    public function title($gender = null)
     {
         return static::titleMale();
     }

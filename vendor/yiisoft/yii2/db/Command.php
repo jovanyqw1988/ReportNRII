@@ -128,68 +128,44 @@ class Command extends Component
     }
 
     /**
-     * Returns the SQL statement for this command.
-     * @return string the SQL statement to be executed
+     * Cancels the execution of the SQL statement.
+     * This method mainly sets [[pdoStatement]] to be null.
      */
-    public function getSql()
+    public function cancel()
     {
-        return $this->_sql;
+        $this->pdoStatement = null;
     }
 
     /**
-     * Specifies the SQL statement to be executed.
-     * The previous SQL execution (if any) will be cancelled, and [[params]] will be cleared as well.
-     * @param string $sql the SQL statement to be set.
-     * @return $this this command instance
+     * Binds a parameter to the SQL statement to be executed.
+     * @param string|integer $name parameter identifier. For a prepared statement
+     * using named placeholders, this will be a parameter name of
+     * the form `:name`. For a prepared statement using question mark
+     * placeholders, this will be the 1-indexed position of the parameter.
+     * @param mixed $value the PHP variable to bind to the SQL statement parameter (passed by reference)
+     * @param integer $dataType SQL data type of the parameter. If null, the type is determined by the PHP type of the value.
+     * @param integer $length length of the data type
+     * @param mixed $driverOptions the driver-specific options
+     * @return $this the current command being executed
+     * @see http://www.php.net/manual/en/function.PDOStatement-bindParam.php
      */
-    public function setSql($sql)
+    public function bindParam($name, &$value, $dataType = null, $length = null, $driverOptions = null)
     {
-        if ($sql !== $this->_sql) {
-            $this->cancel();
-            $this->_sql = $this->db->quoteSql($sql);
-            $this->_pendingParams = [];
-            $this->params = [];
-            $this->_refreshTableName = null;
+        $this->prepare();
+
+        if ($dataType === null) {
+            $dataType = $this->db->getSchema()->getPdoType($value);
         }
+        if ($length === null) {
+            $this->pdoStatement->bindParam($name, $value, $dataType);
+        } elseif ($driverOptions === null) {
+            $this->pdoStatement->bindParam($name, $value, $dataType, $length);
+        } else {
+            $this->pdoStatement->bindParam($name, $value, $dataType, $length, $driverOptions);
+        }
+        $this->params[$name] =& $value;
 
         return $this;
-    }
-
-    /**
-     * Returns the raw SQL by inserting parameter values into the corresponding placeholders in [[sql]].
-     * Note that the return value of this method should mainly be used for logging purpose.
-     * It is likely that this method returns an invalid SQL due to improper replacement of parameter placeholders.
-     * @return string the raw SQL with parameter values inserted into the corresponding placeholders in [[sql]].
-     */
-    public function getRawSql()
-    {
-        if (empty($this->params)) {
-            return $this->_sql;
-        }
-        $params = [];
-        foreach ($this->params as $name => $value) {
-            if (is_string($name) && strncmp(':', $name, 1)) {
-                $name = ':' . $name;
-            }
-            if (is_string($value)) {
-                $params[$name] = $this->db->quoteValue($value);
-            } elseif (is_bool($value)) {
-                $params[$name] = ($value ? 'TRUE' : 'FALSE');
-            } elseif ($value === null) {
-                $params[$name] = 'NULL';
-            } elseif (!is_object($value) && !is_resource($value)) {
-                $params[$name] = $value;
-            }
-        }
-        if (!isset($params[1])) {
-            return strtr($this->_sql, $params);
-        }
-        $sql = '';
-        foreach (explode('?', $this->_sql) as $i => $part) {
-            $sql .= (isset($params[$i]) ? $params[$i] : '') . $part;
-        }
-
-        return $sql;
     }
 
     /**
@@ -232,47 +208,6 @@ class Command extends Component
     }
 
     /**
-     * Cancels the execution of the SQL statement.
-     * This method mainly sets [[pdoStatement]] to be null.
-     */
-    public function cancel()
-    {
-        $this->pdoStatement = null;
-    }
-
-    /**
-     * Binds a parameter to the SQL statement to be executed.
-     * @param string|integer $name parameter identifier. For a prepared statement
-     * using named placeholders, this will be a parameter name of
-     * the form `:name`. For a prepared statement using question mark
-     * placeholders, this will be the 1-indexed position of the parameter.
-     * @param mixed $value the PHP variable to bind to the SQL statement parameter (passed by reference)
-     * @param integer $dataType SQL data type of the parameter. If null, the type is determined by the PHP type of the value.
-     * @param integer $length length of the data type
-     * @param mixed $driverOptions the driver-specific options
-     * @return $this the current command being executed
-     * @see http://www.php.net/manual/en/function.PDOStatement-bindParam.php
-     */
-    public function bindParam($name, &$value, $dataType = null, $length = null, $driverOptions = null)
-    {
-        $this->prepare();
-
-        if ($dataType === null) {
-            $dataType = $this->db->getSchema()->getPdoType($value);
-        }
-        if ($length === null) {
-            $this->pdoStatement->bindParam($name, $value, $dataType);
-        } elseif ($driverOptions === null) {
-            $this->pdoStatement->bindParam($name, $value, $dataType, $length);
-        } else {
-            $this->pdoStatement->bindParam($name, $value, $dataType, $length, $driverOptions);
-        }
-        $this->params[$name] =& $value;
-
-        return $this;
-    }
-
-    /**
      * Binds pending parameters that were registered via [[bindValue()]] and [[bindValues()]].
      * Note that this method requires an active [[pdoStatement]].
      */
@@ -282,6 +217,34 @@ class Command extends Component
             $this->pdoStatement->bindValue($name, $value[0], $value[1]);
         }
         $this->_pendingParams = [];
+    }
+
+    /**
+     * Returns the SQL statement for this command.
+     * @return string the SQL statement to be executed
+     */
+    public function getSql()
+    {
+        return $this->_sql;
+    }
+
+    /**
+     * Specifies the SQL statement to be executed.
+     * The previous SQL execution (if any) will be cancelled, and [[params]] will be cleared as well.
+     * @param string $sql the SQL statement to be set.
+     * @return $this this command instance
+     */
+    public function setSql($sql)
+    {
+        if ($sql !== $this->_sql) {
+            $this->cancel();
+            $this->_sql = $this->db->quoteSql($sql);
+            $this->_pendingParams = [];
+            $this->params = [];
+            $this->_refreshTableName = null;
+        }
+
+        return $this;
     }
 
     /**
@@ -307,38 +270,6 @@ class Command extends Component
     }
 
     /**
-     * Binds a list of values to the corresponding parameters.
-     * This is similar to [[bindValue()]] except that it binds multiple values at a time.
-     * Note that the SQL data type of each value is determined by its PHP type.
-     * @param array $values the values to be bound. This must be given in terms of an associative
-     * array with array keys being the parameter names, and array values the corresponding parameter values,
-     * e.g. `[':name' => 'John', ':age' => 25]`. By default, the PDO type of each value is determined
-     * by its PHP type. You may explicitly specify the PDO type by using an array: `[value, type]`,
-     * e.g. `[':name' => 'John', ':profile' => [$profile, \PDO::PARAM_LOB]]`.
-     * @return $this the current command being executed
-     */
-    public function bindValues($values)
-    {
-        if (empty($values)) {
-            return $this;
-        }
-
-        $schema = $this->db->getSchema();
-        foreach ($values as $name => $value) {
-            if (is_array($value)) {
-                $this->_pendingParams[$name] = $value;
-                $this->params[$name] = $value[0];
-            } else {
-                $type = $schema->getPdoType($value);
-                $this->_pendingParams[$name] = [$value, $type];
-                $this->params[$name] = $value;
-            }
-        }
-
-        return $this;
-    }
-
-    /**
      * Executes the SQL statement and returns query result.
      * This method is for executing a SQL query that returns result set, such as `SELECT`.
      * @return DataReader the reader object for fetching the query result
@@ -347,6 +278,111 @@ class Command extends Component
     public function query()
     {
         return $this->queryInternal('');
+    }
+
+    /**
+     * Performs the actual DB query of a SQL statement.
+     * @param string $method method of PDOStatement to be called
+     * @param integer $fetchMode the result fetch mode. Please refer to [PHP manual](http://www.php.net/manual/en/function.PDOStatement-setFetchMode.php)
+     * for valid fetch modes. If this parameter is null, the value set in [[fetchMode]] will be used.
+     * @return mixed the method execution result
+     * @throws Exception if the query causes any problem
+     * @since 2.0.1 this method is protected (was private before).
+     */
+    protected function queryInternal($method, $fetchMode = null)
+    {
+        $rawSql = $this->getRawSql();
+
+        Yii::info($rawSql, 'yii\db\Command::query');
+
+        if ($method !== '') {
+            $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
+            if (is_array($info)) {
+                /* @var $cache \yii\caching\Cache */
+                $cache = $info[0];
+                $cacheKey = [
+                    __CLASS__,
+                    $method,
+                    $fetchMode,
+                    $this->db->dsn,
+                    $this->db->username,
+                    $rawSql,
+                ];
+                $result = $cache->get($cacheKey);
+                if (is_array($result) && isset($result[0])) {
+                    Yii::trace('Query result served from cache', 'yii\db\Command::query');
+                    return $result[0];
+                }
+            }
+        }
+
+        $this->prepare(true);
+
+        $token = $rawSql;
+        try {
+            Yii::beginProfile($token, 'yii\db\Command::query');
+
+            $this->pdoStatement->execute();
+
+            if ($method === '') {
+                $result = new DataReader($this);
+            } else {
+                if ($fetchMode === null) {
+                    $fetchMode = $this->fetchMode;
+                }
+                $result = call_user_func_array([$this->pdoStatement, $method], (array)$fetchMode);
+                $this->pdoStatement->closeCursor();
+            }
+
+            Yii::endProfile($token, 'yii\db\Command::query');
+        } catch (\Exception $e) {
+            Yii::endProfile($token, 'yii\db\Command::query');
+            throw $this->db->getSchema()->convertException($e, $rawSql);
+        }
+
+        if (isset($cache, $cacheKey, $info)) {
+            $cache->set($cacheKey, [$result], $info[1], $info[2]);
+            Yii::trace('Saved query result in cache', 'yii\db\Command::query');
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns the raw SQL by inserting parameter values into the corresponding placeholders in [[sql]].
+     * Note that the return value of this method should mainly be used for logging purpose.
+     * It is likely that this method returns an invalid SQL due to improper replacement of parameter placeholders.
+     * @return string the raw SQL with parameter values inserted into the corresponding placeholders in [[sql]].
+     */
+    public function getRawSql()
+    {
+        if (empty($this->params)) {
+            return $this->_sql;
+        }
+        $params = [];
+        foreach ($this->params as $name => $value) {
+            if (is_string($name) && strncmp(':', $name, 1)) {
+                $name = ':' . $name;
+            }
+            if (is_string($value)) {
+                $params[$name] = $this->db->quoteValue($value);
+            } elseif (is_bool($value)) {
+                $params[$name] = ($value ? 'TRUE' : 'FALSE');
+            } elseif ($value === null) {
+                $params[$name] = 'NULL';
+            } elseif (!is_object($value) && !is_resource($value)) {
+                $params[$name] = $value;
+            }
+        }
+        if (!isset($params[1])) {
+            return strtr($this->_sql, $params);
+        }
+        $sql = '';
+        foreach (explode('?', $this->_sql) as $i => $part) {
+            $sql .= (isset($params[$i]) ? $params[$i] : '') . $part;
+        }
+
+        return $sql;
     }
 
     /**
@@ -430,6 +466,38 @@ class Command extends Component
         $sql = $this->db->getQueryBuilder()->insert($table, $columns, $params);
 
         return $this->setSql($sql)->bindValues($params);
+    }
+
+    /**
+     * Binds a list of values to the corresponding parameters.
+     * This is similar to [[bindValue()]] except that it binds multiple values at a time.
+     * Note that the SQL data type of each value is determined by its PHP type.
+     * @param array $values the values to be bound. This must be given in terms of an associative
+     * array with array keys being the parameter names, and array values the corresponding parameter values,
+     * e.g. `[':name' => 'John', ':age' => 25]`. By default, the PDO type of each value is determined
+     * by its PHP type. You may explicitly specify the PDO type by using an array: `[value, type]`,
+     * e.g. `[':name' => 'John', ':profile' => [$profile, \PDO::PARAM_LOB]]`.
+     * @return $this the current command being executed
+     */
+    public function bindValues($values)
+    {
+        if (empty($values)) {
+            return $this;
+        }
+
+        $schema = $this->db->getSchema();
+        foreach ($values as $name => $value) {
+            if (is_array($value)) {
+                $this->_pendingParams[$name] = $value;
+                $this->params[$name] = $value[0];
+            } else {
+                $type = $schema->getPdoType($value);
+                $this->_pendingParams[$name] = [$value, $type];
+                $this->params[$name] = $value;
+            }
+        }
+
+        return $this;
     }
 
     /**
@@ -549,6 +617,18 @@ class Command extends Component
         $sql = $this->db->getQueryBuilder()->renameTable($table, $newName);
 
         return $this->setSql($sql)->requireTableSchemaRefresh($table);
+    }
+
+    /**
+     * Marks a specified table schema to be refreshed after command execution.
+     * @param string $name name of the table, which schema should be refreshed.
+     * @return $this this command instance
+     * @since 2.0.6
+     */
+    protected function requireTableSchemaRefresh($name)
+    {
+        $this->_refreshTableName = $name;
+        return $this;
     }
 
     /**
@@ -853,86 +933,6 @@ class Command extends Component
             Yii::endProfile($token, __METHOD__);
             throw $this->db->getSchema()->convertException($e, $rawSql);
         }
-    }
-
-    /**
-     * Performs the actual DB query of a SQL statement.
-     * @param string $method method of PDOStatement to be called
-     * @param integer $fetchMode the result fetch mode. Please refer to [PHP manual](http://www.php.net/manual/en/function.PDOStatement-setFetchMode.php)
-     * for valid fetch modes. If this parameter is null, the value set in [[fetchMode]] will be used.
-     * @return mixed the method execution result
-     * @throws Exception if the query causes any problem
-     * @since 2.0.1 this method is protected (was private before).
-     */
-    protected function queryInternal($method, $fetchMode = null)
-    {
-        $rawSql = $this->getRawSql();
-
-        Yii::info($rawSql, 'yii\db\Command::query');
-
-        if ($method !== '') {
-            $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
-            if (is_array($info)) {
-                /* @var $cache \yii\caching\Cache */
-                $cache = $info[0];
-                $cacheKey = [
-                    __CLASS__,
-                    $method,
-                    $fetchMode,
-                    $this->db->dsn,
-                    $this->db->username,
-                    $rawSql,
-                ];
-                $result = $cache->get($cacheKey);
-                if (is_array($result) && isset($result[0])) {
-                    Yii::trace('Query result served from cache', 'yii\db\Command::query');
-                    return $result[0];
-                }
-            }
-        }
-
-        $this->prepare(true);
-
-        $token = $rawSql;
-        try {
-            Yii::beginProfile($token, 'yii\db\Command::query');
-
-            $this->pdoStatement->execute();
-
-            if ($method === '') {
-                $result = new DataReader($this);
-            } else {
-                if ($fetchMode === null) {
-                    $fetchMode = $this->fetchMode;
-                }
-                $result = call_user_func_array([$this->pdoStatement, $method], (array) $fetchMode);
-                $this->pdoStatement->closeCursor();
-            }
-
-            Yii::endProfile($token, 'yii\db\Command::query');
-        } catch (\Exception $e) {
-            Yii::endProfile($token, 'yii\db\Command::query');
-            throw $this->db->getSchema()->convertException($e, $rawSql);
-        }
-
-        if (isset($cache, $cacheKey, $info)) {
-            $cache->set($cacheKey, [$result], $info[1], $info[2]);
-            Yii::trace('Saved query result in cache', 'yii\db\Command::query');
-        }
-
-        return $result;
-    }
-
-    /**
-     * Marks a specified table schema to be refreshed after command execution.
-     * @param string $name name of the table, which schema should be refreshed.
-     * @return $this this command instance
-     * @since 2.0.6
-     */
-    protected function requireTableSchemaRefresh($name)
-    {
-        $this->_refreshTableName = $name;
-        return $this;
     }
 
     /**

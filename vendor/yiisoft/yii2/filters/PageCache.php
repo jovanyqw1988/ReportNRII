@@ -8,8 +8,8 @@
 namespace yii\filters;
 
 use Yii;
-use yii\base\ActionFilter;
 use yii\base\Action;
+use yii\base\ActionFilter;
 use yii\caching\Cache;
 use yii\caching\Dependency;
 use yii\di\Instance;
@@ -176,6 +176,24 @@ class PageCache extends ActionFilter
     }
 
     /**
+     * @return array the key used to cache response properties.
+     * @since 2.0.3
+     */
+    protected function calculateCacheKey()
+    {
+        $key = [__CLASS__];
+        if ($this->varyByRoute) {
+            $key[] = Yii::$app->requestedRoute;
+        }
+        if (is_array($this->variations)) {
+            foreach ($this->variations as $value) {
+                $key[] = $value;
+            }
+        }
+        return $key;
+    }
+
+    /**
      * Restores response properties from the given data
      * @param Response $response the response to be restored
      * @param array $data the response property data
@@ -248,23 +266,5 @@ class PageCache extends ActionFilter
         }
         $this->cache->set($this->calculateCacheKey(), $data, $this->duration, $this->dependency);
         echo ob_get_clean();
-    }
-
-    /**
-     * @return array the key used to cache response properties.
-     * @since 2.0.3
-     */
-    protected function calculateCacheKey()
-    {
-        $key = [__CLASS__];
-        if ($this->varyByRoute) {
-            $key[] = Yii::$app->requestedRoute;
-        }
-        if (is_array($this->variations)) {
-            foreach ($this->variations as $value) {
-                $key[] = $value;
-            }
-        }
-        return $key;
     }
 }

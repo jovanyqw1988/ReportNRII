@@ -8,8 +8,8 @@
 namespace yii\web;
 
 use Yii;
-use yii\base\Object;
 use yii\base\InvalidConfigException;
+use yii\base\Object;
 
 /**
  * UrlRule represents a rule used by [[UrlManager]] for parsing and generating URLs.
@@ -283,6 +283,27 @@ class UrlRule extends Object implements UrlRuleInterface
     }
 
     /**
+     * Iterates over [[placeholders]] and checks whether each placeholder exists as a key in $matches array.
+     * When found - replaces this placeholder key with a appropriate name of matching parameter.
+     * Used in [[parseRequest()]], [[createUrl()]].
+     *
+     * @param array $matches result of `preg_match()` call
+     * @return array input array with replaced placeholder keys
+     * @see placeholders
+     * @since 2.0.7
+     */
+    protected function substitutePlaceholderNames(array $matches)
+    {
+        foreach ($this->placeholders as $placeholder => $name) {
+            if (isset($matches[$placeholder])) {
+                $matches[$name] = $matches[$placeholder];
+                unset($matches[$placeholder]);
+            }
+        }
+        return $matches;
+    }
+
+    /**
      * Creates a URL according to the given route and parameters.
      * @param UrlManager $manager the URL manager
      * @param string $route the route. It should not have slashes at the beginning or the end.
@@ -371,26 +392,5 @@ class UrlRule extends Object implements UrlRuleInterface
     protected function getParamRules()
     {
         return $this->_paramRules;
-    }
-
-    /**
-     * Iterates over [[placeholders]] and checks whether each placeholder exists as a key in $matches array.
-     * When found - replaces this placeholder key with a appropriate name of matching parameter.
-     * Used in [[parseRequest()]], [[createUrl()]].
-     *
-     * @param array $matches result of `preg_match()` call
-     * @return array input array with replaced placeholder keys
-     * @see placeholders
-     * @since 2.0.7
-     */
-     protected function substitutePlaceholderNames (array $matches)
-     {
-        foreach ($this->placeholders as $placeholder => $name) {
-            if (isset($matches[$placeholder])) {
-                $matches[$name] = $matches[$placeholder];
-                unset($matches[$placeholder]);
-            }
-        }
-        return $matches;
     }
 }

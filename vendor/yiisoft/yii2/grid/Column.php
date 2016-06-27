@@ -84,39 +84,6 @@ class Column extends Object
     }
 
     /**
-     * Renders the footer cell.
-     */
-    public function renderFooterCell()
-    {
-        return Html::tag('td', $this->renderFooterCellContent(), $this->footerOptions);
-    }
-
-    /**
-     * Renders a data cell.
-     * @param mixed $model the data model being rendered
-     * @param mixed $key the key associated with the data model
-     * @param integer $index the zero-based index of the data item among the item array returned by [[GridView::dataProvider]].
-     * @return string the rendering result
-     */
-    public function renderDataCell($model, $key, $index)
-    {
-        if ($this->contentOptions instanceof Closure) {
-            $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
-        } else {
-            $options = $this->contentOptions;
-        }
-        return Html::tag('td', $this->renderDataCellContent($model, $key, $index), $options);
-    }
-
-    /**
-     * Renders the filter cell.
-     */
-    public function renderFilterCell()
-    {
-        return Html::tag('td', $this->renderFilterCellContent(), $this->filterOptions);
-    }
-
-    /**
      * Renders the header cell content.
      * The default implementation simply renders [[header]].
      * This method may be overridden to customize the rendering of the header cell.
@@ -139,6 +106,14 @@ class Column extends Object
     }
 
     /**
+     * Renders the footer cell.
+     */
+    public function renderFooterCell()
+    {
+        return Html::tag('td', $this->renderFooterCellContent(), $this->footerOptions);
+    }
+
+    /**
      * Renders the footer cell content.
      * The default implementation simply renders [[footer]].
      * This method may be overridden to customize the rendering of the footer cell.
@@ -147,6 +122,23 @@ class Column extends Object
     protected function renderFooterCellContent()
     {
         return trim($this->footer) !== '' ? $this->footer : $this->grid->emptyCell;
+    }
+
+    /**
+     * Renders a data cell.
+     * @param mixed $model the data model being rendered
+     * @param mixed $key the key associated with the data model
+     * @param integer $index the zero-based index of the data item among the item array returned by [[GridView::dataProvider]].
+     * @return string the rendering result
+     */
+    public function renderDataCell($model, $key, $index)
+    {
+        if ($this->contentOptions instanceof Closure) {
+            $options = call_user_func($this->contentOptions, $model, $key, $index, $this);
+        } else {
+            $options = $this->contentOptions;
+        }
+        return Html::tag('td', $this->renderDataCellContent($model, $key, $index), $options);
     }
 
     /**
@@ -163,6 +155,14 @@ class Column extends Object
         } else {
             return $this->grid->emptyCell;
         }
+    }
+
+    /**
+     * Renders the filter cell.
+     */
+    public function renderFilterCell()
+    {
+        return Html::tag('td', $this->renderFilterCellContent(), $this->filterOptions);
     }
 
     /**

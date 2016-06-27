@@ -8,8 +8,8 @@
 namespace yii\web;
 
 use Yii;
-use yii\base\Exception;
 use yii\base\ErrorException;
+use yii\base\Exception;
 use yii\base\UserException;
 use yii\helpers\VarDumper;
 
@@ -68,111 +68,6 @@ class ErrorHandler extends \yii\base\ErrorHandler
      */
     public $displayVars = ['_GET', '_POST', '_FILES', '_COOKIE', '_SESSION'];
 
-
-    /**
-     * Renders the exception.
-     * @param \Exception $exception the exception to be rendered.
-     */
-    protected function renderException($exception)
-    {
-        if (Yii::$app->has('response')) {
-            $response = Yii::$app->getResponse();
-            // reset parameters of response to avoid interference with partially created response data
-            // in case the error occurred while sending the response.
-            $response->isSent = false;
-            $response->stream = null;
-            $response->data = null;
-            $response->content = null;
-        } else {
-            $response = new Response();
-        }
-
-        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
-
-        if ($useErrorView && $this->errorAction !== null) {
-            $result = Yii::$app->runAction($this->errorAction);
-            if ($result instanceof Response) {
-                $response = $result;
-            } else {
-                $response->data = $result;
-            }
-        } elseif ($response->format === Response::FORMAT_HTML) {
-            if (YII_ENV_TEST || isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-                // AJAX request
-                $response->data = '<pre>' . $this->htmlEncode(static::convertExceptionToString($exception)) . '</pre>';
-            } else {
-                // if there is an error during error rendering it's useful to
-                // display PHP error in debug mode instead of a blank screen
-                if (YII_DEBUG) {
-                    ini_set('display_errors', 1);
-                }
-                $file = $useErrorView ? $this->errorView : $this->exceptionView;
-                $response->data = $this->renderFile($file, [
-                    'exception' => $exception,
-                ]);
-            }
-        } elseif ($response->format === Response::FORMAT_RAW) {
-            $response->data = static::convertExceptionToString($exception);
-        } else {
-            $response->data = $this->convertExceptionToArray($exception);
-        }
-
-        if ($exception instanceof HttpException) {
-            $response->setStatusCode($exception->statusCode);
-        } else {
-            $response->setStatusCode(500);
-        }
-
-        $response->send();
-    }
-
-    /**
-     * Converts an exception into an array.
-     * @param \Exception $exception the exception being converted
-     * @return array the array representation of the exception.
-     */
-    protected function convertExceptionToArray($exception)
-    {
-        if (!YII_DEBUG && !$exception instanceof UserException && !$exception instanceof HttpException) {
-            $exception = new HttpException(500, Yii::t('yii', 'An internal server error occurred.'));
-        }
-
-        $array = [
-            'name' => ($exception instanceof Exception || $exception instanceof ErrorException) ? $exception->getName() : 'Exception',
-            'message' => $exception->getMessage(),
-            'code' => $exception->getCode(),
-        ];
-        if ($exception instanceof HttpException) {
-            $array['status'] = $exception->statusCode;
-        }
-        if (YII_DEBUG) {
-            $array['type'] = get_class($exception);
-            if (!$exception instanceof UserException) {
-                $array['file'] = $exception->getFile();
-                $array['line'] = $exception->getLine();
-                $array['stack-trace'] = explode("\n", $exception->getTraceAsString());
-                if ($exception instanceof \yii\db\Exception) {
-                    $array['error-info'] = $exception->errorInfo;
-                }
-            }
-        }
-        if (($prev = $exception->getPrevious()) !== null) {
-            $array['previous'] = $this->convertExceptionToArray($prev);
-        }
-
-        return $array;
-    }
-
-    /**
-     * Converts special characters to HTML entities.
-     * @param string $text to encode.
-     * @return string encoded original text.
-     */
-    public function htmlEncode($text)
-    {
-        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
-    }
-
     /**
      * Adds informational links to the given PHP type/class.
      * @param string $code type/class name to be linkified.
@@ -200,6 +95,16 @@ class ErrorHandler extends \yii\base\ErrorHandler
     }
 
     /**
+     * Converts special characters to HTML entities.
+     * @param string $text to encode.
+     * @return string encoded original text.
+     */
+    public function htmlEncode($text)
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
      * Returns the informational link URL for a given PHP type/class.
      * @param string $class the type or class name.
      * @param string|null $method the method name.
@@ -222,6 +127,21 @@ class ErrorHandler extends \yii\base\ErrorHandler
     }
 
     /**
+     * Renders the previous exception stack for a given Exception.
+     * @param \Exception $exception the exception whose precursors should be rendered.
+     * @return string HTML content of the rendered previous exceptions.
+     * Empty string if there are none.
+     */
+    public function renderPreviousExceptions($exception)
+    {
+        if (($previous = $exception->getPrevious()) !== null) {
+            return $this->renderFile($this->previousExceptionView, ['exception' => $previous]);
+        } else {
+            return '';
+        }
+    }
+
+    /**
      * Renders a view file as a PHP script.
      * @param string $_file_ the view file.
      * @param array $_params_ the parameters (name-value pairs) that will be extracted and made available in the view file.
@@ -239,21 +159,6 @@ class ErrorHandler extends \yii\base\ErrorHandler
             return ob_get_clean();
         } else {
             return Yii::$app->getView()->renderFile($_file_, $_params_, $this);
-        }
-    }
-
-    /**
-     * Renders the previous exception stack for a given Exception.
-     * @param \Exception $exception the exception whose precursors should be rendered.
-     * @return string HTML content of the rendered previous exceptions.
-     * Empty string if there are none.
-     */
-    public function renderPreviousExceptions($exception)
-    {
-        if (($previous = $exception->getPrevious()) !== null) {
-            return $this->renderFile($this->previousExceptionView, ['exception' => $previous]);
-        } else {
-            return '';
         }
     }
 
@@ -439,5 +344,99 @@ class ErrorHandler extends \yii\base\ErrorHandler
             return $exception->getName();
         }
         return null;
+    }
+
+    /**
+     * Renders the exception.
+     * @param \Exception $exception the exception to be rendered.
+     */
+    protected function renderException($exception)
+    {
+        if (Yii::$app->has('response')) {
+            $response = Yii::$app->getResponse();
+            // reset parameters of response to avoid interference with partially created response data
+            // in case the error occurred while sending the response.
+            $response->isSent = false;
+            $response->stream = null;
+            $response->data = null;
+            $response->content = null;
+        } else {
+            $response = new Response();
+        }
+
+        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
+
+        if ($useErrorView && $this->errorAction !== null) {
+            $result = Yii::$app->runAction($this->errorAction);
+            if ($result instanceof Response) {
+                $response = $result;
+            } else {
+                $response->data = $result;
+            }
+        } elseif ($response->format === Response::FORMAT_HTML) {
+            if (YII_ENV_TEST || isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                // AJAX request
+                $response->data = '<pre>' . $this->htmlEncode(static::convertExceptionToString($exception)) . '</pre>';
+            } else {
+                // if there is an error during error rendering it's useful to
+                // display PHP error in debug mode instead of a blank screen
+                if (YII_DEBUG) {
+                    ini_set('display_errors', 1);
+                }
+                $file = $useErrorView ? $this->errorView : $this->exceptionView;
+                $response->data = $this->renderFile($file, [
+                    'exception' => $exception,
+                ]);
+            }
+        } elseif ($response->format === Response::FORMAT_RAW) {
+            $response->data = static::convertExceptionToString($exception);
+        } else {
+            $response->data = $this->convertExceptionToArray($exception);
+        }
+
+        if ($exception instanceof HttpException) {
+            $response->setStatusCode($exception->statusCode);
+        } else {
+            $response->setStatusCode(500);
+        }
+
+        $response->send();
+    }
+
+    /**
+     * Converts an exception into an array.
+     * @param \Exception $exception the exception being converted
+     * @return array the array representation of the exception.
+     */
+    protected function convertExceptionToArray($exception)
+    {
+        if (!YII_DEBUG && !$exception instanceof UserException && !$exception instanceof HttpException) {
+            $exception = new HttpException(500, Yii::t('yii', 'An internal server error occurred.'));
+        }
+
+        $array = [
+            'name' => ($exception instanceof Exception || $exception instanceof ErrorException) ? $exception->getName() : 'Exception',
+            'message' => $exception->getMessage(),
+            'code' => $exception->getCode(),
+        ];
+        if ($exception instanceof HttpException) {
+            $array['status'] = $exception->statusCode;
+        }
+        if (YII_DEBUG) {
+            $array['type'] = get_class($exception);
+            if (!$exception instanceof UserException) {
+                $array['file'] = $exception->getFile();
+                $array['line'] = $exception->getLine();
+                $array['stack-trace'] = explode("\n", $exception->getTraceAsString());
+                if ($exception instanceof \yii\db\Exception) {
+                    $array['error-info'] = $exception->errorInfo;
+                }
+            }
+        }
+        if (($prev = $exception->getPrevious()) !== null) {
+            $array['previous'] = $this->convertExceptionToArray($prev);
+        }
+
+        return $array;
     }
 }
