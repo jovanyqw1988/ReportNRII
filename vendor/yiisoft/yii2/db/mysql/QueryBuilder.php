@@ -225,6 +225,15 @@ class QueryBuilder extends \yii\db\QueryBuilder
      * @inheritdoc
      * @since 2.0.8
      */
+    public function dropCommentFromColumn($table, $column)
+    {
+        return $this->addCommentOnColumn($table, $column, '');
+    }
+
+    /**
+     * @inheritdoc
+     * @since 2.0.8
+     */
     public function addCommentOnColumn($table, $column, $comment)
     {
         $definition = $this->getColumnDefinition($table, $column);
@@ -236,34 +245,6 @@ class QueryBuilder extends \yii\db\QueryBuilder
             . (empty($definition) ? '' : ' ' . $definition)
             . ' COMMENT ' . $this->db->quoteValue($comment);
     }
-
-    /**
-     * @inheritdoc
-     * @since 2.0.8
-     */
-    public function addCommentOnTable($table, $comment)
-    {
-        return 'ALTER TABLE ' . $this->db->quoteTableName($table) . ' COMMENT ' . $this->db->quoteValue($comment);
-    }
-
-    /**
-     * @inheritdoc
-     * @since 2.0.8
-     */
-    public function dropCommentFromColumn($table, $column)
-    {
-        return $this->addCommentOnColumn($table, $column, '');
-    }
-
-    /**
-     * @inheritdoc
-     * @since 2.0.8
-     */
-    public function dropCommentFromTable($table)
-    {
-        return $this->addCommentOnTable($table, '');
-    }
-
 
     /**
      * Gets column definition.
@@ -294,5 +275,23 @@ class QueryBuilder extends \yii\db\QueryBuilder
             }
         }
         return null;
+    }
+
+    /**
+     * @inheritdoc
+     * @since 2.0.8
+     */
+    public function dropCommentFromTable($table)
+    {
+        return $this->addCommentOnTable($table, '');
+    }
+
+    /**
+     * @inheritdoc
+     * @since 2.0.8
+     */
+    public function addCommentOnTable($table, $comment)
+    {
+        return 'ALTER TABLE ' . $this->db->quoteTableName($table) . ' COMMENT ' . $this->db->quoteValue($comment);
     }
 }

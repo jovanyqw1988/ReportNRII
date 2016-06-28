@@ -173,7 +173,10 @@ class Sort extends Object
      * the "urlManager" application component will be used.
      */
     public $urlManager;
-
+    /**
+     * @var array the currently requested sort order as computed by [[getAttributeOrders]].
+     */
+    private $_attributeOrders;
 
     /**
      * Normalizes the [[attributes]] property.
@@ -221,11 +224,6 @@ class Sort extends Object
     }
 
     /**
-     * @var array the currently requested sort order as computed by [[getAttributeOrders]].
-     */
-    private $_attributeOrders;
-
-    /**
      * Returns the currently requested sort information.
      * @param boolean $recalculate whether to recalculate the sort directions
      * @return array sort directions indexed by attribute names.
@@ -263,20 +261,6 @@ class Sort extends Object
         }
 
         return $this->_attributeOrders;
-    }
-
-    /**
-     * Returns the sort direction of the specified attribute in the current request.
-     * @param string $attribute the attribute name
-     * @return boolean|null Sort direction of the attribute. Can be either `SORT_ASC`
-     * for ascending order or `SORT_DESC` for descending order. Null is returned
-     * if the attribute is invalid or does not need to be sorted.
-     */
-    public function getAttributeOrder($attribute)
-    {
-        $orders = $this->getAttributeOrders();
-
-        return isset($orders[$attribute]) ? $orders[$attribute] : null;
     }
 
     /**
@@ -318,6 +302,20 @@ class Sort extends Object
         }
 
         return Html::a($label, $url, $options);
+    }
+
+    /**
+     * Returns the sort direction of the specified attribute in the current request.
+     * @param string $attribute the attribute name
+     * @return boolean|null Sort direction of the attribute. Can be either `SORT_ASC`
+     * for ascending order or `SORT_DESC` for descending order. Null is returned
+     * if the attribute is invalid or does not need to be sorted.
+     */
+    public function getAttributeOrder($attribute)
+    {
+        $orders = $this->getAttributeOrders();
+
+        return isset($orders[$attribute]) ? $orders[$attribute] : null;
     }
 
     /**

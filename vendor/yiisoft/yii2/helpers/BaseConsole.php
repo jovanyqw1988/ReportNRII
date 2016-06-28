@@ -50,7 +50,12 @@ class BaseConsole
     const FRAMED      = 51;
     const ENCIRCLED   = 52;
     const OVERLINED   = 53;
-
+    private static $_progressStart;
+    private static $_progressWidth;
+    private static $_progressPrefix;
+    private static $_progressEta;
+    private static $_progressEtaLastDone = 0;
+    private static $_progressEtaLastUpdate;
 
     /**
      * Moves the terminal cursor up by sending ANSI control code CUU to the terminal.
@@ -208,15 +213,6 @@ class BaseConsole
     }
 
     /**
-     * Clears the line, the cursor is currently on by sending ANSI control code EL with argument 2 to the terminal.
-     * Cursor position will not be changed.
-     */
-    public static function clearLine()
-    {
-        echo "\033[2K";
-    }
-
-    /**
      * Clears text from cursor position to the beginning of the line by sending ANSI control code EL with argument 1 to the terminal.
      * Cursor position will not be changed.
      */
@@ -232,19 +228,6 @@ class BaseConsole
     public static function clearLineAfterCursor()
     {
         echo "\033[0K";
-    }
-
-    /**
-     * Returns the ANSI format code.
-     *
-     * @param array $format An array containing formatting values.
-     * You can pass any of the FG_*, BG_* and TEXT_* constants
-     * and also [[xtermFgColor]] and [[xtermBgColor]] to specify a format.
-     * @return string The ANSI format code according to the given formatting constants.
-     */
-    public static function ansiFormatCode($format)
-    {
-        return "\033[" . implode(';', $format) . 'm';
     }
 
     /**
@@ -317,27 +300,6 @@ class BaseConsole
     public static function xtermBgColor($colorCode)
     {
         return '48;5;' . $colorCode;
-    }
-
-    /**
-     * Strips ANSI control codes from a string
-     *
-     * @param string $string String to strip
-     * @return string
-     */
-    public static function stripAnsiFormat($string)
-    {
-        return preg_replace('/\033\[[\d;?]*\w/', '', $string);
-    }
-
-    /**
-     * Returns the length of the string without ANSI color codes.
-     * @param string $string the string to measure
-     * @return integer the length of the string not counting ANSI format characters
-     */
-    public static function ansiStrlen($string)
-    {
-        return mb_strlen(static::stripAnsiFormat($string));
     }
 
     /**
@@ -556,6 +518,19 @@ class BaseConsole
     }
 
     /**
+     * Returns the ANSI format code.
+     *
+     * @param array $format An array containing formatting values.
+     * You can pass any of the FG_*, BG_* and TEXT_* constants
+     * and also [[xtermFgColor]] and [[xtermBgColor]] to specify a format.
+     * @return string The ANSI format code according to the given formatting constants.
+     */
+    public static function ansiFormatCode($format)
+    {
+        return "\033[" . implode(';', $format) . 'm';
+    }
+
+    /**
      * Escapes % so they don't get interpreted as color codes when
      * the string is parsed by [[renderColoredString]]
      *
@@ -571,28 +546,43 @@ class BaseConsole
     }
 
     /**
-     * Returns true if the stream supports colorization. ANSI colors are disabled if not supported by the stream.
+     * Word wrap text with indentation to fit the screen size
      *
-     * - windows without ansicon
-     * - not tty consoles
+     * If screen size could not be detected, or the indentation is greater than the screen size, the text will not be wrapped.
      *
-     * @param mixed $stream
-     * @return boolean true if the stream supports ANSI colors, otherwise false.
+     * The first line will **not** be indented, so `Console::wrapText("Lorem ipsum dolor sit amet.", 4)` will result in the
+     * following output, given the screen width is 16 characters:
+     *
+     * ```
+     * Lorem ipsum
+     *     dolor sit
+     *     amet.
+     * ```
+     *
+     * @param string $text the text to be wrapped
+     * @param integer $indent number of spaces to use for indentation.
+     * @param boolean $refresh whether to force refresh of screen size.
+     * This will be passed to [[getScreenSize()]].
+     * @return string the wrapped text.
+     * @since 2.0.4
      */
-    public static function streamSupportsAnsiColors($stream)
+    public static function wrapText($text, $indent = 0, $refresh = false)
     {
-        return DIRECTORY_SEPARATOR === '\\'
-            ? getenv('ANSICON') !== false || getenv('ConEmuANSI') === 'ON'
-            : function_exists('posix_isatty') && @posix_isatty($stream);
-    }
-
-    /**
-     * Returns true if the console is running on windows
-     * @return boolean
-     */
-    public static function isRunningOnWindows()
-    {
-        return DIRECTORY_SEPARATOR === '\\';
+        $size = static::getScreenSize($refresh);
+        if ($size === false || $size[0] <= $indent) {
+            return $text;
+        }
+        $pad = str_repeat(' ', $indent);
+        $lines = explode("\n", wordwrap($text, $size[0] - $indent, "\n", true));
+        $first = true;
+        foreach ($lines as $i => $line) {
+            if ($first) {
+                $first = false;
+                continue;
+            }
+            $lines[$i] = $pad . $line;
+        }
+        return implode("\n", $lines);
     }
 
     /**
@@ -638,103 +628,12 @@ class BaseConsole
     }
 
     /**
-     * Word wrap text with indentation to fit the screen size
-     *
-     * If screen size could not be detected, or the indentation is greater than the screen size, the text will not be wrapped.
-     *
-     * The first line will **not** be indented, so `Console::wrapText("Lorem ipsum dolor sit amet.", 4)` will result in the
-     * following output, given the screen width is 16 characters:
-     *
-     * ```
-     * Lorem ipsum
-     *     dolor sit
-     *     amet.
-     * ```
-     *
-     * @param string $text the text to be wrapped
-     * @param integer $indent number of spaces to use for indentation.
-     * @param boolean $refresh whether to force refresh of screen size.
-     * This will be passed to [[getScreenSize()]].
-     * @return string the wrapped text.
-     * @since 2.0.4
+     * Returns true if the console is running on windows
+     * @return boolean
      */
-    public static function wrapText($text, $indent = 0, $refresh = false)
+    public static function isRunningOnWindows()
     {
-        $size = static::getScreenSize($refresh);
-        if ($size === false || $size[0] <= $indent) {
-            return $text;
-        }
-        $pad = str_repeat(' ', $indent);
-        $lines = explode("\n", wordwrap($text, $size[0] - $indent, "\n", true));
-        $first = true;
-        foreach ($lines as $i => $line) {
-            if ($first) {
-                $first = false;
-                continue;
-            }
-            $lines[$i] = $pad . $line;
-        }
-        return implode("\n", $lines);
-    }
-
-    /**
-     * Gets input from STDIN and returns a string right-trimmed for EOLs.
-     *
-     * @param boolean $raw If set to true, returns the raw string without trimming
-     * @return string the string read from stdin
-     */
-    public static function stdin($raw = false)
-    {
-        return $raw ? fgets(\STDIN) : rtrim(fgets(\STDIN), PHP_EOL);
-    }
-
-    /**
-     * Prints a string to STDOUT.
-     *
-     * @param string $string the string to print
-     * @return integer|boolean Number of bytes printed or false on error
-     */
-    public static function stdout($string)
-    {
-        return fwrite(\STDOUT, $string);
-    }
-
-    /**
-     * Prints a string to STDERR.
-     *
-     * @param string $string the string to print
-     * @return integer|boolean Number of bytes printed or false on error
-     */
-    public static function stderr($string)
-    {
-        return fwrite(\STDERR, $string);
-    }
-
-    /**
-     * Asks the user for input. Ends when the user types a carriage return (PHP_EOL). Optionally, It also provides a
-     * prompt.
-     *
-     * @param string $prompt the prompt to display before waiting for input (optional)
-     * @return string the user's input
-     */
-    public static function input($prompt = null)
-    {
-        if (isset($prompt)) {
-            static::stdout($prompt);
-        }
-
-        return static::stdin();
-    }
-
-    /**
-     * Prints text to STDOUT appended with a carriage return (PHP_EOL).
-     *
-     * @param string $string the text to print
-     * @return integer|boolean number of bytes printed or false on error.
-     */
-    public static function output($string = null)
-    {
-        return static::stdout($string . PHP_EOL);
+        return DIRECTORY_SEPARATOR === '\\';
     }
 
     /**
@@ -746,6 +645,17 @@ class BaseConsole
     public static function error($string = null)
     {
         return static::stderr($string . PHP_EOL);
+    }
+
+    /**
+     * Prints a string to STDERR.
+     *
+     * @param string $string the string to print
+     * @return integer|boolean Number of bytes printed or false on error
+     */
+    public static function stderr($string)
+    {
+        return fwrite(\STDERR, $string);
     }
 
     /**
@@ -803,6 +713,55 @@ class BaseConsole
     }
 
     /**
+     * Asks the user for input. Ends when the user types a carriage return (PHP_EOL). Optionally, It also provides a
+     * prompt.
+     *
+     * @param string $prompt the prompt to display before waiting for input (optional)
+     * @return string the user's input
+     */
+    public static function input($prompt = null)
+    {
+        if (isset($prompt)) {
+            static::stdout($prompt);
+        }
+
+        return static::stdin();
+    }
+
+    /**
+     * Prints a string to STDOUT.
+     *
+     * @param string $string the string to print
+     * @return integer|boolean Number of bytes printed or false on error
+     */
+    public static function stdout($string)
+    {
+        return fwrite(\STDOUT, $string);
+    }
+
+    /**
+     * Gets input from STDIN and returns a string right-trimmed for EOLs.
+     *
+     * @param boolean $raw If set to true, returns the raw string without trimming
+     * @return string the string read from stdin
+     */
+    public static function stdin($raw = false)
+    {
+        return $raw ? fgets(\STDIN) : rtrim(fgets(\STDIN), PHP_EOL);
+    }
+
+    /**
+     * Prints text to STDOUT appended with a carriage return (PHP_EOL).
+     *
+     * @param string $string the text to print
+     * @return integer|boolean number of bytes printed or false on error.
+     */
+    public static function output($string = null)
+    {
+        return static::stdout($string . PHP_EOL);
+    }
+
+    /**
      * Asks user to confirm by typing y or n.
      *
      * @param string $message to print out before waiting for user input
@@ -855,13 +814,6 @@ class BaseConsole
 
         return $input;
     }
-
-    private static $_progressStart;
-    private static $_progressWidth;
-    private static $_progressPrefix;
-    private static $_progressEta;
-    private static $_progressEtaLastDone = 0;
-    private static $_progressEtaLastUpdate;
 
     /**
      * Starts display of a progress bar on screen.
@@ -990,6 +942,27 @@ class BaseConsole
     }
 
     /**
+     * Returns the length of the string without ANSI color codes.
+     * @param string $string the string to measure
+     * @return integer the length of the string not counting ANSI format characters
+     */
+    public static function ansiStrlen($string)
+    {
+        return mb_strlen(static::stripAnsiFormat($string));
+    }
+
+    /**
+     * Strips ANSI control codes from a string
+     *
+     * @param string $string String to strip
+     * @return string
+     */
+    public static function stripAnsiFormat($string)
+    {
+        return preg_replace('/\033\[[\d;?]*\w/', '', $string);
+    }
+
+    /**
      * Ends a progress bar that has been started by [[startProgress()]].
      *
      * @param string|boolean $remove This can be `false` to leave the progress bar on screen and just print a newline.
@@ -1018,5 +991,30 @@ class BaseConsole
         self::$_progressEta = null;
         self::$_progressEtaLastDone = 0;
         self::$_progressEtaLastUpdate = null;
+    }
+
+    /**
+     * Returns true if the stream supports colorization. ANSI colors are disabled if not supported by the stream.
+     *
+     * - windows without ansicon
+     * - not tty consoles
+     *
+     * @param mixed $stream
+     * @return boolean true if the stream supports ANSI colors, otherwise false.
+     */
+    public static function streamSupportsAnsiColors($stream)
+    {
+        return DIRECTORY_SEPARATOR === '\\'
+            ? getenv('ANSICON') !== false || getenv('ConEmuANSI') === 'ON'
+            : function_exists('posix_isatty') && @posix_isatty($stream);
+    }
+
+    /**
+     * Clears the line, the cursor is currently on by sending ANSI control code EL with argument 2 to the terminal.
+     * Cursor position will not be changed.
+     */
+    public static function clearLine()
+    {
+        echo "\033[2K";
     }
 }

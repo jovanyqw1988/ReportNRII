@@ -115,53 +115,6 @@ class ImageValidator extends FileValidator
     /**
      * @inheritdoc
      */
-    protected function validateValue($file)
-    {
-        $result = parent::validateValue($file);
-
-        return empty($result) ? $this->validateImage($file) : $result;
-    }
-
-    /**
-     * Validates an image file.
-     * @param UploadedFile $image uploaded file passed to check against a set of rules
-     * @return array|null the error message and the parameters to be inserted into the error message.
-     * Null should be returned if the data is valid.
-     */
-    protected function validateImage($image)
-    {
-        if (false === ($imageInfo = getimagesize($image->tempName))) {
-            return [$this->notImage, ['file' => $image->name]];
-        }
-
-        list($width, $height) = $imageInfo;
-
-        if ($width == 0 || $height == 0) {
-            return [$this->notImage, ['file' => $image->name]];
-        }
-
-        if ($this->minWidth !== null && $width < $this->minWidth) {
-            return [$this->underWidth, ['file' => $image->name, 'limit' => $this->minWidth]];
-        }
-
-        if ($this->minHeight !== null && $height < $this->minHeight) {
-            return [$this->underHeight, ['file' => $image->name, 'limit' => $this->minHeight]];
-        }
-
-        if ($this->maxWidth !== null && $width > $this->maxWidth) {
-            return [$this->overWidth, ['file' => $image->name, 'limit' => $this->maxWidth]];
-        }
-
-        if ($this->maxHeight !== null && $height > $this->maxHeight) {
-            return [$this->overHeight, ['file' => $image->name, 'limit' => $this->maxHeight]];
-        }
-
-        return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         ValidationAsset::register($view);
@@ -217,5 +170,52 @@ class ImageValidator extends FileValidator
         }
 
         return $options;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($file)
+    {
+        $result = parent::validateValue($file);
+
+        return empty($result) ? $this->validateImage($file) : $result;
+    }
+
+    /**
+     * Validates an image file.
+     * @param UploadedFile $image uploaded file passed to check against a set of rules
+     * @return array|null the error message and the parameters to be inserted into the error message.
+     * Null should be returned if the data is valid.
+     */
+    protected function validateImage($image)
+    {
+        if (false === ($imageInfo = getimagesize($image->tempName))) {
+            return [$this->notImage, ['file' => $image->name]];
+        }
+
+        list($width, $height) = $imageInfo;
+
+        if ($width == 0 || $height == 0) {
+            return [$this->notImage, ['file' => $image->name]];
+        }
+
+        if ($this->minWidth !== null && $width < $this->minWidth) {
+            return [$this->underWidth, ['file' => $image->name, 'limit' => $this->minWidth]];
+        }
+
+        if ($this->minHeight !== null && $height < $this->minHeight) {
+            return [$this->underHeight, ['file' => $image->name, 'limit' => $this->minHeight]];
+        }
+
+        if ($this->maxWidth !== null && $width > $this->maxWidth) {
+            return [$this->overWidth, ['file' => $image->name, 'limit' => $this->maxWidth]];
+        }
+
+        if ($this->maxHeight !== null && $height > $this->maxHeight) {
+            return [$this->overHeight, ['file' => $image->name, 'limit' => $this->maxHeight]];
+        }
+
+        return null;
     }
 }

@@ -21,17 +21,6 @@ use Yii;
 class BaseStringHelper
 {
     /**
-     * Returns the number of bytes in the given string.
-     * This method ensures the string is treated as a byte array by using `mb_strlen()`.
-     * @param string $string the string being measured for length
-     * @return integer the number of bytes in the given string.
-     */
-    public static function byteLength($string)
-    {
-        return mb_strlen($string, '8bit');
-    }
-
-    /**
      * Returns the portion of string specified by the start and length parameters.
      * This method ensures the string is treated as a byte array by using `mb_substr()`.
      * @param string $string the input string. Must be one character or longer.
@@ -90,7 +79,7 @@ class BaseStringHelper
             return '';
         }
     }
-    
+
     /**
      * Truncates a string to the number of characters specified.
      *
@@ -110,30 +99,6 @@ class BaseStringHelper
         
         if (mb_strlen($string, $encoding ?: Yii::$app->charset) > $length) {
             return trim(mb_substr($string, 0, $length, $encoding ?: Yii::$app->charset)) . $suffix;
-        } else {
-            return $string;
-        }
-    }
-    
-    /**
-     * Truncates a string to the number of words specified.
-     *
-     * @param string $string The string to truncate.
-     * @param integer $count How many words from original string to include into truncated string.
-     * @param string $suffix String to append to the end of truncated string.
-     * @param boolean $asHtml Whether to treat the string being truncated as HTML and preserve proper HTML tags.
-     * This parameter is available since version 2.0.1.
-     * @return string the truncated string.
-     */
-    public static function truncateWords($string, $count, $suffix = '...', $asHtml = false)
-    {
-        if ($asHtml) {
-            return static::truncateHtml($string, $count, $suffix);
-        }
-
-        $words = preg_split('/(\s+)/u', trim($string), null, PREG_SPLIT_DELIM_CAPTURE);
-        if (count($words) / 2 > $count) {
-            return implode('', array_slice($words, 0, ($count * 2) - 1)) . $suffix;
         } else {
             return $string;
         }
@@ -191,6 +156,42 @@ class BaseStringHelper
     }
 
     /**
+     * Truncates a string to the number of words specified.
+     *
+     * @param string $string The string to truncate.
+     * @param integer $count How many words from original string to include into truncated string.
+     * @param string $suffix String to append to the end of truncated string.
+     * @param boolean $asHtml Whether to treat the string being truncated as HTML and preserve proper HTML tags.
+     * This parameter is available since version 2.0.1.
+     * @return string the truncated string.
+     */
+    public static function truncateWords($string, $count, $suffix = '...', $asHtml = false)
+    {
+        if ($asHtml) {
+            return static::truncateHtml($string, $count, $suffix);
+        }
+
+        $words = preg_split('/(\s+)/u', trim($string), null, PREG_SPLIT_DELIM_CAPTURE);
+        if (count($words) / 2 > $count) {
+            return implode('', array_slice($words, 0, ($count * 2) - 1)) . $suffix;
+        } else {
+            return $string;
+        }
+    }
+    
+    /**
+     * Counts words in a string
+     * @since 2.0.8
+     *
+     * @param string $string
+     * @return integer
+     */
+    public static function countWords($string)
+    {
+        return count(preg_split('/\s+/u', $string, null, PREG_SPLIT_NO_EMPTY));
+    }
+
+    /**
      * Check if given string starts with specified substring.
      * Binary and multibyte safe.
      *
@@ -209,6 +210,17 @@ class BaseStringHelper
         } else {
             return mb_strtolower(mb_substr($string, 0, $bytes, '8bit'), Yii::$app->charset) === mb_strtolower($with, Yii::$app->charset);
         }
+    }
+
+    /**
+     * Returns the number of bytes in the given string.
+     * This method ensures the string is treated as a byte array by using `mb_strlen()`.
+     * @param string $string the string being measured for length
+     * @return integer the number of bytes in the given string.
+     */
+    public static function byteLength($string)
+    {
+        return mb_strlen($string, '8bit');
     }
 
     /**
@@ -269,17 +281,5 @@ class BaseStringHelper
             }));
         }
         return $result;
-    }
-
-    /**
-     * Counts words in a string
-     * @since 2.0.8
-     *
-     * @param string $string
-     * @return integer
-     */
-    public static function countWords($string)
-    {
-        return count(preg_split('/\s+/u', $string, null, PREG_SPLIT_NO_EMPTY));
     }
 }

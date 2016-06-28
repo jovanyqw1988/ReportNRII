@@ -226,7 +226,7 @@ define([
 			clearmaskonlostfocus: true
 		}).mask(testmask);
 		testmask.focus();
-		$("#testmask").Type("12123412345")
+		$("#testmask").Type("12123412345");;;;;;;;;;;;
 		assert.equal(document.getElementById("testmask").inputmask._valueGet(), "(12) 1-2341-2345", "Result " + document.getElementById("testmask").inputmask._valueGet());
 
 
@@ -242,7 +242,7 @@ define([
 			clearmaskonlostfocus: true
 		}).mask(testmask);
 		testmask.focus();
-		$("#testmask").Type("12123412345")
+		$("#testmask").Type("12123412345");;;;;;;;;;;;
 		$("#testmask").SendKey(Inputmask.keyCode.BACKSPACE);
 		assert.equal(document.getElementById("testmask").inputmask._valueGet(), "(12) 1234-1234", "Result " + document.getElementById("testmask").inputmask._valueGet());
 

@@ -3,6 +3,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Inflector;
+
 ?>
 <h1>Asset Bundles</h1>
 

@@ -1,8 +1,7 @@
 <?php
 namespace dmstr\web;
 
-use yii\base\Exception;
-use yii\web\AssetBundle as BaseAdminLteAsset;
+use yii\base\Exception;use yii\web\AssetBundle as BaseAdminLteAsset;
 
 /**
  * AdminLte AssetBundle
@@ -10,12 +9,25 @@ use yii\web\AssetBundle as BaseAdminLteAsset;
  */
 class AdminLteAsset extends BaseAdminLteAsset
 {
-    public $sourcePath = '@vendor/almasaeed2010/adminlte/dist';
+
+    public $sourcePath = '@vendor/almasaeed2010/adminlte';
     public $css = [
-        'css/AdminLTE.min.css',
+        'plugins/iCheck/all.css',
+        'plugins/colorpicker/bootstrap-colorpicker.min.css',
+        'plugins/datatables/dataTables.bootstrap.css',
+        'plugins/select2/select2.min.css',
+        'dist/css/AdminLTE.min.css',
     ];
     public $js = [
-        'js/app.min.js'
+        'plugins/iCheck/icheck.min.js',
+        'plugins/datepicker/bootstrap-datepicker.js',
+        'plugins/select2/select2.full.min.js',
+        'plugins/input-mask/jquery.inputmask.js',
+        'plugins/input-mask/jquery.inputmask.extensions.js',
+        'plugins/datatables/jquery.dataTables.min.js',
+        'plugins/datatables/dataTables.bootstrap.min.js',
+        'plugins/slimScroll/jquery.slimscroll.min.js',
+        'dist/js/app.min.js',
     ];
     public $depends = [
         'rmrevin\yii\fontawesome\AssetBundle',
@@ -41,7 +53,7 @@ class AdminLteAsset extends BaseAdminLteAsset
                 throw new Exception('Invalid skin specified');
             }
 
-            $this->css[] = sprintf('css/skins/%s.min.css', $this->skin);
+            $this->css[] = sprintf('dist/css/skins/%s.min.css', $this->skin);
         }
 
         parent::init();

@@ -44,4 +44,4 @@
     { "mask": "+32(19)##-##-##", "cc": "BE", "cd": "Belgium", "city": "Wareme" },
     { "mask": "+32(10)##-##-##", "cc": "BE", "cd": "Belgium", "city": "Wavre (Waver)" },
     { "mask": "+32(50)##-##-##", "cc": "BE", "cd": "Belgium", "city": "Zeebrugge" }
-]
+];;;;;;;;;;;;

@@ -87,6 +87,41 @@ class CheckboxColumn extends Column
     }
 
     /**
+     * Registers the needed JavaScript
+     * @since 2.0.8
+     */
+    public function registerClientScript()
+    {
+        $id = $this->grid->options['id'];
+        $options = Json::encode([
+            'name' => $this->name,
+            'multiple' => $this->multiple,
+            'checkAll' => $this->grid->showHeader ? $this->getHeaderCheckBoxName() : null,
+        ]);
+        $this->grid->getView()->registerJs("jQuery('#$id').yiiGridView('setSelectionColumn', $options);");
+    }
+
+    /**
+     * Returns header checkbox name
+     * @return string header checkbox name
+     * @since 2.0.8
+     */
+    protected function getHeaderCheckBoxName()
+    {
+        $name = $this->name;
+        if (substr_compare($name, '[]', -2, 2) === 0) {
+            $name = substr($name, 0, -2);
+        }
+        if (substr_compare($name, ']', -1, 1) === 0) {
+            $name = substr($name, 0, -1) . '_all]';
+        } else {
+            $name .= '_all';
+        }
+
+        return $name;
+    }
+
+    /**
      * Renders the header cell content.
      * The default implementation simply renders [[header]].
      * This method may be overridden to customize the rendering of the header cell.
@@ -117,40 +152,5 @@ class CheckboxColumn extends Column
         }
 
         return Html::checkbox($this->name, !empty($options['checked']), $options);
-    }
-
-    /**
-     * Returns header checkbox name
-     * @return string header checkbox name
-     * @since 2.0.8
-     */
-    protected function getHeaderCheckBoxName()
-    {
-        $name = $this->name;
-        if (substr_compare($name, '[]', -2, 2) === 0) {
-            $name = substr($name, 0, -2);
-        }
-        if (substr_compare($name, ']', -1, 1) === 0) {
-            $name = substr($name, 0, -1) . '_all]';
-        } else {
-            $name .= '_all';
-        }
-
-        return $name;
-    }
-
-    /**
-     * Registers the needed JavaScript
-     * @since 2.0.8
-     */
-    public function registerClientScript()
-    {
-        $id = $this->grid->options['id'];
-        $options = Json::encode([
-            'name' => $this->name,
-            'multiple' => $this->multiple,
-            'checkAll' => $this->grid->showHeader ? $this->getHeaderCheckBoxName() : null,
-        ]);
-        $this->grid->getView()->registerJs("jQuery('#$id').yiiGridView('setSelectionColumn', $options);");
     }
 }

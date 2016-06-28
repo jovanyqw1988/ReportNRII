@@ -256,6 +256,22 @@ class Validator extends Component
     }
 
     /**
+     * Checks if the given value is empty.
+     * A value is considered empty if it is null, an empty array, or an empty string.
+     * Note that this method is different from PHP empty(). It will return false when the value is 0.
+     * @param mixed $value the value to be checked
+     * @return boolean whether the value is empty
+     */
+    public function isEmpty($value)
+    {
+        if ($this->isEmpty !== null) {
+            return call_user_func($this->isEmpty, $value);
+        } else {
+            return $value === null || $value === [] || $value === '';
+        }
+    }
+
+    /**
      * Validates a single attribute.
      * Child classes must implement this method to provide the actual validation logic.
      * @param \yii\base\Model $model the data model to be validated
@@ -267,6 +283,37 @@ class Validator extends Component
         if (!empty($result)) {
             $this->addError($model, $attribute, $result[0], $result[1]);
         }
+    }
+
+    /**
+     * Validates a value.
+     * A validator class can implement this method to support data validation out of the context of a data model.
+     * @param mixed $value the data value to be validated.
+     * @return array|null the error message and the parameters to be inserted into the error message.
+     * Null should be returned if the data is valid.
+     * @throws NotSupportedException if the validator does not supporting data validation without a model
+     */
+    protected function validateValue($value)
+    {
+        throw new NotSupportedException(get_class($this) . ' does not support validateValue().');
+    }
+
+    /**
+     * Adds an error about the specified attribute to the model object.
+     * This is a helper method that performs message selection and internationalization.
+     * @param \yii\base\Model $model the data model being validated
+     * @param string $attribute the attribute being validated
+     * @param string $message the error message
+     * @param array $params values for the placeholders in the error message
+     */
+    public function addError($model, $attribute, $message, $params = [])
+    {
+        $params['attribute'] = $model->getAttributeLabel($attribute);
+        if (!isset($params['value'])) {
+            $value = $model->$attribute;
+            $params['value'] = is_array($value) ? 'array()' : $value;
+        }
+        $model->addError($attribute, Yii::$app->getI18n()->format($message, $params, Yii::$app->language));
     }
 
     /**
@@ -295,19 +342,6 @@ class Validator extends Component
         $error = Yii::$app->getI18n()->format($message, $params, Yii::$app->language);
 
         return false;
-    }
-
-    /**
-     * Validates a value.
-     * A validator class can implement this method to support data validation out of the context of a data model.
-     * @param mixed $value the data value to be validated.
-     * @return array|null the error message and the parameters to be inserted into the error message.
-     * Null should be returned if the data is valid.
-     * @throws NotSupportedException if the validator does not supporting data validation without a model
-     */
-    protected function validateValue($value)
-    {
-        throw new NotSupportedException(get_class($this) . ' does not support validateValue().');
     }
 
     /**
@@ -359,39 +393,5 @@ class Validator extends Component
     public function isActive($scenario)
     {
         return !in_array($scenario, $this->except, true) && (empty($this->on) || in_array($scenario, $this->on, true));
-    }
-
-    /**
-     * Adds an error about the specified attribute to the model object.
-     * This is a helper method that performs message selection and internationalization.
-     * @param \yii\base\Model $model the data model being validated
-     * @param string $attribute the attribute being validated
-     * @param string $message the error message
-     * @param array $params values for the placeholders in the error message
-     */
-    public function addError($model, $attribute, $message, $params = [])
-    {
-        $params['attribute'] = $model->getAttributeLabel($attribute);
-        if (!isset($params['value'])) {
-            $value = $model->$attribute;
-            $params['value'] = is_array($value) ? 'array()' : $value;
-        }
-        $model->addError($attribute, Yii::$app->getI18n()->format($message, $params, Yii::$app->language));
-    }
-
-    /**
-     * Checks if the given value is empty.
-     * A value is considered empty if it is null, an empty array, or an empty string.
-     * Note that this method is different from PHP empty(). It will return false when the value is 0.
-     * @param mixed $value the value to be checked
-     * @return boolean whether the value is empty
-     */
-    public function isEmpty($value)
-    {
-        if ($this->isEmpty !== null) {
-            return call_user_func($this->isEmpty, $value);
-        } else {
-            return $value === null || $value === [] || $value === '';
-        }
     }
 }

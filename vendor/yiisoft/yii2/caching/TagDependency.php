@@ -31,41 +31,6 @@ class TagDependency extends Dependency
      */
     public $tags = [];
 
-
-    /**
-     * Generates the data needed to determine if dependency has been changed.
-     * This method does nothing in this class.
-     * @param Cache $cache the cache component that is currently evaluating this dependency
-     * @return mixed the data needed to determine if dependency has been changed.
-     */
-    protected function generateDependencyData($cache)
-    {
-        $timestamps = $this->getTimestamps($cache, (array) $this->tags);
-
-        $newKeys = [];
-        foreach ($timestamps as $key => $timestamp) {
-            if ($timestamp === false) {
-                $newKeys[] = $key;
-            }
-        }
-        if (!empty($newKeys)) {
-            $timestamps = array_merge($timestamps, static::touchKeys($cache, $newKeys));
-        }
-
-        return $timestamps;
-    }
-
-    /**
-     * Performs the actual dependency checking.
-     * @param Cache $cache the cache component that is currently evaluating this dependency
-     * @return boolean whether the dependency is changed or not.
-     */
-    public function getHasChanged($cache)
-    {
-        $timestamps = $this->getTimestamps($cache, (array) $this->tags);
-        return $timestamps !== $this->data;
-    }
-
     /**
      * Invalidates all of the cached data items that are associated with any of the specified [[tags]].
      * @param Cache $cache the cache component that caches the data items
@@ -98,6 +63,17 @@ class TagDependency extends Dependency
     }
 
     /**
+     * Performs the actual dependency checking.
+     * @param Cache $cache the cache component that is currently evaluating this dependency
+     * @return boolean whether the dependency is changed or not.
+     */
+    public function getHasChanged($cache)
+    {
+        $timestamps = $this->getTimestamps($cache, (array)$this->tags);
+        return $timestamps !== $this->data;
+    }
+
+    /**
      * Returns the timestamps for the specified tags.
      * @param Cache $cache
      * @param string[] $tags
@@ -115,5 +91,28 @@ class TagDependency extends Dependency
         }
 
         return $cache->multiGet($keys);
+    }
+
+    /**
+     * Generates the data needed to determine if dependency has been changed.
+     * This method does nothing in this class.
+     * @param Cache $cache the cache component that is currently evaluating this dependency
+     * @return mixed the data needed to determine if dependency has been changed.
+     */
+    protected function generateDependencyData($cache)
+    {
+        $timestamps = $this->getTimestamps($cache, (array)$this->tags);
+
+        $newKeys = [];
+        foreach ($timestamps as $key => $timestamp) {
+            if ($timestamp === false) {
+                $newKeys[] = $key;
+            }
+        }
+        if (!empty($newKeys)) {
+            $timestamps = array_merge($timestamps, static::touchKeys($cache, $newKeys));
+        }
+
+        return $timestamps;
     }
 }

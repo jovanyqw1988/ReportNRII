@@ -72,15 +72,6 @@ class Migration extends Component implements MigrationInterface
     }
 
     /**
-     * @inheritdoc
-     * @since 2.0.6
-     */
-    protected function getDb()
-    {
-        return $this->db;
-    }
-
-    /**
      * This method contains the logic to be executed when applying this migration.
      * Child classes may override this method to provide actual migration logic.
      * @return boolean return a false value to indicate the migration fails
@@ -105,6 +96,19 @@ class Migration extends Component implements MigrationInterface
         }
 
         return null;
+    }
+
+    /**
+     * This method contains the logic to be executed when applying this migration.
+     * This method differs from [[up()]] in that the DB logic implemented here will
+     * be enclosed within a DB transaction.
+     * Child classes may implement this method instead of [[up()]] if the DB logic
+     * needs to be within a transaction.
+     * @return boolean return a false value to indicate the migration fails
+     * and should not proceed further. All other return values mean the migration succeeds.
+     */
+    public function safeUp()
+    {
     }
 
     /**
@@ -133,19 +137,6 @@ class Migration extends Component implements MigrationInterface
         }
 
         return null;
-    }
-
-    /**
-     * This method contains the logic to be executed when applying this migration.
-     * This method differs from [[up()]] in that the DB logic implemented here will
-     * be enclosed within a DB transaction.
-     * Child classes may implement this method instead of [[up()]] if the DB logic
-     * needs to be within a transaction.
-     * @return boolean return a false value to indicate the migration fails
-     * and should not proceed further. All other return values mean the migration succeeds.
-     */
-    public function safeUp()
-    {
     }
 
     /**
@@ -520,5 +511,14 @@ class Migration extends Component implements MigrationInterface
         $time = microtime(true);
         $this->db->createCommand()->dropCommentFromTable($table)->execute();
         echo ' done (time: ' . sprintf('%.3f', microtime(true) - $time) . "s)\n";
+    }
+
+    /**
+     * @inheritdoc
+     * @since 2.0.6
+     */
+    protected function getDb()
+    {
+        return $this->db;
     }
 }

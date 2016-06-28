@@ -9,8 +9,8 @@ namespace yii\validators;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\web\JsExpression;
 use yii\helpers\Json;
+use yii\web\JsExpression;
 
 /**
  * EmailValidator validates that the attribute value is a valid email address.
@@ -68,6 +68,32 @@ class EmailValidator extends Validator
     /**
      * @inheritdoc
      */
+    public function clientValidateAttribute($model, $attribute, $view)
+    {
+        $options = [
+            'pattern' => new JsExpression($this->pattern),
+            'fullPattern' => new JsExpression($this->fullPattern),
+            'allowName' => $this->allowName,
+            'message' => Yii::$app->getI18n()->format($this->message, [
+                'attribute' => $model->getAttributeLabel($attribute),
+            ], Yii::$app->language),
+            'enableIDN' => (bool)$this->enableIDN,
+        ];
+        if ($this->skipOnEmpty) {
+            $options['skipOnEmpty'] = 1;
+        }
+
+        ValidationAsset::register($view);
+        if ($this->enableIDN) {
+            PunycodeAsset::register($view);
+        }
+
+        return 'yii.validation.email(value, messages, ' . Json::htmlEncode($options) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function validateValue($value)
     {
         if (!is_string($value)) {
@@ -102,31 +128,5 @@ class EmailValidator extends Validator
         }
 
         return $valid ? null : [$this->message, []];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        $options = [
-            'pattern' => new JsExpression($this->pattern),
-            'fullPattern' => new JsExpression($this->fullPattern),
-            'allowName' => $this->allowName,
-            'message' => Yii::$app->getI18n()->format($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ], Yii::$app->language),
-            'enableIDN' => (bool)$this->enableIDN,
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-
-        ValidationAsset::register($view);
-        if ($this->enableIDN) {
-            PunycodeAsset::register($view);
-        }
-
-        return 'yii.validation.email(value, messages, ' . Json::htmlEncode($options) . ');';
     }
 }

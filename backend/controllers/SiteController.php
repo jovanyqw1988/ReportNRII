@@ -1,11 +1,7 @@
 <?php
 namespace backend\controllers;
 
-use Yii;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
-use common\models\LoginForm;
+use common\models\LoginForm;use Yii;use yii\filters\VerbFilter;use yii\web\Controller;
 
 /**
  * Site controller
@@ -18,20 +14,6 @@ class SiteController extends Controller
     public function behaviors()
     {
         return [
-            'access' => [
-                'class' => AccessControl::className(),
-                'rules' => [
-                    [
-                        'actions' => ['login', 'error'],
-                        'allow' => true,
-                    ],
-                    [
-                        'actions' => ['logout', 'index'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
@@ -58,6 +40,7 @@ class SiteController extends Controller
         return $this->render('index');
     }
 
+
     public function actionLogin()
     {
         if (!Yii::$app->user->isGuest) {
@@ -73,6 +56,27 @@ class SiteController extends Controller
             ]);
         }
     }
+
+    /*
+     * 注册页面
+     */
+    public function actionSignup()
+    {
+        $model = new SignupForm();
+        if ($model->load(Yii::$app->request->post())) {
+            if ($user = $model->signup()) {
+                if (Yii::$app->getUser()->login($user)) {
+                    return $this->goHome();
+                }
+            }
+        }
+
+        return $this->render('signup', [
+            'model' => $model,
+        ]);
+
+    }
+
 
     public function actionLogout()
     {

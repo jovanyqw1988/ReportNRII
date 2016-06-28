@@ -11,8 +11,8 @@ use Yii;
 use yii\base\ActionFilter;
 use yii\base\BootstrapInterface;
 use yii\base\InvalidConfigException;
-use yii\web\Response;
 use yii\web\Request;
+use yii\web\Response;
 use yii\web\UnsupportedMediaTypeHttpException;
 
 /**
@@ -138,15 +138,6 @@ class ContentNegotiator extends ActionFilter implements BootstrapInterface
     }
 
     /**
-     * @inheritdoc
-     */
-    public function beforeAction($action)
-    {
-        $this->negotiate();
-        return true;
-    }
-
-    /**
      * Negotiates the response format and application language.
      */
     public function negotiate()
@@ -252,5 +243,14 @@ class ContentNegotiator extends ActionFilter implements BootstrapInterface
         $supported = str_replace('_', '-', strtolower($supported));
         $requested = str_replace('_', '-', strtolower($requested));
         return strpos($requested . '-', $supported . '-') === 0;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeAction($action)
+    {
+        $this->negotiate();
+        return true;
     }
 }

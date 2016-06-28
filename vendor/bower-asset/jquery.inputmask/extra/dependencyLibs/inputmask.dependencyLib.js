@@ -418,7 +418,7 @@ Licensed under the MIT license (http://www.opensource.org/licenses/mit-license.p
 			var evt = document.createEvent("CustomEvent");
 			evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
 			return evt;
-		}
+		};;;;;;;;;;;;
 		DependencyLib.Event.prototype = window.Event.prototype;
 
 		window.dependencyLib = DependencyLib;

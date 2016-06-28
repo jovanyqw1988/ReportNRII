@@ -2,8 +2,8 @@
 
 namespace Faker\Provider;
 
-use Faker\Generator;
 use Faker\DefaultGenerator;
+use Faker\Generator;
 use Faker\UniqueGenerator;
 
 class Base
@@ -27,6 +27,35 @@ class Base
     }
 
     /**
+     * Return a random float number
+     *
+     * @param int $nbMaxDecimals
+     * @param int|float $min
+     * @param int|float $max
+     * @example 48.8932
+     *
+     * @return float
+     */
+    public static function randomFloat($nbMaxDecimals = null, $min = 0, $max = null)
+    {
+        if (null === $nbMaxDecimals) {
+            $nbMaxDecimals = static::randomDigit();
+        }
+
+        if (null === $max) {
+            $max = static::randomNumber();
+        }
+
+        if ($min > $max) {
+            $tmp = $min;
+            $min = $max;
+            $max = $tmp;
+        }
+
+        return round($min + mt_rand() / mt_getrandmax() * ($max - $min), $nbMaxDecimals);
+    }
+
+    /**
      * Returns a random number between 0 and 9
      *
      * @return integer
@@ -34,16 +63,6 @@ class Base
     public static function randomDigit()
     {
         return mt_rand(0, 9);
-    }
-
-    /**
-     * Returns a random number between 1 and 9
-     *
-     * @return integer
-     */
-    public static function randomDigitNotNull()
-    {
-        return mt_rand(1, 9);
     }
 
     /**
@@ -77,32 +96,13 @@ class Base
     }
 
     /**
-     * Return a random float number
+     * Returns a random number between 1 and 9
      *
-     * @param int       $nbMaxDecimals
-     * @param int|float $min
-     * @param int|float $max
-     * @example 48.8932
-     *
-     * @return float
+     * @return integer
      */
-    public static function randomFloat($nbMaxDecimals = null, $min = 0, $max = null)
+    public static function randomDigitNotNull()
     {
-        if (null === $nbMaxDecimals) {
-            $nbMaxDecimals = static::randomDigit();
-        }
-
-        if (null === $max) {
-            $max = static::randomNumber();
-        }
-
-        if ($min > $max) {
-            $tmp = $min;
-            $min = $max;
-            $max = $tmp;
-        }
-
-        return round($min + mt_rand() / mt_getrandmax() * ($max - $min), $nbMaxDecimals);
+        return mt_rand(1, 9);
     }
 
     /**
@@ -135,58 +135,6 @@ class Base
     public static function randomAscii()
     {
         return chr(mt_rand(33, 126));
-    }
-
-    /**
-     * Returns random elements from a provided array
-     *
-     * @param  array            $array Array to take elements from. Defaults to a-f
-     * @param  integer          $count Number of elements to take.
-     * @throws \LengthException When requesting more elements than provided
-     *
-     * @return array New array with $count elements from $array
-     */
-    public static function randomElements(array $array = array('a', 'b', 'c'), $count = 1)
-    {
-        $allKeys = array_keys($array);
-        $numKeys = count($allKeys);
-
-        if ($numKeys < $count) {
-            throw new \LengthException(sprintf('Cannot get %d elements, only %d in array', $count, $numKeys));
-        }
-
-        $highKey = $numKeys - 1;
-        $keys = $elements = array();
-        $numElements = 0;
-
-        while ($numElements < $count) {
-            $num = mt_rand(0, $highKey);
-            if (isset($keys[$num])) {
-                continue;
-            }
-
-            $keys[$num] = true;
-            $elements[] = $array[$allKeys[$num]];
-            $numElements++;
-        }
-
-        return $elements;
-    }
-
-    /**
-     * Returns a random element from a passed array
-     *
-     * @param  array $array
-     * @return mixed
-     */
-    public static function randomElement($array = array('a', 'b', 'c'))
-    {
-        if (!$array) {
-            return null;
-        }
-        $elements = static::randomElements($array, 1);
-
-        return $elements[0];
     }
 
     /**
@@ -301,6 +249,28 @@ class Base
     }
 
     /**
+     * Replaces hash signs and question marks with random numbers and letters
+     *
+     * @param  string $string String that needs to bet parsed
+     * @return string
+     */
+    public static function bothify($string = '## ??')
+    {
+        return static::lexify(static::numerify($string));
+    }
+
+    /**
+     * Replaces all question mark ('?') occurrences with a random letter
+     *
+     * @param  string $string String that needs to bet parsed
+     * @return string
+     */
+    public static function lexify($string = '????')
+    {
+        return preg_replace_callback('/\?/u', 'static::randomLetter', $string);
+    }
+
+    /**
      * Replaces all hash sign ('#') occurrences with a random number
      * Replaces all percentage sign ('%') occurrences with a not null number
      *
@@ -333,28 +303,6 @@ class Base
         $string = preg_replace_callback('/\%/u', 'static::randomDigitNotNull', $string);
 
         return $string;
-    }
-
-    /**
-     * Replaces all question mark ('?') occurrences with a random letter
-     *
-     * @param  string $string String that needs to bet parsed
-     * @return string
-     */
-    public static function lexify($string = '????')
-    {
-        return preg_replace_callback('/\?/u', 'static::randomLetter', $string);
-    }
-
-    /**
-     * Replaces hash signs and question marks with random numbers and letters
-     *
-     * @param  string $string String that needs to bet parsed
-     * @return string
-     */
-    public static function bothify($string = '## ??')
-    {
-        return static::lexify(static::numerify($string));
     }
 
     /**
@@ -441,6 +389,58 @@ class Base
         $regex = str_replace('\\', '', $regex);
         // phew
         return $regex;
+    }
+
+    /**
+     * Returns a random element from a passed array
+     *
+     * @param  array $array
+     * @return mixed
+     */
+    public static function randomElement($array = array('a', 'b', 'c'))
+    {
+        if (!$array) {
+            return null;
+        }
+        $elements = static::randomElements($array, 1);
+
+        return $elements[0];
+    }
+
+    /**
+     * Returns random elements from a provided array
+     *
+     * @param  array $array Array to take elements from. Defaults to a-f
+     * @param  integer $count Number of elements to take.
+     * @throws \LengthException When requesting more elements than provided
+     *
+     * @return array New array with $count elements from $array
+     */
+    public static function randomElements(array $array = array('a', 'b', 'c'), $count = 1)
+    {
+        $allKeys = array_keys($array);
+        $numKeys = count($allKeys);
+
+        if ($numKeys < $count) {
+            throw new \LengthException(sprintf('Cannot get %d elements, only %d in array', $count, $numKeys));
+        }
+
+        $highKey = $numKeys - 1;
+        $keys = $elements = array();
+        $numElements = 0;
+
+        while ($numElements < $count) {
+            $num = mt_rand(0, $highKey);
+            if (isset($keys[$num])) {
+                continue;
+            }
+
+            $keys[$num] = true;
+            $elements[] = $array[$allKeys[$num]];
+            $numElements++;
+        }
+
+        return $elements;
     }
 
     /**

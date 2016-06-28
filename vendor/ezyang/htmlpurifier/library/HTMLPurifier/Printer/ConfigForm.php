@@ -52,21 +52,6 @@ class HTMLPurifier_Printer_ConfigForm extends HTMLPurifier_Printer
     }
 
     /**
-     * Sets default column and row size for textareas in sub-printers
-     * @param $cols Integer columns of textarea, null to use default
-     * @param $rows Integer rows of textarea, null to use default
-     */
-    public function setTextareaDimensions($cols = null, $rows = null)
-    {
-        if ($cols) {
-            $this->fields['default']->cols = $cols;
-        }
-        if ($rows) {
-            $this->fields['default']->rows = $rows;
-        }
-    }
-
-    /**
      * Retrieves styling, in case it is not accessible by webserver
      */
     public static function getCSS()
@@ -80,6 +65,21 @@ class HTMLPurifier_Printer_ConfigForm extends HTMLPurifier_Printer
     public static function getJavaScript()
     {
         return file_get_contents(HTMLPURIFIER_PREFIX . '/HTMLPurifier/Printer/ConfigForm.js');
+    }
+
+    /**
+     * Sets default column and row size for textareas in sub-printers
+     * @param $cols Integer columns of textarea, null to use default
+     * @param $rows Integer rows of textarea, null to use default
+     */
+    public function setTextareaDimensions($cols = null, $rows = null)
+    {
+        if ($cols) {
+            $this->fields['default']->cols = $cols;
+        }
+        if ($rows) {
+            $this->fields['default']->rows = $rows;
+        }
     }
 
     /**

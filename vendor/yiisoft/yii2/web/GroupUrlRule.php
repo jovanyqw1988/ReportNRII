@@ -85,6 +85,31 @@ class GroupUrlRule extends CompositeUrlRule
     /**
      * @inheritdoc
      */
+    public function parseRequest($manager, $request)
+    {
+        $pathInfo = $request->getPathInfo();
+        if ($this->prefix === '' || strpos($pathInfo . '/', $this->prefix . '/') === 0) {
+            return parent::parseRequest($manager, $request);
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createUrl($manager, $route, $params)
+    {
+        if ($this->routePrefix === '' || strpos($route, $this->routePrefix . '/') === 0) {
+            return parent::createUrl($manager, $route, $params);
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function createRules()
     {
         $rules = [];
@@ -106,30 +131,5 @@ class GroupUrlRule extends CompositeUrlRule
             $rules[] = $rule;
         }
         return $rules;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function parseRequest($manager, $request)
-    {
-        $pathInfo = $request->getPathInfo();
-        if ($this->prefix === '' || strpos($pathInfo . '/', $this->prefix . '/') === 0) {
-            return parent::parseRequest($manager, $request);
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function createUrl($manager, $route, $params)
-    {
-        if ($this->routePrefix === '' || strpos($route, $this->routePrefix . '/') === 0) {
-            return parent::createUrl($manager, $route, $params);
-        } else {
-            return false;
-        }
     }
 }

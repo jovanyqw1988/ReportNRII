@@ -187,17 +187,6 @@ class Generator extends \yii\gii\Generator
     }
 
     /**
-     * @return string the controller ID (without the module ID prefix)
-     */
-    public function getControllerID()
-    {
-        $pos = strrpos($this->controllerClass, '\\');
-        $class = substr(substr($this->controllerClass, $pos + 1), 0, -10);
-
-        return Inflector::camel2id($class);
-    }
-
-    /**
      * @return string the controller view path
      */
     public function getViewPath()
@@ -207,6 +196,17 @@ class Generator extends \yii\gii\Generator
         } else {
             return Yii::getAlias($this->viewPath);
         }
+    }
+
+    /**
+     * @return string the controller ID (without the module ID prefix)
+     */
+    public function getControllerID()
+    {
+        $pos = strrpos($this->controllerClass, '\\');
+        $class = substr(substr($this->controllerClass, $pos + 1), 0, -10);
+
+        return Inflector::camel2id($class);
     }
 
     public function getNameAttribute()
@@ -221,6 +221,23 @@ class Generator extends \yii\gii\Generator
         $pk = $class::primaryKey();
 
         return $pk[0];
+    }
+
+    /**
+     * @return array model column names
+     */
+    public function getColumnNames()
+    {
+        /* @var $class ActiveRecord */
+        $class = $this->modelClass;
+        if (is_subclass_of($class, 'yii\db\ActiveRecord')) {
+            return $class::getTableSchema()->getColumnNames();
+        } else {
+            /* @var $model \yii\base\Model */
+            $model = new $class();
+
+            return $model->attributes();
+        }
     }
 
     /**
@@ -261,6 +278,21 @@ class Generator extends \yii\gii\Generator
             } else {
                 return "\$form->field(\$model, '$attribute')->$input(['maxlength' => true])";
             }
+        }
+    }
+
+    /**
+     * Returns table schema for current model class or false if it is not an active record
+     * @return boolean|\yii\db\TableSchema
+     */
+    public function getTableSchema()
+    {
+        /* @var $class ActiveRecord */
+        $class = $this->modelClass;
+        if (is_subclass_of($class, 'yii\db\ActiveRecord')) {
+            return $class::getTableSchema();
+        } else {
+            return false;
         }
     }
 
@@ -514,38 +546,6 @@ class Generator extends \yii\gii\Generator
             }
 
             return $params;
-        }
-    }
-
-    /**
-     * Returns table schema for current model class or false if it is not an active record
-     * @return boolean|\yii\db\TableSchema
-     */
-    public function getTableSchema()
-    {
-        /* @var $class ActiveRecord */
-        $class = $this->modelClass;
-        if (is_subclass_of($class, 'yii\db\ActiveRecord')) {
-            return $class::getTableSchema();
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * @return array model column names
-     */
-    public function getColumnNames()
-    {
-        /* @var $class ActiveRecord */
-        $class = $this->modelClass;
-        if (is_subclass_of($class, 'yii\db\ActiveRecord')) {
-            return $class::getTableSchema()->getColumnNames();
-        } else {
-            /* @var $model \yii\base\Model */
-            $model = new $class();
-
-            return $model->attributes();
         }
     }
 }

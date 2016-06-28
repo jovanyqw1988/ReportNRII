@@ -17,27 +17,6 @@ use yii\rbac\DbManager;
 class m140506_102106_rbac_init extends \yii\db\Migration
 {
     /**
-     * @throws yii\base\InvalidConfigException
-     * @return DbManager
-     */
-    protected function getAuthManager()
-    {
-        $authManager = Yii::$app->getAuthManager();
-        if (!$authManager instanceof DbManager) {
-            throw new InvalidConfigException('You should configure "authManager" component to use database before executing this migration.');
-        }
-        return $authManager;
-    }
-
-    /**
-     * @return bool
-     */
-    protected function isMSSQL()
-    {
-        return $this->db->driverName === 'mssql' || $this->db->driverName === 'sqlsrv' || $this->db->driverName === 'dblib';
-    }
-
-    /**
      * @inheritdoc
      */
     public function up()
@@ -127,6 +106,27 @@ class m140506_102106_rbac_init extends \yii\db\Migration
                     END
             END;");
         }
+    }
+
+    /**
+     * @throws yii\base\InvalidConfigException
+     * @return DbManager
+     */
+    protected function getAuthManager()
+    {
+        $authManager = Yii::$app->getAuthManager();
+        if (!$authManager instanceof DbManager) {
+            throw new InvalidConfigException('You should configure "authManager" component to use database before executing this migration.');
+        }
+        return $authManager;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isMSSQL()
+    {
+        return $this->db->driverName === 'mssql' || $this->db->driverName === 'sqlsrv' || $this->db->driverName === 'dblib';
     }
 
     /**

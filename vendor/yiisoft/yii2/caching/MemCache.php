@@ -296,6 +296,23 @@ class MemCache extends Cache
     }
 
     /**
+     * Trims duration to 30 days (2592000 seconds).
+     * @param integer $duration the number of seconds
+     * @return integer the duration
+     * @since 2.0.7
+     * @see http://php.net/manual/en/memcache.set.php
+     * @see http://php.net/manual/en/memcached.expiration.php
+     */
+    protected function trimDuration($duration)
+    {
+        if ($duration > 2592000) {
+            Yii::warning('Duration has been truncated to 30 days due to Memcache/Memcached limitation.', __METHOD__);
+            return 2592000;
+        }
+        return $duration;
+    }
+
+    /**
      * Stores multiple key-value pairs in cache.
      * @param array $data array where key corresponds to cache key while value is the value stored
      * @param integer $duration the number of seconds in which the cached values will expire. 0 means never expire.
@@ -350,22 +367,5 @@ class MemCache extends Cache
     protected function flushValues()
     {
         return $this->_cache->flush();
-    }
-
-    /**
-     * Trims duration to 30 days (2592000 seconds).
-     * @param integer $duration the number of seconds
-     * @return integer the duration
-     * @since 2.0.7
-     * @see http://php.net/manual/en/memcache.set.php
-     * @see http://php.net/manual/en/memcached.expiration.php
-     */
-    protected function trimDuration($duration)
-    {
-        if ($duration > 2592000) {
-            Yii::warning('Duration has been truncated to 30 days due to Memcache/Memcached limitation.', __METHOD__);
-            return 2592000;
-        }
-        return $duration;
     }
 }

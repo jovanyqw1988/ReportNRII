@@ -351,93 +351,6 @@ EOD;
     }
 
     /**
-     * Saves messages to database
-     *
-     * @param array $messages
-     * @param \yii\db\Connection $db
-     * @param string $sourceMessageTable
-     * @param string $messageTable
-     * @param boolean $removeUnused
-     * @param array $languages
-     * @param boolean $markUnused
-     */
-    protected function saveMessagesToDb($messages, $db, $sourceMessageTable, $messageTable, $removeUnused, $languages, $markUnused)
-    {
-        $q = new \yii\db\Query;
-        $current = [];
-
-        foreach ($q->select(['id', 'category', 'message'])->from($sourceMessageTable)->all($db) as $row) {
-            $current[$row['category']][$row['id']] = $row['message'];
-        }
-
-        $new = [];
-        $obsolete = [];
-
-        foreach ($messages as $category => $msgs) {
-            $msgs = array_unique($msgs);
-
-            if (isset($current[$category])) {
-                $new[$category] = array_diff($msgs, $current[$category]);
-                $obsolete += array_diff($current[$category], $msgs);
-            } else {
-                $new[$category] = $msgs;
-            }
-        }
-
-        foreach (array_diff(array_keys($current), array_keys($messages)) as $category) {
-            $obsolete += $current[$category];
-        }
-
-        if (!$removeUnused) {
-            foreach ($obsolete as $pk => $m) {
-                if (mb_substr($m, 0, 2) === '@@' && mb_substr($m, -2) === '@@') {
-                    unset($obsolete[$pk]);
-                }
-            }
-        }
-
-        $obsolete = array_keys($obsolete);
-        $this->stdout('Inserting new messages...');
-        $savedFlag = false;
-
-        foreach ($new as $category => $msgs) {
-            foreach ($msgs as $m) {
-                $savedFlag = true;
-                $lastPk = $db->schema->insert($sourceMessageTable, ['category' => $category, 'message' => $m]);
-                foreach ($languages as $language) {
-                    $db->createCommand()
-                       ->insert($messageTable, ['id' => $lastPk['id'], 'language' => $language])
-                       ->execute();
-                }
-            }
-        }
-
-        $this->stdout($savedFlag ? "saved.\n" : "Nothing new...skipped.\n");
-        $this->stdout($removeUnused ? 'Deleting obsoleted messages...' : 'Updating obsoleted messages...');
-
-        if (empty($obsolete)) {
-            $this->stdout("Nothing obsoleted...skipped.\n");
-        } else {
-            if ($removeUnused) {
-                $db->createCommand()
-                   ->delete($sourceMessageTable, ['in', 'id', $obsolete])
-                   ->execute();
-                $this->stdout("deleted.\n");
-            } elseif ($markUnused) {
-                $db->createCommand()
-                   ->update(
-                       $sourceMessageTable,
-                       ['message' => new \yii\db\Expression("CONCAT('@@',message,'@@')")],
-                       ['in', 'id', $obsolete]
-                   )->execute();
-                $this->stdout("updated.\n");
-            } else {
-                $this->stdout("kept untouched.\n");
-            }
-        }
-    }
-
-    /**
      * Extracts messages from a file
      *
      * @param string $fileName name of the file to extract messages from
@@ -545,6 +458,24 @@ EOD;
     }
 
     /**
+     * Finds out if two PHP tokens are equal
+     *
+     * @param array|string $a
+     * @param array|string $b
+     * @return boolean
+     * @since 2.0.1
+     */
+    protected function tokensEqual($a, $b)
+    {
+        if (is_string($a) && is_string($b)) {
+            return $a === $b;
+        } elseif (isset($a[0], $a[1], $b[0], $b[1])) {
+            return $a[0] === $b[0] && $a[1] == $b[1];
+        }
+        return false;
+    }
+
+    /**
      * The method checks, whether the $category is ignored according to $ignoreCategories array.
      * Examples:
      *
@@ -577,24 +508,6 @@ EOD;
     }
 
     /**
-     * Finds out if two PHP tokens are equal
-     *
-     * @param array|string $a
-     * @param array|string $b
-     * @return boolean
-     * @since 2.0.1
-     */
-    protected function tokensEqual($a, $b)
-    {
-        if (is_string($a) && is_string($b)) {
-            return $a === $b;
-        } elseif (isset($a[0], $a[1], $b[0], $b[1])) {
-            return $a[0] === $b[0] && $a[1] == $b[1];
-        }
-        return false;
-    }
-
-    /**
      * Finds out a line of the first non-char PHP token found
      *
      * @param array $tokens
@@ -609,6 +522,103 @@ EOD;
             }
         }
         return 'unknown';
+    }
+
+    /**
+     * Writes messages into PO file
+     *
+     * @param array $messages
+     * @param string $dirName name of the directory to write to
+     * @param boolean $overwrite if existing file should be overwritten without backup
+     * @param boolean $removeUnused if obsolete translations should be removed
+     * @param boolean $sort if translations should be sorted
+     * @param string $catalog message catalog
+     * @param boolean $markUnused if obsolete translations should be marked
+     */
+    protected function saveMessagesToPO($messages, $dirName, $overwrite, $removeUnused, $sort, $catalog, $markUnused)
+    {
+        $file = str_replace("\\", '/', "$dirName/$catalog.po");
+        FileHelper::createDirectory(dirname($file));
+        $this->stdout("Saving messages to $file...\n");
+
+        $poFile = new GettextPoFile();
+
+
+        $merged = [];
+        $todos = [];
+
+        $hasSomethingToWrite = false;
+        foreach ($messages as $category => $msgs) {
+            $notTranslatedYet = [];
+            $msgs = array_values(array_unique($msgs));
+
+            if (is_file($file)) {
+                $existingMessages = $poFile->load($file, $category);
+
+                sort($msgs);
+                ksort($existingMessages);
+                if (array_keys($existingMessages) == $msgs) {
+                    $this->stdout("Nothing new in \"$category\" category...\n");
+
+                    sort($msgs);
+                    foreach ($msgs as $message) {
+                        $merged[$category . chr(4) . $message] = $existingMessages[$message];
+                    }
+                    ksort($merged);
+                    continue;
+                }
+
+                // merge existing message translations with new message translations
+                foreach ($msgs as $message) {
+                    if (array_key_exists($message, $existingMessages) && $existingMessages[$message] !== '') {
+                        $merged[$category . chr(4) . $message] = $existingMessages[$message];
+                    } else {
+                        $notTranslatedYet[] = $message;
+                    }
+                }
+                ksort($merged);
+                sort($notTranslatedYet);
+
+                // collect not yet translated messages
+                foreach ($notTranslatedYet as $message) {
+                    $todos[$category . chr(4) . $message] = '';
+                }
+
+                // add obsolete unused messages
+                foreach ($existingMessages as $message => $translation) {
+                    if (!$removeUnused && !isset($merged[$category . chr(4) . $message]) && !isset($todos[$category . chr(4) . $message])) {
+                        if (!empty($translation) && (!$markUnused || (substr($translation, 0, 2) === '@@' && substr($translation, -2) === '@@'))) {
+                            $todos[$category . chr(4) . $message] = $translation;
+                        } else {
+                            $todos[$category . chr(4) . $message] = '@@' . $translation . '@@';
+                        }
+                    }
+                }
+
+                $merged = array_merge($todos, $merged);
+                if ($sort) {
+                    ksort($merged);
+                }
+
+                if ($overwrite === false) {
+                    $file .= '.merged';
+                }
+            } else {
+                sort($msgs);
+                foreach ($msgs as $message) {
+                    $merged[$category . chr(4) . $message] = '';
+                }
+                ksort($merged);
+            }
+            $this->stdout("Category \"$category\" merged.\n");
+            $hasSomethingToWrite = true;
+        }
+        if ($hasSomethingToWrite) {
+            $poFile->save($file, $merged);
+            $this->stdout("Translation saved.\n", Console::FG_GREEN);
+        } else {
+            $this->stdout("Nothing to save.\n", Console::FG_GREEN);
+        }
     }
 
     /**
@@ -733,99 +743,89 @@ EOD;
     }
 
     /**
-     * Writes messages into PO file
+     * Saves messages to database
      *
      * @param array $messages
-     * @param string $dirName name of the directory to write to
-     * @param boolean $overwrite if existing file should be overwritten without backup
-     * @param boolean $removeUnused if obsolete translations should be removed
-     * @param boolean $sort if translations should be sorted
-     * @param string $catalog message catalog
-     * @param boolean $markUnused if obsolete translations should be marked
+     * @param \yii\db\Connection $db
+     * @param string $sourceMessageTable
+     * @param string $messageTable
+     * @param boolean $removeUnused
+     * @param array $languages
+     * @param boolean $markUnused
      */
-    protected function saveMessagesToPO($messages, $dirName, $overwrite, $removeUnused, $sort, $catalog, $markUnused)
+    protected function saveMessagesToDb($messages, $db, $sourceMessageTable, $messageTable, $removeUnused, $languages, $markUnused)
     {
-        $file = str_replace("\\", '/', "$dirName/$catalog.po");
-        FileHelper::createDirectory(dirname($file));
-        $this->stdout("Saving messages to $file...\n");
+        $q = new \yii\db\Query;
+        $current = [];
 
-        $poFile = new GettextPoFile();
-
-
-        $merged = [];
-        $todos = [];
-
-        $hasSomethingToWrite = false;
-        foreach ($messages as $category => $msgs) {
-            $notTranslatedYet = [];
-            $msgs = array_values(array_unique($msgs));
-
-            if (is_file($file)) {
-                $existingMessages = $poFile->load($file, $category);
-
-                sort($msgs);
-                ksort($existingMessages);
-                if (array_keys($existingMessages) == $msgs) {
-                    $this->stdout("Nothing new in \"$category\" category...\n");
-
-                    sort($msgs);
-                    foreach ($msgs as $message) {
-                        $merged[$category . chr(4) . $message] = $existingMessages[$message];
-                    }
-                    ksort($merged);
-                    continue;
-                }
-
-                // merge existing message translations with new message translations
-                foreach ($msgs as $message) {
-                    if (array_key_exists($message, $existingMessages) && $existingMessages[$message] !== '') {
-                        $merged[$category . chr(4) . $message] = $existingMessages[$message];
-                    } else {
-                        $notTranslatedYet[] = $message;
-                    }
-                }
-                ksort($merged);
-                sort($notTranslatedYet);
-
-                // collect not yet translated messages
-                foreach ($notTranslatedYet as $message) {
-                    $todos[$category . chr(4) . $message] = '';
-                }
-
-                // add obsolete unused messages
-                foreach ($existingMessages as $message => $translation) {
-                    if (!$removeUnused && !isset($merged[$category . chr(4) . $message]) && !isset($todos[$category . chr(4) . $message])) {
-                        if (!empty($translation) && (!$markUnused || (substr($translation, 0, 2) === '@@' && substr($translation, -2) === '@@'))) {
-                            $todos[$category . chr(4) . $message] = $translation;
-                        } else {
-                            $todos[$category . chr(4) . $message] = '@@' . $translation . '@@';
-                        }
-                    }
-                }
-
-                $merged = array_merge($todos, $merged);
-                if ($sort) {
-                    ksort($merged);
-                }
-
-                if ($overwrite === false) {
-                    $file .= '.merged';
-                }
-            } else {
-                sort($msgs);
-                foreach ($msgs as $message) {
-                    $merged[$category . chr(4) . $message] = '';
-                }
-                ksort($merged);
-            }
-            $this->stdout("Category \"$category\" merged.\n");
-            $hasSomethingToWrite = true;
+        foreach ($q->select(['id', 'category', 'message'])->from($sourceMessageTable)->all($db) as $row) {
+            $current[$row['category']][$row['id']] = $row['message'];
         }
-        if ($hasSomethingToWrite) {
-            $poFile->save($file, $merged);
-            $this->stdout("Translation saved.\n", Console::FG_GREEN);
+
+        $new = [];
+        $obsolete = [];
+
+        foreach ($messages as $category => $msgs) {
+            $msgs = array_unique($msgs);
+
+            if (isset($current[$category])) {
+                $new[$category] = array_diff($msgs, $current[$category]);
+                $obsolete += array_diff($current[$category], $msgs);
+            } else {
+                $new[$category] = $msgs;
+            }
+        }
+
+        foreach (array_diff(array_keys($current), array_keys($messages)) as $category) {
+            $obsolete += $current[$category];
+        }
+
+        if (!$removeUnused) {
+            foreach ($obsolete as $pk => $m) {
+                if (mb_substr($m, 0, 2) === '@@' && mb_substr($m, -2) === '@@') {
+                    unset($obsolete[$pk]);
+                }
+            }
+        }
+
+        $obsolete = array_keys($obsolete);
+        $this->stdout('Inserting new messages...');
+        $savedFlag = false;
+
+        foreach ($new as $category => $msgs) {
+            foreach ($msgs as $m) {
+                $savedFlag = true;
+                $lastPk = $db->schema->insert($sourceMessageTable, ['category' => $category, 'message' => $m]);
+                foreach ($languages as $language) {
+                    $db->createCommand()
+                        ->insert($messageTable, ['id' => $lastPk['id'], 'language' => $language])
+                        ->execute();
+                }
+            }
+        }
+
+        $this->stdout($savedFlag ? "saved.\n" : "Nothing new...skipped.\n");
+        $this->stdout($removeUnused ? 'Deleting obsoleted messages...' : 'Updating obsoleted messages...');
+
+        if (empty($obsolete)) {
+            $this->stdout("Nothing obsoleted...skipped.\n");
         } else {
-            $this->stdout("Nothing to save.\n", Console::FG_GREEN);
+            if ($removeUnused) {
+                $db->createCommand()
+                    ->delete($sourceMessageTable, ['in', 'id', $obsolete])
+                    ->execute();
+                $this->stdout("deleted.\n");
+            } elseif ($markUnused) {
+                $db->createCommand()
+                    ->update(
+                        $sourceMessageTable,
+                        ['message' => new \yii\db\Expression("CONCAT('@@',message,'@@')")],
+                        ['in', 'id', $obsolete]
+                    )->execute();
+                $this->stdout("updated.\n");
+            } else {
+                $this->stdout("kept untouched.\n");
+            }
         }
     }
 

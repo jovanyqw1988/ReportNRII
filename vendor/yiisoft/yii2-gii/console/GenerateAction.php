@@ -39,15 +39,6 @@ class GenerateAction extends \yii\base\Action
         }
     }
 
-    protected function displayValidationErrors()
-    {
-        $this->controller->stdout("Code not generated. Please fix the following errors:\n\n", Console::FG_RED);
-        foreach ($this->generator->errors as $attribute => $errors) {
-            echo ' - ' . $this->controller->ansiFormat($attribute, Console::FG_CYAN) . ': ' . implode('; ', $errors) . "\n";
-        }
-        echo "\n";
-    }
-
     protected function generateCode()
     {
         $files = $this->generator->generate();
@@ -109,5 +100,14 @@ class GenerateAction extends \yii\base\Action
             $this->controller->stdout("\nSome errors occurred while generating the files.", Console::FG_RED);
         }
         echo preg_replace('%<span class="error">(.*?)</span>%', '\1', $results) . "\n";
+    }
+
+    protected function displayValidationErrors()
+    {
+        $this->controller->stdout("Code not generated. Please fix the following errors:\n\n", Console::FG_RED);
+        foreach ($this->generator->errors as $attribute => $errors) {
+            echo ' - ' . $this->controller->ansiFormat($attribute, Console::FG_CYAN) . ': ' . implode('; ', $errors) . "\n";
+        }
+        echo "\n";
     }
 }

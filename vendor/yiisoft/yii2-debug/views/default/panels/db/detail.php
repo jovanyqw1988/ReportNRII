@@ -3,8 +3,8 @@
 /* @var $searchModel yii\debug\models\search\Db */
 /* @var $dataProvider yii\data\ArrayDataProvider */
 
-use yii\helpers\Html;
 use yii\grid\GridView;
+use yii\helpers\Html;
 use yii\web\View;
 
 echo Html::tag('h1', $panel->getName() . ' Queries');

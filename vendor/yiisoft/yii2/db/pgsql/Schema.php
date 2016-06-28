@@ -7,9 +7,9 @@
 
 namespace yii\db\pgsql;
 
+use yii\db\ColumnSchema;
 use yii\db\Expression;
 use yii\db\TableSchema;
-use yii\db\ColumnSchema;
 
 /**
  * Schema is the class for retrieving metadata from a PostgreSQL database
@@ -119,26 +119,6 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Resolves the table name and schema name (if any).
-     * @param TableSchema $table the table metadata object
-     * @param string $name the table name
-     */
-    protected function resolveTableNames($table, $name)
-    {
-        $parts = explode('.', str_replace('"', '', $name));
-
-        if (isset($parts[1])) {
-            $table->schemaName = $parts[0];
-            $table->name = $parts[1];
-        } else {
-            $table->schemaName = $this->defaultSchema;
-            $table->name = $name;
-        }
-
-        $table->fullName = $table->schemaName !== $this->defaultSchema ? $table->schemaName . '.' . $table->name : $table->name;
-    }
-
-    /**
      * Quotes a table name for use in a query.
      * A simple table name has no schema prefix.
      * @param string $name table name
@@ -168,162 +148,23 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Returns all schema names in the database, including the default one but not system schemas.
-     * This method should be overridden by child classes in order to support this feature
-     * because the default implementation simply throws an exception.
-     * @return array all schema names in the database, except system schemas
-     * @since 2.0.4
+     * Resolves the table name and schema name (if any).
+     * @param TableSchema $table the table metadata object
+     * @param string $name the table name
      */
-    protected function findSchemaNames()
+    protected function resolveTableNames($table, $name)
     {
-        $sql = <<<SQL
-SELECT ns.nspname AS schema_name
-FROM pg_namespace ns
-WHERE ns.nspname != 'information_schema' AND ns.nspname NOT LIKE 'pg_%'
-ORDER BY ns.nspname
-SQL;
-        return $this->db->createCommand($sql)->queryColumn();
-    }
+        $parts = explode('.', str_replace('"', '', $name));
 
-    /**
-     * Returns all table names in the database.
-     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
-     * @return array all table names in the database. The names have NO schema name prefix.
-     */
-    protected function findTableNames($schema = '')
-    {
-        if ($schema === '') {
-            $schema = $this->defaultSchema;
-        }
-        $sql = <<<SQL
-SELECT c.relname AS table_name
-FROM pg_class c
-INNER JOIN pg_namespace ns ON ns.oid = c.relnamespace
-WHERE ns.nspname = :schemaName AND c.relkind IN ('r','v','m','f')
-ORDER BY c.relname
-SQL;
-        $command = $this->db->createCommand($sql, [':schemaName' => $schema]);
-        $rows = $command->queryAll();
-        $names = [];
-        foreach ($rows as $row) {
-            $names[] = $row['table_name'];
+        if (isset($parts[1])) {
+            $table->schemaName = $parts[0];
+            $table->name = $parts[1];
+        } else {
+            $table->schemaName = $this->defaultSchema;
+            $table->name = $name;
         }
 
-        return $names;
-    }
-
-    /**
-     * Collects the foreign key column details for the given table.
-     * @param TableSchema $table the table metadata
-     */
-    protected function findConstraints($table)
-    {
-
-        $tableName = $this->quoteValue($table->name);
-        $tableSchema = $this->quoteValue($table->schemaName);
-
-        //We need to extract the constraints de hard way since:
-        //http://www.postgresql.org/message-id/26677.1086673982@sss.pgh.pa.us
-
-        $sql = <<<SQL
-select
-    ct.conname as constraint_name,
-    a.attname as column_name,
-    fc.relname as foreign_table_name,
-    fns.nspname as foreign_table_schema,
-    fa.attname as foreign_column_name
-from
-    (SELECT ct.conname, ct.conrelid, ct.confrelid, ct.conkey, ct.contype, ct.confkey, generate_subscripts(ct.conkey, 1) AS s
-       FROM pg_constraint ct
-    ) AS ct
-    inner join pg_class c on c.oid=ct.conrelid
-    inner join pg_namespace ns on c.relnamespace=ns.oid
-    inner join pg_attribute a on a.attrelid=ct.conrelid and a.attnum = ct.conkey[ct.s]
-    left join pg_class fc on fc.oid=ct.confrelid
-    left join pg_namespace fns on fc.relnamespace=fns.oid
-    left join pg_attribute fa on fa.attrelid=ct.confrelid and fa.attnum = ct.confkey[ct.s]
-where
-    ct.contype='f'
-    and c.relname={$tableName}
-    and ns.nspname={$tableSchema}
-order by
-    fns.nspname, fc.relname, a.attnum
-SQL;
-
-        $constraints = [];
-        foreach ($this->db->createCommand($sql)->queryAll() as $constraint) {
-            if ($constraint['foreign_table_schema'] !== $this->defaultSchema) {
-                $foreignTable = $constraint['foreign_table_schema'] . '.' . $constraint['foreign_table_name'];
-            } else {
-                $foreignTable = $constraint['foreign_table_name'];
-            }
-            $name = $constraint['constraint_name'];
-            if (!isset($constraints[$name])) {
-                $constraints[$name] = [
-                    'tableName' => $foreignTable,
-                    'columns' => [],
-                ];
-            }
-            $constraints[$name]['columns'][$constraint['column_name']] = $constraint['foreign_column_name'];
-        }
-        foreach ($constraints as $constraint) {
-            $table->foreignKeys[] = array_merge([$constraint['tableName']], $constraint['columns']);
-        }
-    }
-
-    /**
-     * Gets information about given table unique indexes.
-     * @param TableSchema $table the table metadata
-     * @return array with index and column names
-     */
-    protected function getUniqueIndexInformation($table)
-    {
-        $sql = <<<SQL
-SELECT
-    i.relname as indexname,
-    pg_get_indexdef(idx.indexrelid, k + 1, TRUE) AS columnname
-FROM (
-  SELECT *, generate_subscripts(indkey, 1) AS k
-  FROM pg_index
-) idx
-INNER JOIN pg_class i ON i.oid = idx.indexrelid
-INNER JOIN pg_class c ON c.oid = idx.indrelid
-INNER JOIN pg_namespace ns ON c.relnamespace = ns.oid
-WHERE idx.indisprimary = FALSE AND idx.indisunique = TRUE
-AND c.relname = :tableName AND ns.nspname = :schemaName
-ORDER BY i.relname, k
-SQL;
-
-        return $this->db->createCommand($sql, [
-            ':schemaName' => $table->schemaName,
-            ':tableName' => $table->name,
-        ])->queryAll();
-    }
-
-    /**
-     * Returns all unique indexes for the given table.
-     * Each array element is of the following structure:
-     *
-     * ```php
-     * [
-     *     'IndexName1' => ['col1' [, ...]],
-     *     'IndexName2' => ['col2' [, ...]],
-     * ]
-     * ```
-     *
-     * @param TableSchema $table the table metadata
-     * @return array all unique indexes for the given table.
-     */
-    public function findUniqueIndexes($table)
-    {
-        $uniqueIndexes = [];
-
-        $rows = $this->getUniqueIndexInformation($table);
-        foreach ($rows as $row) {
-            $uniqueIndexes[$row['indexname']][] = $row['columnname'];
-        }
-
-        return $uniqueIndexes;
+        $table->fullName = $table->schemaName !== $this->defaultSchema ? $table->schemaName . '.' . $table->name : $table->name;
     }
 
     /**
@@ -458,6 +299,120 @@ SQL;
     }
 
     /**
+     * Collects the foreign key column details for the given table.
+     * @param TableSchema $table the table metadata
+     */
+    protected function findConstraints($table)
+    {
+
+        $tableName = $this->quoteValue($table->name);
+        $tableSchema = $this->quoteValue($table->schemaName);
+
+        //We need to extract the constraints de hard way since:
+        //http://www.postgresql.org/message-id/26677.1086673982@sss.pgh.pa.us
+
+        $sql = <<<SQL
+select
+    ct.conname as constraint_name,
+    a.attname as column_name,
+    fc.relname as foreign_table_name,
+    fns.nspname as foreign_table_schema,
+    fa.attname as foreign_column_name
+from
+    (SELECT ct.conname, ct.conrelid, ct.confrelid, ct.conkey, ct.contype, ct.confkey, generate_subscripts(ct.conkey, 1) AS s
+       FROM pg_constraint ct
+    ) AS ct
+    inner join pg_class c on c.oid=ct.conrelid
+    inner join pg_namespace ns on c.relnamespace=ns.oid
+    inner join pg_attribute a on a.attrelid=ct.conrelid and a.attnum = ct.conkey[ct.s]
+    left join pg_class fc on fc.oid=ct.confrelid
+    left join pg_namespace fns on fc.relnamespace=fns.oid
+    left join pg_attribute fa on fa.attrelid=ct.confrelid and fa.attnum = ct.confkey[ct.s]
+where
+    ct.contype='f'
+    and c.relname={$tableName}
+    and ns.nspname={$tableSchema}
+order by
+    fns.nspname, fc.relname, a.attnum
+SQL;
+
+        $constraints = [];
+        foreach ($this->db->createCommand($sql)->queryAll() as $constraint) {
+            if ($constraint['foreign_table_schema'] !== $this->defaultSchema) {
+                $foreignTable = $constraint['foreign_table_schema'] . '.' . $constraint['foreign_table_name'];
+            } else {
+                $foreignTable = $constraint['foreign_table_name'];
+            }
+            $name = $constraint['constraint_name'];
+            if (!isset($constraints[$name])) {
+                $constraints[$name] = [
+                    'tableName' => $foreignTable,
+                    'columns' => [],
+                ];
+            }
+            $constraints[$name]['columns'][$constraint['column_name']] = $constraint['foreign_column_name'];
+        }
+        foreach ($constraints as $constraint) {
+            $table->foreignKeys[] = array_merge([$constraint['tableName']], $constraint['columns']);
+        }
+    }
+
+    /**
+     * Returns all unique indexes for the given table.
+     * Each array element is of the following structure:
+     *
+     * ```php
+     * [
+     *     'IndexName1' => ['col1' [, ...]],
+     *     'IndexName2' => ['col2' [, ...]],
+     * ]
+     * ```
+     *
+     * @param TableSchema $table the table metadata
+     * @return array all unique indexes for the given table.
+     */
+    public function findUniqueIndexes($table)
+    {
+        $uniqueIndexes = [];
+
+        $rows = $this->getUniqueIndexInformation($table);
+        foreach ($rows as $row) {
+            $uniqueIndexes[$row['indexname']][] = $row['columnname'];
+        }
+
+        return $uniqueIndexes;
+    }
+
+    /**
+     * Gets information about given table unique indexes.
+     * @param TableSchema $table the table metadata
+     * @return array with index and column names
+     */
+    protected function getUniqueIndexInformation($table)
+    {
+        $sql = <<<SQL
+SELECT
+    i.relname as indexname,
+    pg_get_indexdef(idx.indexrelid, k + 1, TRUE) AS columnname
+FROM (
+  SELECT *, generate_subscripts(indkey, 1) AS k
+  FROM pg_index
+) idx
+INNER JOIN pg_class i ON i.oid = idx.indexrelid
+INNER JOIN pg_class c ON c.oid = idx.indrelid
+INNER JOIN pg_namespace ns ON c.relnamespace = ns.oid
+WHERE idx.indisprimary = FALSE AND idx.indisunique = TRUE
+AND c.relname = :tableName AND ns.nspname = :schemaName
+ORDER BY i.relname, k
+SQL;
+
+        return $this->db->createCommand($sql, [
+            ':schemaName' => $table->schemaName,
+            ':tableName' => $table->name,
+        ])->queryAll();
+    }
+
+    /**
      * @inheritdoc
      */
     public function insert($table, $columns)
@@ -478,5 +433,50 @@ SQL;
         $result = $command->queryOne();
 
         return !$command->pdoStatement->rowCount() ? false : $result;
+    }
+
+    /**
+     * Returns all schema names in the database, including the default one but not system schemas.
+     * This method should be overridden by child classes in order to support this feature
+     * because the default implementation simply throws an exception.
+     * @return array all schema names in the database, except system schemas
+     * @since 2.0.4
+     */
+    protected function findSchemaNames()
+    {
+        $sql = <<<SQL
+SELECT ns.nspname AS schema_name
+FROM pg_namespace ns
+WHERE ns.nspname != 'information_schema' AND ns.nspname NOT LIKE 'pg_%'
+ORDER BY ns.nspname
+SQL;
+        return $this->db->createCommand($sql)->queryColumn();
+    }
+
+    /**
+     * Returns all table names in the database.
+     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
+     * @return array all table names in the database. The names have NO schema name prefix.
+     */
+    protected function findTableNames($schema = '')
+    {
+        if ($schema === '') {
+            $schema = $this->defaultSchema;
+        }
+        $sql = <<<SQL
+SELECT c.relname AS table_name
+FROM pg_class c
+INNER JOIN pg_namespace ns ON ns.oid = c.relnamespace
+WHERE ns.nspname = :schemaName AND c.relkind IN ('r','v','m','f')
+ORDER BY c.relname
+SQL;
+        $command = $this->db->createCommand($sql, [':schemaName' => $schema]);
+        $rows = $command->queryAll();
+        $names = [];
+        foreach ($rows as $row) {
+            $names[] = $row['table_name'];
+        }
+
+        return $names;
     }
 }

@@ -88,40 +88,6 @@ class PhpMessageSource extends MessageSource
     }
 
     /**
-     * The method is normally called by [[loadMessages]] to load the fallback messages for the language.
-     * Method tries to load the $category messages for the $fallbackLanguage and adds them to the $messages array.
-     *
-     * @param string $category the message category
-     * @param string $fallbackLanguage the target fallback language
-     * @param array $messages the array of previously loaded translation messages.
-     * The keys are original messages, and the values are the translated messages.
-     * @param string $originalMessageFile the path to the file with messages. Used to log an error message
-     * in case when no translations were found.
-     * @return array the loaded messages. The keys are original messages, and the values are the translated messages.
-     * @since 2.0.7
-     */
-    protected function loadFallbackMessages($category, $fallbackLanguage, $messages, $originalMessageFile)
-    {
-        $fallbackMessageFile = $this->getMessageFilePath($category, $fallbackLanguage);
-        $fallbackMessages = $this->loadMessagesFromFile($fallbackMessageFile);
-
-        if ($messages === null && $fallbackMessages === null && $fallbackLanguage !== $this->sourceLanguage) {
-            Yii::error("The message file for category '$category' does not exist: $originalMessageFile "
-                . "Fallback file does not exist as well: $fallbackMessageFile", __METHOD__);
-        } elseif (empty($messages)) {
-            return $fallbackMessages;
-        } elseif (!empty($fallbackMessages)) {
-            foreach ($fallbackMessages as $key => $value) {
-                if (!empty($value) && empty($messages[$key])) {
-                    $messages[$key] = $fallbackMessages[$key];
-                }
-            }
-        }
-
-        return (array) $messages;
-    }
-
-    /**
      * Returns message file path for the specified language and category.
      *
      * @param string $category the message category
@@ -158,5 +124,39 @@ class PhpMessageSource extends MessageSource
         } else {
             return null;
         }
+    }
+
+    /**
+     * The method is normally called by [[loadMessages]] to load the fallback messages for the language.
+     * Method tries to load the $category messages for the $fallbackLanguage and adds them to the $messages array.
+     *
+     * @param string $category the message category
+     * @param string $fallbackLanguage the target fallback language
+     * @param array $messages the array of previously loaded translation messages.
+     * The keys are original messages, and the values are the translated messages.
+     * @param string $originalMessageFile the path to the file with messages. Used to log an error message
+     * in case when no translations were found.
+     * @return array the loaded messages. The keys are original messages, and the values are the translated messages.
+     * @since 2.0.7
+     */
+    protected function loadFallbackMessages($category, $fallbackLanguage, $messages, $originalMessageFile)
+    {
+        $fallbackMessageFile = $this->getMessageFilePath($category, $fallbackLanguage);
+        $fallbackMessages = $this->loadMessagesFromFile($fallbackMessageFile);
+
+        if ($messages === null && $fallbackMessages === null && $fallbackLanguage !== $this->sourceLanguage) {
+            Yii::error("The message file for category '$category' does not exist: $originalMessageFile "
+                . "Fallback file does not exist as well: $fallbackMessageFile", __METHOD__);
+        } elseif (empty($messages)) {
+            return $fallbackMessages;
+        } elseif (!empty($fallbackMessages)) {
+            foreach ($fallbackMessages as $key => $value) {
+                if (!empty($value) && empty($messages[$key])) {
+                    $messages[$key] = $fallbackMessages[$key];
+                }
+            }
+        }
+
+        return (array)$messages;
     }
 }

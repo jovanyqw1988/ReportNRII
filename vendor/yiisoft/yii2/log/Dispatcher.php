@@ -91,20 +91,6 @@ class Dispatcher extends Component
     }
 
     /**
-     * @inheritdoc
-     */
-    public function init()
-    {
-        parent::init();
-
-        foreach ($this->targets as $name => $target) {
-            if (!$target instanceof Target) {
-                $this->targets[$name] = Yii::createObject($target);
-            }
-        }
-    }
-
-    /**
      * Gets the connected logger.
      * If not set, [[\Yii::getLogger()]] will be used.
      * @property Logger the logger. If not set, [[\Yii::getLogger()]] will be used.
@@ -130,6 +116,20 @@ class Dispatcher extends Component
         }
         $this->_logger = $value;
         $this->_logger->dispatcher = $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function init()
+    {
+        parent::init();
+
+        foreach ($this->targets as $name => $target) {
+            if (!$target instanceof Target) {
+                $this->targets[$name] = Yii::createObject($target);
+            }
+        }
     }
 
     /**

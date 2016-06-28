@@ -3,9 +3,9 @@
 /* @var $searchModel yii\debug\models\search\Mail */
 /* @var $dataProvider yii\data\ArrayDataProvider */
 
-use \yii\widgets\ListView;
-use yii\widgets\ActiveForm;
 use yii\helpers\Html;
+use yii\widgets\ActiveForm;
+use yii\widgets\ListView;
 
 $listView = new ListView([
     'dataProvider' => $dataProvider,

@@ -66,23 +66,6 @@ class BaseMarkdown
     }
 
     /**
-     * Converts markdown into HTML but only parses inline elements.
-     *
-     * This can be useful for parsing small comments or description lines.
-     *
-     * @param string $markdown the markdown text to parse
-     * @param string $flavor the markdown flavor to use. See [[$flavors]] for available values.
-     * @return string the parsed HTML output
-     * @throws \yii\base\InvalidParamException when an undefined flavor is given.
-     */
-    public static function processParagraph($markdown, $flavor = 'original')
-    {
-        $parser = static::getParser($flavor);
-
-        return $parser->parseParagraph($markdown);
-    }
-
-    /**
      * @param string $flavor
      * @return \cebe\markdown\Parser
      * @throws \yii\base\InvalidParamException when an undefined flavor is given.
@@ -97,5 +80,22 @@ class BaseMarkdown
         }
 
         return static::$flavors[$flavor];
+    }
+
+    /**
+     * Converts markdown into HTML but only parses inline elements.
+     *
+     * This can be useful for parsing small comments or description lines.
+     *
+     * @param string $markdown the markdown text to parse
+     * @param string $flavor the markdown flavor to use. See [[$flavors]] for available values.
+     * @return string the parsed HTML output
+     * @throws \yii\base\InvalidParamException when an undefined flavor is given.
+     */
+    public static function processParagraph($markdown, $flavor = 'original')
+    {
+        $parser = static::getParser($flavor);
+
+        return $parser->parseParagraph($markdown);
     }
 }

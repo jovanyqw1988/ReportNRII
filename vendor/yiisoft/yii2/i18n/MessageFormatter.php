@@ -118,129 +118,6 @@ class MessageFormatter extends Component
     }
 
     /**
-     * Parses an input string according to an [ICU message format](http://userguide.icu-project.org/formatparse/messages) pattern.
-     *
-     * It uses the PHP intl extension's [MessageFormatter::parse()](http://www.php.net/manual/en/messageformatter.parsemessage.php)
-     * and adds support for named arguments.
-     * Usage of this method requires PHP intl extension to be installed.
-     *
-     * @param string $pattern The pattern to use for parsing the message.
-     * @param string $message The message to parse, conforming to the pattern.
-     * @param string $language The locale to use for formatting locale-dependent parts
-     * @return array|boolean An array containing items extracted, or `FALSE` on error.
-     * @throws \yii\base\NotSupportedException when PHP intl extension is not installed.
-     */
-    public function parse($pattern, $message, $language)
-    {
-        $this->_errorCode = 0;
-        $this->_errorMessage = '';
-
-        if (!class_exists('MessageFormatter', false)) {
-            throw new NotSupportedException('You have to install PHP intl extension to use this feature.');
-        }
-
-        // replace named arguments
-        if (($tokens = self::tokenizePattern($pattern)) === false) {
-            $this->_errorCode = -1;
-            $this->_errorMessage = 'Message pattern is invalid.';
-
-            return false;
-        }
-        $map = [];
-        foreach ($tokens as $i => $token) {
-            if (is_array($token)) {
-                $param = trim($token[0]);
-                if (!isset($map[$param])) {
-                    $map[$param] = count($map);
-                }
-                $token[0] = $map[$param];
-                $tokens[$i] = '{' . implode(',', $token) . '}';
-            }
-        }
-        $pattern = implode('', $tokens);
-        $map = array_flip($map);
-
-        $formatter = new \MessageFormatter($language, $pattern);
-        if ($formatter === null) {
-            $this->_errorCode = -1;
-            $this->_errorMessage = 'Message pattern is invalid.';
-
-            return false;
-        }
-        $result = $formatter->parse($message);
-        if ($result === false) {
-            $this->_errorCode = $formatter->getErrorCode();
-            $this->_errorMessage = $formatter->getErrorMessage();
-
-            return false;
-        } else {
-            $values = [];
-            foreach ($result as $key => $value) {
-                $values[$map[$key]] = $value;
-            }
-
-            return $values;
-        }
-    }
-
-    /**
-     * Replace named placeholders with numeric placeholders and quote unused.
-     *
-     * @param string $pattern The pattern string to replace things into.
-     * @param array $givenParams The array of values to insert into the format string.
-     * @param array $resultingParams Modified array of parameters.
-     * @param array $map
-     * @return string The pattern string with placeholders replaced.
-     */
-    private function replaceNamedArguments($pattern, $givenParams, &$resultingParams = [], &$map = [])
-    {
-        if (($tokens = self::tokenizePattern($pattern)) === false) {
-            return false;
-        }
-        foreach ($tokens as $i => $token) {
-            if (!is_array($token)) {
-                continue;
-            }
-            $param = trim($token[0]);
-            if (isset($givenParams[$param])) {
-                // if param is given, replace it with a number
-                if (!isset($map[$param])) {
-                    $map[$param] = count($map);
-                    // make sure only used params are passed to format method
-                    $resultingParams[$map[$param]] = $givenParams[$param];
-                }
-                $token[0] = $map[$param];
-                $quote = '';
-            } else {
-                // quote unused token
-                $quote = "'";
-            }
-            $type = isset($token[1]) ? trim($token[1]) : 'none';
-            // replace plural and select format recursively
-            if ($type === 'plural' || $type === 'select') {
-                if (!isset($token[2])) {
-                    return false;
-                }
-                if (($subtokens = self::tokenizePattern($token[2])) === false) {
-                    return false;
-                }
-                $c = count($subtokens);
-                for ($k = 0; $k + 1 < $c; $k++) {
-                    if (is_array($subtokens[$k]) || !is_array($subtokens[++$k])) {
-                        return false;
-                    }
-                    $subpattern = $this->replaceNamedArguments(implode(',', $subtokens[$k]), $givenParams, $resultingParams, $map);
-                    $subtokens[$k] = $quote . '{' . $quote . $subpattern . $quote . '}' . $quote;
-                }
-                $token[2] = implode('', $subtokens);
-            }
-            $tokens[$i] = $quote . '{' . $quote . implode(',', $token) . $quote . '}' . $quote;
-        }
-
-        return implode('', $tokens);
-    }
-
-    /**
      * Fallback implementation for MessageFormatter::formatMessage
      * @param string $pattern The pattern string to insert things into.
      * @param array $args The array of values to insert into the format string
@@ -417,5 +294,128 @@ class MessageFormatter extends Component
         }
 
         return false;
+    }
+
+    /**
+     * Replace named placeholders with numeric placeholders and quote unused.
+     *
+     * @param string $pattern The pattern string to replace things into.
+     * @param array $givenParams The array of values to insert into the format string.
+     * @param array $resultingParams Modified array of parameters.
+     * @param array $map
+     * @return string The pattern string with placeholders replaced.
+     */
+    private function replaceNamedArguments($pattern, $givenParams, &$resultingParams = [], &$map = [])
+    {
+        if (($tokens = self::tokenizePattern($pattern)) === false) {
+            return false;
+        }
+        foreach ($tokens as $i => $token) {
+            if (!is_array($token)) {
+                continue;
+            }
+            $param = trim($token[0]);
+            if (isset($givenParams[$param])) {
+                // if param is given, replace it with a number
+                if (!isset($map[$param])) {
+                    $map[$param] = count($map);
+                    // make sure only used params are passed to format method
+                    $resultingParams[$map[$param]] = $givenParams[$param];
+                }
+                $token[0] = $map[$param];
+                $quote = '';
+            } else {
+                // quote unused token
+                $quote = "'";
+            }
+            $type = isset($token[1]) ? trim($token[1]) : 'none';
+            // replace plural and select format recursively
+            if ($type === 'plural' || $type === 'select') {
+                if (!isset($token[2])) {
+                    return false;
+                }
+                if (($subtokens = self::tokenizePattern($token[2])) === false) {
+                    return false;
+                }
+                $c = count($subtokens);
+                for ($k = 0; $k + 1 < $c; $k++) {
+                    if (is_array($subtokens[$k]) || !is_array($subtokens[++$k])) {
+                        return false;
+                    }
+                    $subpattern = $this->replaceNamedArguments(implode(',', $subtokens[$k]), $givenParams, $resultingParams, $map);
+                    $subtokens[$k] = $quote . '{' . $quote . $subpattern . $quote . '}' . $quote;
+                }
+                $token[2] = implode('', $subtokens);
+            }
+            $tokens[$i] = $quote . '{' . $quote . implode(',', $token) . $quote . '}' . $quote;
+        }
+
+        return implode('', $tokens);
+    }
+
+    /**
+     * Parses an input string according to an [ICU message format](http://userguide.icu-project.org/formatparse/messages) pattern.
+     *
+     * It uses the PHP intl extension's [MessageFormatter::parse()](http://www.php.net/manual/en/messageformatter.parsemessage.php)
+     * and adds support for named arguments.
+     * Usage of this method requires PHP intl extension to be installed.
+     *
+     * @param string $pattern The pattern to use for parsing the message.
+     * @param string $message The message to parse, conforming to the pattern.
+     * @param string $language The locale to use for formatting locale-dependent parts
+     * @return array|boolean An array containing items extracted, or `FALSE` on error.
+     * @throws \yii\base\NotSupportedException when PHP intl extension is not installed.
+     */
+    public function parse($pattern, $message, $language)
+    {
+        $this->_errorCode = 0;
+        $this->_errorMessage = '';
+
+        if (!class_exists('MessageFormatter', false)) {
+            throw new NotSupportedException('You have to install PHP intl extension to use this feature.');
+        }
+
+        // replace named arguments
+        if (($tokens = self::tokenizePattern($pattern)) === false) {
+            $this->_errorCode = -1;
+            $this->_errorMessage = 'Message pattern is invalid.';
+
+            return false;
+        }
+        $map = [];
+        foreach ($tokens as $i => $token) {
+            if (is_array($token)) {
+                $param = trim($token[0]);
+                if (!isset($map[$param])) {
+                    $map[$param] = count($map);
+                }
+                $token[0] = $map[$param];
+                $tokens[$i] = '{' . implode(',', $token) . '}';
+            }
+        }
+        $pattern = implode('', $tokens);
+        $map = array_flip($map);
+
+        $formatter = new \MessageFormatter($language, $pattern);
+        if ($formatter === null) {
+            $this->_errorCode = -1;
+            $this->_errorMessage = 'Message pattern is invalid.';
+
+            return false;
+        }
+        $result = $formatter->parse($message);
+        if ($result === false) {
+            $this->_errorCode = $formatter->getErrorCode();
+            $this->_errorMessage = $formatter->getErrorMessage();
+
+            return false;
+        } else {
+            $values = [];
+            foreach ($result as $key => $value) {
+                $values[$map[$key]] = $value;
+            }
+
+            return $values;
+        }
     }
 }

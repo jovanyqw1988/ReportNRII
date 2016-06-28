@@ -8,9 +8,9 @@
 namespace yii\db\sqlite;
 
 use yii\base\NotSupportedException;
+use yii\db\ColumnSchema;
 use yii\db\Expression;
 use yii\db\TableSchema;
-use yii\db\ColumnSchema;
 use yii\db\Transaction;
 
 /**
@@ -58,18 +58,6 @@ class Schema extends \yii\db\Schema
         'enum' => self::TYPE_STRING,
     ];
 
-
-    /**
-     * Quotes a table name for use in a query.
-     * A simple table name has no schema prefix.
-     * @param string $name table name
-     * @return string the properly quoted table name
-     */
-    public function quoteSimpleTableName($name)
-    {
-        return strpos($name, '`') !== false ? $name : "`$name`";
-    }
-
     /**
      * Quotes a column name for use in a query.
      * A simple column name has no prefix.
@@ -98,6 +86,74 @@ class Schema extends \yii\db\Schema
     public function createColumnSchemaBuilder($type, $length = null)
     {
         return new ColumnSchemaBuilder($type, $length);
+    }
+
+    /**
+     * Returns all unique indexes for the given table.
+     * Each array element is of the following structure:
+     *
+     * ```php
+     * [
+     *     'IndexName1' => ['col1' [, ...]],
+     *     'IndexName2' => ['col2' [, ...]],
+     * ]
+     * ```
+     *
+     * @param TableSchema $table the table metadata
+     * @return array all unique indexes for the given table.
+     */
+    public function findUniqueIndexes($table)
+    {
+        $sql = 'PRAGMA index_list(' . $this->quoteSimpleTableName($table->name) . ')';
+        $indexes = $this->db->createCommand($sql)->queryAll();
+        $uniqueIndexes = [];
+
+        foreach ($indexes as $index) {
+            $indexName = $index['name'];
+            $indexInfo = $this->db->createCommand('PRAGMA index_info(' . $this->quoteValue($index['name']) . ')')->queryAll();
+
+            if ($index['unique']) {
+                $uniqueIndexes[$indexName] = [];
+                foreach ($indexInfo as $row) {
+                    $uniqueIndexes[$indexName][] = $row['name'];
+                }
+            }
+        }
+
+        return $uniqueIndexes;
+    }
+
+    /**
+     * Quotes a table name for use in a query.
+     * A simple table name has no schema prefix.
+     * @param string $name table name
+     * @return string the properly quoted table name
+     */
+    public function quoteSimpleTableName($name)
+    {
+        return strpos($name, '`') !== false ? $name : "`$name`";
+    }
+
+    /**
+     * Sets the isolation level of the current transaction.
+     * @param string $level The transaction isolation level to use for this transaction.
+     * This can be either [[Transaction::READ_UNCOMMITTED]] or [[Transaction::SERIALIZABLE]].
+     * @throws \yii\base\NotSupportedException when unsupported isolation levels are used.
+     * SQLite only supports SERIALIZABLE and READ UNCOMMITTED.
+     * @see http://www.sqlite.org/pragma.html#pragma_read_uncommitted
+     */
+    public function setTransactionIsolationLevel($level)
+    {
+        switch ($level) {
+            case Transaction::SERIALIZABLE:
+                $this->db->createCommand('PRAGMA read_uncommitted = False;')->execute();
+                break;
+            case Transaction::READ_UNCOMMITTED:
+                $this->db->createCommand('PRAGMA read_uncommitted = True;')->execute();
+                break;
+            default:
+                throw new NotSupportedException(get_class($this) . ' only supports transaction isolation levels READ UNCOMMITTED and SERIALIZABLE.');
+        }
     }
 
     /**
@@ -161,60 +217,6 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Collects the foreign key column details for the given table.
-     * @param TableSchema $table the table metadata
-     */
-    protected function findConstraints($table)
-    {
-        $sql = 'PRAGMA foreign_key_list(' . $this->quoteSimpleTableName($table->name) . ')';
-        $keys = $this->db->createCommand($sql)->queryAll();
-        foreach ($keys as $key) {
-            $id = (int) $key['id'];
-            if (!isset($table->foreignKeys[$id])) {
-                $table->foreignKeys[$id] = [$key['table'], $key['from'] => $key['to']];
-            } else {
-                // composite FK
-                $table->foreignKeys[$id][$key['from']] = $key['to'];
-            }
-        }
-    }
-
-    /**
-     * Returns all unique indexes for the given table.
-     * Each array element is of the following structure:
-     *
-     * ```php
-     * [
-     *     'IndexName1' => ['col1' [, ...]],
-     *     'IndexName2' => ['col2' [, ...]],
-     * ]
-     * ```
-     *
-     * @param TableSchema $table the table metadata
-     * @return array all unique indexes for the given table.
-     */
-    public function findUniqueIndexes($table)
-    {
-        $sql = 'PRAGMA index_list(' . $this->quoteSimpleTableName($table->name) . ')';
-        $indexes = $this->db->createCommand($sql)->queryAll();
-        $uniqueIndexes = [];
-
-        foreach ($indexes as $index) {
-            $indexName = $index['name'];
-            $indexInfo = $this->db->createCommand('PRAGMA index_info(' . $this->quoteValue($index['name']) . ')')->queryAll();
-
-            if ($index['unique']) {
-                $uniqueIndexes[$indexName] = [];
-                foreach ($indexInfo as $row) {
-                    $uniqueIndexes[$indexName][] = $row['name'];
-                }
-            }
-        }
-
-        return $uniqueIndexes;
-    }
-
-    /**
      * Loads the column information into a [[ColumnSchema]] object.
      * @param array $info column information
      * @return ColumnSchema the column schema object
@@ -270,24 +272,21 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Sets the isolation level of the current transaction.
-     * @param string $level The transaction isolation level to use for this transaction.
-     * This can be either [[Transaction::READ_UNCOMMITTED]] or [[Transaction::SERIALIZABLE]].
-     * @throws \yii\base\NotSupportedException when unsupported isolation levels are used.
-     * SQLite only supports SERIALIZABLE and READ UNCOMMITTED.
-     * @see http://www.sqlite.org/pragma.html#pragma_read_uncommitted
+     * Collects the foreign key column details for the given table.
+     * @param TableSchema $table the table metadata
      */
-    public function setTransactionIsolationLevel($level)
+    protected function findConstraints($table)
     {
-        switch ($level) {
-            case Transaction::SERIALIZABLE:
-                $this->db->createCommand('PRAGMA read_uncommitted = False;')->execute();
-                break;
-            case Transaction::READ_UNCOMMITTED:
-                $this->db->createCommand('PRAGMA read_uncommitted = True;')->execute();
-                break;
-            default:
-                throw new NotSupportedException(get_class($this) . ' only supports transaction isolation levels READ UNCOMMITTED and SERIALIZABLE.');
+        $sql = 'PRAGMA foreign_key_list(' . $this->quoteSimpleTableName($table->name) . ')';
+        $keys = $this->db->createCommand($sql)->queryAll();
+        foreach ($keys as $key) {
+            $id = (int)$key['id'];
+            if (!isset($table->foreignKeys[$id])) {
+                $table->foreignKeys[$id] = [$key['table'], $key['from'] => $key['to']];
+            } else {
+                // composite FK
+                $table->foreignKeys[$id][$key['from']] = $key['to'];
+            }
         }
     }
 }

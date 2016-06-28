@@ -10,9 +10,9 @@ namespace yii\widgets;
 use Yii;
 use yii\base\Component;
 use yii\base\ErrorHandler;
+use yii\base\Model;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
-use yii\base\Model;
 use yii\web\JsExpression;
 
 /**
@@ -207,42 +207,44 @@ class ActiveField extends Component
     }
 
     /**
-     * Renders the opening tag of the field container.
-     * @return string the rendering result.
+     * Renders a text input.
+     * This method will generate the "name" and "value" tag attributes automatically for the model attribute
+     * unless they are explicitly specified in `$options`.
+     * @param array $options the tag options in terms of name-value pairs. These will be rendered as
+     * the attributes of the resulting tag. The values will be HTML-encoded using [[Html::encode()]].
+     *
+     * The following special options are recognized:
+     *
+     * - maxlength: integer|boolean, when `maxlength` is set true and the model attribute is validated
+     *   by a string validator, the `maxlength` option will take the value of [[\yii\validators\StringValidator::max]].
+     *   This is available since version 2.0.3.
+     *
+     * Note that if you set a custom `id` for the input element, you may need to adjust the value of [[selectors]] accordingly.
+     *
+     * @return $this the field object itself
      */
-    public function begin()
+    public function textInput($options = [])
     {
-        if ($this->form->enableClientScript) {
-            $clientOptions = $this->getClientOptions();
-            if (!empty($clientOptions)) {
-                $this->form->attributes[] = $clientOptions;
-            }
-        }
+        $options = array_merge($this->inputOptions, $options);
+        $this->adjustLabelFor($options);
+        $this->parts['{input}'] = Html::activeTextInput($this->model, $this->attribute, $options);
 
-        $inputID = $this->getInputId();
-        $attribute = Html::getAttributeName($this->attribute);
-        $options = $this->options;
-        $class = isset($options['class']) ? [$options['class']] : [];
-        $class[] = "field-$inputID";
-        if ($this->model->isAttributeRequired($attribute)) {
-            $class[] = $this->form->requiredCssClass;
-        }
-        if ($this->model->hasErrors($attribute)) {
-            $class[] = $this->form->errorCssClass;
-        }
-        $options['class'] = implode(' ', $class);
-        $tag = ArrayHelper::remove($options, 'tag', 'div');
-
-        return Html::beginTag($tag, $options);
+        return $this;
     }
 
     /**
-     * Renders the closing tag of the field container.
-     * @return string the rendering result.
+     * Adjusts the "for" attribute for the label based on the input options.
+     * @param array $options the input options
      */
-    public function end()
+    protected function adjustLabelFor($options)
     {
-        return Html::endTag(isset($this->options['tag']) ? $this->options['tag'] : 'div');
+        if (!isset($options['id'])) {
+            return;
+        }
+        $this->_inputId = $options['id'];
+        if (!isset($this->labelOptions['for'])) {
+            $this->labelOptions['for'] = $options['id'];
+        }
     }
 
     /**
@@ -320,6 +322,126 @@ class ActiveField extends Component
     }
 
     /**
+     * Renders the opening tag of the field container.
+     * @return string the rendering result.
+     */
+    public function begin()
+    {
+        if ($this->form->enableClientScript) {
+            $clientOptions = $this->getClientOptions();
+            if (!empty($clientOptions)) {
+                $this->form->attributes[] = $clientOptions;
+            }
+        }
+
+        $inputID = $this->getInputId();
+        $attribute = Html::getAttributeName($this->attribute);
+        $options = $this->options;
+        $class = isset($options['class']) ? [$options['class']] : [];
+        $class[] = "field-$inputID";
+        if ($this->model->isAttributeRequired($attribute)) {
+            $class[] = $this->form->requiredCssClass;
+        }
+        if ($this->model->hasErrors($attribute)) {
+            $class[] = $this->form->errorCssClass;
+        }
+        $options['class'] = implode(' ', $class);
+        $tag = ArrayHelper::remove($options, 'tag', 'div');
+
+        return Html::beginTag($tag, $options);
+    }
+
+    /**
+     * Returns the JS options for the field.
+     * @return array the JS options
+     */
+    protected function getClientOptions()
+    {
+        $attribute = Html::getAttributeName($this->attribute);
+        if (!in_array($attribute, $this->model->activeAttributes(), true)) {
+            return [];
+        }
+
+        $enableClientValidation = $this->enableClientValidation || $this->enableClientValidation === null && $this->form->enableClientValidation;
+        $enableAjaxValidation = $this->enableAjaxValidation || $this->enableAjaxValidation === null && $this->form->enableAjaxValidation;
+
+        if ($enableClientValidation) {
+            $validators = [];
+            foreach ($this->model->getActiveValidators($attribute) as $validator) {
+                /* @var $validator \yii\validators\Validator */
+                $js = $validator->clientValidateAttribute($this->model, $attribute, $this->form->getView());
+                if ($validator->enableClientValidation && $js != '') {
+                    if ($validator->whenClient !== null) {
+                        $js = "if (({$validator->whenClient})(attribute, value)) { $js }";
+                    }
+                    $validators[] = $js;
+                }
+            }
+        }
+
+        if (!$enableAjaxValidation && (!$enableClientValidation || empty($validators))) {
+            return [];
+        }
+
+        $options = [];
+
+        $inputID = $this->getInputId();
+        $options['id'] = Html::getInputId($this->model, $this->attribute);
+        $options['name'] = $this->attribute;
+
+        $options['container'] = isset($this->selectors['container']) ? $this->selectors['container'] : ".field-$inputID";
+        $options['input'] = isset($this->selectors['input']) ? $this->selectors['input'] : "#$inputID";
+        if (isset($this->selectors['error'])) {
+            $options['error'] = $this->selectors['error'];
+        } elseif (isset($this->errorOptions['class'])) {
+            $options['error'] = '.' . implode('.', preg_split('/\s+/', $this->errorOptions['class'], -1, PREG_SPLIT_NO_EMPTY));
+        } else {
+            $options['error'] = isset($this->errorOptions['tag']) ? $this->errorOptions['tag'] : 'span';
+        }
+
+        $options['encodeError'] = !isset($this->errorOptions['encode']) || $this->errorOptions['encode'];
+        if ($enableAjaxValidation) {
+            $options['enableAjaxValidation'] = true;
+        }
+        foreach (['validateOnChange', 'validateOnBlur', 'validateOnType', 'validationDelay'] as $name) {
+            $options[$name] = $this->$name === null ? $this->form->$name : $this->$name;
+        }
+
+        if (!empty($validators)) {
+            $options['validate'] = new JsExpression("function (attribute, value, messages, deferred, \$form) {" . implode('', $validators) . '}');
+        }
+
+        // only get the options that are different from the default ones (set in yii.activeForm.js)
+        return array_diff_assoc($options, [
+            'validateOnChange' => true,
+            'validateOnBlur' => true,
+            'validateOnType' => false,
+            'validationDelay' => 500,
+            'encodeError' => true,
+            'error' => '.help-block',
+        ]);
+    }
+
+    /**
+     * Returns the HTML `id` of the input element of this form field.
+     * @return string the input id.
+     * @since 2.0.7
+     */
+    protected function getInputId()
+    {
+        return $this->_inputId ?: Html::getInputId($this->model, $this->attribute);
+    }
+
+    /**
+     * Renders the closing tag of the field container.
+     * @return string the rendering result.
+     */
+    public function end()
+    {
+        return Html::endTag(isset($this->options['tag']) ? $this->options['tag'] : 'div');
+    }
+
+    /**
      * Renders an input tag.
      * @param string $type the input type (e.g. 'text', 'password')
      * @param array $options the tag options in terms of name-value pairs. These will be rendered as
@@ -334,32 +456,6 @@ class ActiveField extends Component
         $options = array_merge($this->inputOptions, $options);
         $this->adjustLabelFor($options);
         $this->parts['{input}'] = Html::activeInput($type, $this->model, $this->attribute, $options);
-
-        return $this;
-    }
-
-    /**
-     * Renders a text input.
-     * This method will generate the "name" and "value" tag attributes automatically for the model attribute
-     * unless they are explicitly specified in `$options`.
-     * @param array $options the tag options in terms of name-value pairs. These will be rendered as
-     * the attributes of the resulting tag. The values will be HTML-encoded using [[Html::encode()]].
-     *
-     * The following special options are recognized:
-     *
-     * - maxlength: integer|boolean, when `maxlength` is set true and the model attribute is validated
-     *   by a string validator, the `maxlength` option will take the value of [[\yii\validators\StringValidator::max]].
-     *   This is available since version 2.0.3.
-     *
-     * Note that if you set a custom `id` for the input element, you may need to adjust the value of [[selectors]] accordingly.
-     *
-     * @return $this the field object itself
-     */
-    public function textInput($options = [])
-    {
-        $options = array_merge($this->inputOptions, $options);
-        $this->adjustLabelFor($options);
-        $this->parts['{input}'] = Html::activeTextInput($this->model, $this->attribute, $options);
 
         return $this;
     }
@@ -673,101 +769,5 @@ class ActiveField extends Component
         $this->parts['{input}'] = $class::widget($config);
 
         return $this;
-    }
-
-    /**
-     * Adjusts the "for" attribute for the label based on the input options.
-     * @param array $options the input options
-     */
-    protected function adjustLabelFor($options)
-    {
-        if (!isset($options['id'])) {
-            return;
-        }
-        $this->_inputId = $options['id'];
-        if (!isset($this->labelOptions['for'])) {
-            $this->labelOptions['for'] = $options['id'];
-        }
-    }
-
-    /**
-     * Returns the JS options for the field.
-     * @return array the JS options
-     */
-    protected function getClientOptions()
-    {
-        $attribute = Html::getAttributeName($this->attribute);
-        if (!in_array($attribute, $this->model->activeAttributes(), true)) {
-            return [];
-        }
-
-        $enableClientValidation = $this->enableClientValidation || $this->enableClientValidation === null && $this->form->enableClientValidation;
-        $enableAjaxValidation = $this->enableAjaxValidation || $this->enableAjaxValidation === null && $this->form->enableAjaxValidation;
-
-        if ($enableClientValidation) {
-            $validators = [];
-            foreach ($this->model->getActiveValidators($attribute) as $validator) {
-                /* @var $validator \yii\validators\Validator */
-                $js = $validator->clientValidateAttribute($this->model, $attribute, $this->form->getView());
-                if ($validator->enableClientValidation && $js != '') {
-                    if ($validator->whenClient !== null) {
-                        $js = "if (({$validator->whenClient})(attribute, value)) { $js }";
-                    }
-                    $validators[] = $js;
-                }
-            }
-        }
-
-        if (!$enableAjaxValidation && (!$enableClientValidation || empty($validators))) {
-            return [];
-        }
-
-        $options = [];
-
-        $inputID = $this->getInputId();
-        $options['id'] = Html::getInputId($this->model, $this->attribute);
-        $options['name'] = $this->attribute;
-
-        $options['container'] = isset($this->selectors['container']) ? $this->selectors['container'] : ".field-$inputID";
-        $options['input'] = isset($this->selectors['input']) ? $this->selectors['input'] : "#$inputID";
-        if (isset($this->selectors['error'])) {
-            $options['error'] = $this->selectors['error'];
-        } elseif (isset($this->errorOptions['class'])) {
-            $options['error'] = '.' . implode('.', preg_split('/\s+/', $this->errorOptions['class'], -1, PREG_SPLIT_NO_EMPTY));
-        } else {
-            $options['error'] = isset($this->errorOptions['tag']) ? $this->errorOptions['tag'] : 'span';
-        }
-
-        $options['encodeError'] = !isset($this->errorOptions['encode']) || $this->errorOptions['encode'];
-        if ($enableAjaxValidation) {
-            $options['enableAjaxValidation'] = true;
-        }
-        foreach (['validateOnChange', 'validateOnBlur', 'validateOnType', 'validationDelay'] as $name) {
-            $options[$name] = $this->$name === null ? $this->form->$name : $this->$name;
-        }
-
-        if (!empty($validators)) {
-            $options['validate'] = new JsExpression("function (attribute, value, messages, deferred, \$form) {" . implode('', $validators) . '}');
-        }
-
-        // only get the options that are different from the default ones (set in yii.activeForm.js)
-        return array_diff_assoc($options, [
-            'validateOnChange' => true,
-            'validateOnBlur' => true,
-            'validateOnType' => false,
-            'validationDelay' => 500,
-            'encodeError' => true,
-            'error' => '.help-block',
-        ]);
-    }
-
-    /**
-     * Returns the HTML `id` of the input element of this form field.
-     * @return string the input id.
-     * @since 2.0.7
-     */
-    protected function getInputId()
-    {
-        return $this->_inputId ?: Html::getInputId($this->model, $this->attribute);
     }
 }

@@ -65,27 +65,6 @@ class RequiredValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        if ($this->requiredValue === null) {
-            if ($this->strict && $value !== null || !$this->strict && !$this->isEmpty(is_string($value) ? trim($value) : $value)) {
-                return null;
-            }
-        } elseif (!$this->strict && $value == $this->requiredValue || $this->strict && $value === $this->requiredValue) {
-            return null;
-        }
-        if ($this->requiredValue === null) {
-            return [$this->message, []];
-        } else {
-            return [$this->message, [
-                'requiredValue' => $this->requiredValue,
-            ]];
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         $options = [];
@@ -108,5 +87,26 @@ class RequiredValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.required(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        if ($this->requiredValue === null) {
+            if ($this->strict && $value !== null || !$this->strict && !$this->isEmpty(is_string($value) ? trim($value) : $value)) {
+                return null;
+            }
+        } elseif (!$this->strict && $value == $this->requiredValue || $this->strict && $value === $this->requiredValue) {
+            return null;
+        }
+        if ($this->requiredValue === null) {
+            return [$this->message, []];
+        } else {
+            return [$this->message, [
+                'requiredValue' => $this->requiredValue,
+            ]];
+        }
     }
 }

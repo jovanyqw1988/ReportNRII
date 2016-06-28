@@ -120,14 +120,14 @@ abstract class Text extends \Faker\Provider\Base
         return implode(static::$separator, $words);
     }
 
-    protected static function strlen($text)
-    {
-        return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
-    }
-
     protected static function validStart($word)
     {
         return preg_match('/^\p{Lu}/u', $word);
+    }
+
+    protected static function strlen($text)
+    {
+        return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
     }
 
     protected static function appendEnd($text)

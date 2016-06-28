@@ -68,6 +68,24 @@ class HTMLPurifier_EntityParser
     }
 
     /**
+     * Substitutes only special entities with their parsed equivalents.
+     *
+     * @notice We try to avoid calling this function because otherwise, it
+     * would have to be called a lot (for every parsed section).
+     *
+     * @param string $string String to have non-special entities parsed.
+     * @return string Parsed string.
+     */
+    public function substituteSpecialEntities($string)
+    {
+        return preg_replace_callback(
+            $this->_substituteEntitiesRegex,
+            array($this, 'specialEntityCallback'),
+            $string
+        );
+    }
+
+    /**
      * Callback function for substituteNonSpecialEntities() that does the work.
      *
      * @param array $matches  PCRE matches array, with 0 the entire match, and
@@ -102,24 +120,6 @@ class HTMLPurifier_EntityParser
                 return $entity;
             }
         }
-    }
-
-    /**
-     * Substitutes only special entities with their parsed equivalents.
-     *
-     * @notice We try to avoid calling this function because otherwise, it
-     * would have to be called a lot (for every parsed section).
-     *
-     * @param string $string String to have non-special entities parsed.
-     * @return string Parsed string.
-     */
-    public function substituteSpecialEntities($string)
-    {
-        return preg_replace_callback(
-            $this->_substituteEntitiesRegex,
-            array($this, 'specialEntityCallback'),
-            $string
-        );
     }
 
     /**

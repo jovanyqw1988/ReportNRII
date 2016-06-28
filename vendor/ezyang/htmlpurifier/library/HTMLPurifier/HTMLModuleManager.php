@@ -147,6 +147,19 @@ class HTMLPurifier_HTMLModuleManager
     }
 
     /**
+     * Adds a module to the current doctype by first registering it,
+     * and then tacking it on to the active doctype
+     */
+    public function addModule($module)
+    {
+        $this->registerModule($module);
+        if (is_object($module)) {
+            $module = $module->name;
+        }
+        $this->userModules[] = $module;
+    }
+
+    /**
      * Registers a module to the recognized module list, useful for
      * overloading pre-existing modules.
      * @param $module Mixed: string module name, with or without
@@ -200,19 +213,6 @@ class HTMLPurifier_HTMLModuleManager
             trigger_error('Overloading ' . $module->name . ' without explicit overload parameter', E_USER_WARNING);
         }
         $this->registeredModules[$module->name] = $module;
-    }
-
-    /**
-     * Adds a module to the current doctype by first registering it,
-     * and then tacking it on to the active doctype
-     */
-    public function addModule($module)
-    {
-        $this->registerModule($module);
-        if (is_object($module)) {
-            $module = $module->name;
-        }
-        $this->userModules[] = $module;
     }
 
     /**

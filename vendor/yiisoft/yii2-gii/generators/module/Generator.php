@@ -7,9 +7,9 @@
 
 namespace yii\gii\generators\module;
 
+use Yii;
 use yii\gii\CodeFile;
 use yii\helpers\Html;
-use Yii;
 use yii\helpers\StringHelper;
 
 /**
@@ -140,6 +140,14 @@ EOD;
     }
 
     /**
+     * @return boolean the directory that contains the module class
+     */
+    public function getModulePath()
+    {
+        return Yii::getAlias('@' . str_replace('\\', '/', substr($this->moduleClass, 0, strrpos($this->moduleClass, '\\'))));
+    }
+
+    /**
      * Validates [[moduleClass]] to make sure it is a fully qualified class name.
      */
     public function validateModuleClass()
@@ -150,14 +158,6 @@ EOD;
         if (empty($this->moduleClass) || substr_compare($this->moduleClass, '\\', -1, 1) === 0) {
             $this->addError('moduleClass', 'Module class name must not be empty. Please enter a fully qualified class name. e.g. "app\\modules\\admin\\Module".');
         }
-    }
-
-    /**
-     * @return boolean the directory that contains the module class
-     */
-    public function getModulePath()
-    {
-        return Yii::getAlias('@' . str_replace('\\', '/', substr($this->moduleClass, 0, strrpos($this->moduleClass, '\\'))));
     }
 
     /**

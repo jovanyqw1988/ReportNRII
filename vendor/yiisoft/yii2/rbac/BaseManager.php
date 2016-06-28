@@ -24,71 +24,6 @@ abstract class BaseManager extends Component implements ManagerInterface
      */
     public $defaultRoles = [];
 
-
-    /**
-     * Returns the named auth item.
-     * @param string $name the auth item name.
-     * @return Item the auth item corresponding to the specified name. Null is returned if no such item.
-     */
-    abstract protected function getItem($name);
-
-    /**
-     * Returns the items of the specified type.
-     * @param integer $type the auth item type (either [[Item::TYPE_ROLE]] or [[Item::TYPE_PERMISSION]]
-     * @return Item[] the auth items of the specified type.
-     */
-    abstract protected function getItems($type);
-
-    /**
-     * Adds an auth item to the RBAC system.
-     * @param Item $item the item to add
-     * @return boolean whether the auth item is successfully added to the system
-     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
-     */
-    abstract protected function addItem($item);
-
-    /**
-     * Adds a rule to the RBAC system.
-     * @param Rule $rule the rule to add
-     * @return boolean whether the rule is successfully added to the system
-     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
-     */
-    abstract protected function addRule($rule);
-
-    /**
-     * Removes an auth item from the RBAC system.
-     * @param Item $item the item to remove
-     * @return boolean whether the role or permission is successfully removed
-     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
-     */
-    abstract protected function removeItem($item);
-
-    /**
-     * Removes a rule from the RBAC system.
-     * @param Rule $rule the rule to remove
-     * @return boolean whether the rule is successfully removed
-     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
-     */
-    abstract protected function removeRule($rule);
-
-    /**
-     * Updates an auth item in the RBAC system.
-     * @param string $name the name of the item being updated
-     * @param Item $item the updated item
-     * @return boolean whether the auth item is successfully updated
-     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
-     */
-    abstract protected function updateItem($name, $item);
-
-    /**
-     * Updates a rule to the RBAC system.
-     * @param string $name the name of the rule being updated
-     * @param Rule $rule the updated rule
-     * @return boolean whether the rule is successfully updated
-     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
-     */
-    abstract protected function updateRule($name, $rule);
-
     /**
      * @inheritdoc
      */
@@ -129,6 +64,22 @@ abstract class BaseManager extends Component implements ManagerInterface
     }
 
     /**
+     * Adds a rule to the RBAC system.
+     * @param Rule $rule the rule to add
+     * @return boolean whether the rule is successfully added to the system
+     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
+     */
+    abstract protected function addRule($rule);
+
+    /**
+     * Adds an auth item to the RBAC system.
+     * @param Item $item the item to add
+     * @return boolean whether the auth item is successfully added to the system
+     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
+     */
+    abstract protected function addItem($item);
+
+    /**
      * @inheritdoc
      */
     public function remove($object)
@@ -141,6 +92,22 @@ abstract class BaseManager extends Component implements ManagerInterface
             throw new InvalidParamException('Removing unsupported object type.');
         }
     }
+
+    /**
+     * Removes an auth item from the RBAC system.
+     * @param Item $item the item to remove
+     * @return boolean whether the role or permission is successfully removed
+     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
+     */
+    abstract protected function removeItem($item);
+
+    /**
+     * Removes a rule from the RBAC system.
+     * @param Rule $rule the rule to remove
+     * @return boolean whether the rule is successfully removed
+     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
+     */
+    abstract protected function removeRule($rule);
 
     /**
      * @inheritdoc
@@ -162,6 +129,24 @@ abstract class BaseManager extends Component implements ManagerInterface
     }
 
     /**
+     * Updates an auth item in the RBAC system.
+     * @param string $name the name of the item being updated
+     * @param Item $item the updated item
+     * @return boolean whether the auth item is successfully updated
+     * @throws \Exception if data validation or saving fails (such as the name of the role or permission is not unique)
+     */
+    abstract protected function updateItem($name, $item);
+
+    /**
+     * Updates a rule to the RBAC system.
+     * @param string $name the name of the rule being updated
+     * @param Rule $rule the updated rule
+     * @return boolean whether the rule is successfully updated
+     * @throws \Exception if data validation or saving fails (such as the name of the rule is not unique)
+     */
+    abstract protected function updateRule($name, $rule);
+
+    /**
      * @inheritdoc
      */
     public function getRole($name)
@@ -169,6 +154,13 @@ abstract class BaseManager extends Component implements ManagerInterface
         $item = $this->getItem($name);
         return $item instanceof Item && $item->type == Item::TYPE_ROLE ? $item : null;
     }
+
+    /**
+     * Returns the named auth item.
+     * @param string $name the auth item name.
+     * @return Item the auth item corresponding to the specified name. Null is returned if no such item.
+     */
+    abstract protected function getItem($name);
 
     /**
      * @inheritdoc
@@ -186,6 +178,13 @@ abstract class BaseManager extends Component implements ManagerInterface
     {
         return $this->getItems(Item::TYPE_ROLE);
     }
+
+    /**
+     * Returns the items of the specified type.
+     * @param integer $type the auth item type (either [[Item::TYPE_ROLE]] or [[Item::TYPE_PERMISSION]]
+     * @return Item[] the auth items of the specified type.
+     */
+    abstract protected function getItems($type);
 
     /**
      * @inheritdoc

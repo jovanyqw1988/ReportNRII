@@ -79,7 +79,7 @@ define([
 			groupSeparator: ",",
 			autoGroup: true,
 			placeholder: "0"
-		}).mask(testmask)
+		}).mask(testmask);;;;;;;;;;;;
 
 		testmask.focus();
 		$("#testmask").Type("00000");

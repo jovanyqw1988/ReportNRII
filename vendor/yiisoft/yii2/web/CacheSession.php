@@ -83,6 +83,16 @@ class CacheSession extends Session
     }
 
     /**
+     * Generates a unique key used for storing session data in cache.
+     * @param string $id session variable name
+     * @return mixed a safe cache key associated with the session variable name
+     */
+    protected function calculateKey($id)
+    {
+        return [__CLASS__, $id];
+    }
+
+    /**
      * Session write handler.
      * Do not call this method directly.
      * @param string $id session ID
@@ -103,15 +113,5 @@ class CacheSession extends Session
     public function destroySession($id)
     {
         return $this->cache->delete($this->calculateKey($id));
-    }
-
-    /**
-     * Generates a unique key used for storing session data in cache.
-     * @param string $id session variable name
-     * @return mixed a safe cache key associated with the session variable name
-     */
-    protected function calculateKey($id)
-    {
-        return [__CLASS__, $id];
     }
 }

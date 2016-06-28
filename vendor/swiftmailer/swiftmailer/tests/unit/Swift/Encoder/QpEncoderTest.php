@@ -51,6 +51,11 @@ class Swift_Encoder_QpEncoderTest extends \SwiftMailerTestCase
         }
     }
 
+    private function _createCharStream()
+    {
+        return $this->getMockery('Swift_CharacterStream')->shouldIgnoreMissing();
+    }
+
     public function testWhiteSpaceAtLineEndingIsEncoded()
     {
         /* -- RFC 2045, 6.7 --
@@ -338,6 +343,8 @@ class Swift_Encoder_QpEncoderTest extends \SwiftMailerTestCase
         }
     }
 
+    // -- Creation methods
+
     public function testFirstLineLengthCanBeDifferent()
     {
         $input = str_repeat('a', 140);
@@ -370,12 +377,5 @@ class Swift_Encoder_QpEncoderTest extends \SwiftMailerTestCase
             $output, $encoder->encodeString($input, 22),
             '%s: First line should start at offset 22 so can only have max length 54'
             );
-    }
-
-    // -- Creation methods
-
-    private function _createCharStream()
-    {
-        return $this->getMockery('Swift_CharacterStream')->shouldIgnoreMissing();
     }
 }

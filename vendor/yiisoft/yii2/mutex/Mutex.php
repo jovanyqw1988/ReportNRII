@@ -61,24 +61,6 @@ abstract class Mutex extends Component
     }
 
     /**
-     * Acquires a lock by name.
-     * @param string $name of the lock to be acquired. Must be unique.
-     * @param integer $timeout time to wait for lock to be released. Defaults to zero meaning that method will return
-     * false immediately in case lock was already acquired.
-     * @return boolean lock acquiring result.
-     */
-    public function acquire($name, $timeout = 0)
-    {
-        if ($this->acquireLock($name, $timeout)) {
-            $this->_locks[] = $name;
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
      * Releases acquired lock. This method will return false in case the lock was not found.
      * @param string $name of the lock to be released. This lock must already exist.
      * @return boolean lock release result: false in case named lock was not found..
@@ -98,17 +80,35 @@ abstract class Mutex extends Component
     }
 
     /**
+     * This method should be extended by a concrete Mutex implementations. Releases lock by given name.
+     * @param string $name of the lock to be released.
+     * @return boolean release result.
+     */
+    abstract protected function releaseLock($name);
+
+    /**
+     * Acquires a lock by name.
+     * @param string $name of the lock to be acquired. Must be unique.
+     * @param integer $timeout time to wait for lock to be released. Defaults to zero meaning that method will return
+     * false immediately in case lock was already acquired.
+     * @return boolean lock acquiring result.
+     */
+    public function acquire($name, $timeout = 0)
+    {
+        if ($this->acquireLock($name, $timeout)) {
+            $this->_locks[] = $name;
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * This method should be extended by a concrete Mutex implementations. Acquires lock by name.
      * @param string $name of the lock to be acquired.
      * @param integer $timeout time to wait for the lock to be released.
      * @return boolean acquiring result.
      */
     abstract protected function acquireLock($name, $timeout = 0);
-
-    /**
-     * This method should be extended by a concrete Mutex implementations. Releases lock by given name.
-     * @param string $name of the lock to be released.
-     * @return boolean release result.
-     */
-    abstract protected function releaseLock($name);
 }

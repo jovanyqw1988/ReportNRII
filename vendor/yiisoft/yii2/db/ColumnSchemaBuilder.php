@@ -28,7 +28,43 @@ class ColumnSchemaBuilder extends Object
     const CATEGORY_NUMERIC = 'numeric';
     const CATEGORY_TIME = 'time';
     const CATEGORY_OTHER = 'other';
-
+    /**
+     * @var array mapping of abstract column types (keys) to type categories (values).
+     * @since 2.0.8
+     */
+    public $categoryMap = [
+        Schema::TYPE_PK => self::CATEGORY_PK,
+        Schema::TYPE_UPK => self::CATEGORY_PK,
+        Schema::TYPE_BIGPK => self::CATEGORY_PK,
+        Schema::TYPE_UBIGPK => self::CATEGORY_PK,
+        Schema::TYPE_CHAR => self::CATEGORY_STRING,
+        Schema::TYPE_STRING => self::CATEGORY_STRING,
+        Schema::TYPE_TEXT => self::CATEGORY_STRING,
+        Schema::TYPE_SMALLINT => self::CATEGORY_NUMERIC,
+        Schema::TYPE_INTEGER => self::CATEGORY_NUMERIC,
+        Schema::TYPE_BIGINT => self::CATEGORY_NUMERIC,
+        Schema::TYPE_FLOAT => self::CATEGORY_NUMERIC,
+        Schema::TYPE_DOUBLE => self::CATEGORY_NUMERIC,
+        Schema::TYPE_DECIMAL => self::CATEGORY_NUMERIC,
+        Schema::TYPE_DATETIME => self::CATEGORY_TIME,
+        Schema::TYPE_TIMESTAMP => self::CATEGORY_TIME,
+        Schema::TYPE_TIME => self::CATEGORY_TIME,
+        Schema::TYPE_DATE => self::CATEGORY_TIME,
+        Schema::TYPE_BINARY => self::CATEGORY_OTHER,
+        Schema::TYPE_BOOLEAN => self::CATEGORY_NUMERIC,
+        Schema::TYPE_MONEY => self::CATEGORY_NUMERIC,
+    ];
+    /**
+     * @var \yii\db\Connection the current database connection. It is used mainly to escape strings
+     * safely when building the final column schema string.
+     * @since 2.0.8
+     */
+    public $db;
+    /**
+     * @var string comment value of the column.
+     * @since 2.0.8
+     */
+    public $comment;
     /**
      * @var string the column type definition such as INTEGER, VARCHAR, DATETIME, etc.
      */
@@ -70,45 +106,6 @@ class ColumnSchemaBuilder extends Object
      * @since 2.0.8
      */
     protected $isFirst;
-
-
-    /**
-     * @var array mapping of abstract column types (keys) to type categories (values).
-     * @since 2.0.8
-     */
-    public $categoryMap = [
-        Schema::TYPE_PK => self::CATEGORY_PK,
-        Schema::TYPE_UPK => self::CATEGORY_PK,
-        Schema::TYPE_BIGPK => self::CATEGORY_PK,
-        Schema::TYPE_UBIGPK => self::CATEGORY_PK,
-        Schema::TYPE_CHAR => self::CATEGORY_STRING,
-        Schema::TYPE_STRING => self::CATEGORY_STRING,
-        Schema::TYPE_TEXT => self::CATEGORY_STRING,
-        Schema::TYPE_SMALLINT => self::CATEGORY_NUMERIC,
-        Schema::TYPE_INTEGER => self::CATEGORY_NUMERIC,
-        Schema::TYPE_BIGINT => self::CATEGORY_NUMERIC,
-        Schema::TYPE_FLOAT => self::CATEGORY_NUMERIC,
-        Schema::TYPE_DOUBLE => self::CATEGORY_NUMERIC,
-        Schema::TYPE_DECIMAL => self::CATEGORY_NUMERIC,
-        Schema::TYPE_DATETIME => self::CATEGORY_TIME,
-        Schema::TYPE_TIMESTAMP => self::CATEGORY_TIME,
-        Schema::TYPE_TIME => self::CATEGORY_TIME,
-        Schema::TYPE_DATE => self::CATEGORY_TIME,
-        Schema::TYPE_BINARY => self::CATEGORY_OTHER,
-        Schema::TYPE_BOOLEAN => self::CATEGORY_NUMERIC,
-        Schema::TYPE_MONEY => self::CATEGORY_NUMERIC,
-    ];
-    /**
-     * @var \yii\db\Connection the current database connection. It is used mainly to escape strings
-     * safely when building the final column schema string.
-     * @since 2.0.8
-     */
-    public $db;
-    /**
-     * @var string comment value of the column.
-     * @since 2.0.8
-     */
-    public $comment;
 
     /**
      * Create a column schema builder instance giving the type and value precision.
@@ -253,6 +250,40 @@ class ColumnSchemaBuilder extends Object
     }
 
     /**
+     * Returns the category of the column type.
+     * @return string a string containing the column type category name.
+     * @since 2.0.8
+     */
+    protected function getTypeCategory()
+    {
+        return $this->categoryMap[$this->type];
+    }
+
+    /**
+     * Returns the complete column definition from input format
+     * @param string $format the format of the definition.
+     * @return string a string containing the complete column definition.
+     * @since 2.0.8
+     */
+    protected function buildCompleteString($format)
+    {
+        $placeholderValues = [
+            '{type}' => $this->type,
+            '{length}' => $this->buildLengthString(),
+            '{unsigned}' => $this->buildUnsignedString(),
+            '{notnull}' => $this->buildNotNullString(),
+            '{unique}' => $this->buildUniqueString(),
+            '{default}' => $this->buildDefaultString(),
+            '{check}' => $this->buildCheckString(),
+            '{comment}' => $this->buildCommentString(),
+            '{pos}' => ($this->isFirst) ?
+                $this->buildFirstString() :
+                $this->buildAfterString(),
+        ];
+        return strtr($format, $placeholderValues);
+    }
+
+    /**
      * Builds the length/precision part of the column.
      * @return string
      */
@@ -265,6 +296,16 @@ class ColumnSchemaBuilder extends Object
             $this->length = implode(',', $this->length);
         }
         return "({$this->length})";
+    }
+
+    /**
+     * Builds the unsigned string for column. Defaults to unsupported.
+     * @return string a string containing UNSIGNED keyword.
+     * @since 2.0.7
+     */
+    protected function buildUnsignedString()
+    {
+        return '';
     }
 
     /**
@@ -327,21 +368,11 @@ class ColumnSchemaBuilder extends Object
     }
 
     /**
-     * Builds the unsigned string for column. Defaults to unsupported.
-     * @return string a string containing UNSIGNED keyword.
-     * @since 2.0.7
-     */
-    protected function buildUnsignedString()
-    {
-        return '';
-    }
-
-    /**
-     * Builds the after constraint for the column. Defaults to unsupported.
-     * @return string a string containing the AFTER constraint.
+     * Builds the comment specification for the column.
+     * @return string a string containing the COMMENT keyword and the comment itself
      * @since 2.0.8
      */
-    protected function buildAfterString()
+    protected function buildCommentString()
     {
         return '';
     }
@@ -357,46 +388,12 @@ class ColumnSchemaBuilder extends Object
     }
 
     /**
-     * Returns the category of the column type.
-     * @return string a string containing the column type category name.
+     * Builds the after constraint for the column. Defaults to unsupported.
+     * @return string a string containing the AFTER constraint.
      * @since 2.0.8
      */
-    protected function getTypeCategory()
-    {
-        return $this->categoryMap[$this->type];
-    }
-
-    /**
-     * Builds the comment specification for the column.
-     * @return string a string containing the COMMENT keyword and the comment itself
-     * @since 2.0.8
-     */
-    protected function buildCommentString()
+    protected function buildAfterString()
     {
         return '';
-    }
-
-    /**
-     * Returns the complete column definition from input format
-     * @param string $format the format of the definition.
-     * @return string a string containing the complete column definition.
-     * @since 2.0.8
-     */
-    protected function buildCompleteString($format)
-    {
-        $placeholderValues = [
-            '{type}' => $this->type,
-            '{length}' => $this->buildLengthString(),
-            '{unsigned}' => $this->buildUnsignedString(),
-            '{notnull}' => $this->buildNotNullString(),
-            '{unique}' => $this->buildUniqueString(),
-            '{default}' => $this->buildDefaultString(),
-            '{check}' => $this->buildCheckString(),
-            '{comment}' => $this->buildCommentString(),
-            '{pos}' => ($this->isFirst) ?
-                        $this->buildFirstString() :
-                            $this->buildAfterString(),
-        ];
-        return strtr($format, $placeholderValues);
     }
 }

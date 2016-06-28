@@ -29,7 +29,77 @@ class Internet extends \Faker\Provider\Base
         'http://{{domainName}}/{{slug}}.html',
         'https://{{domainName}}/{{slug}}.html',
     );
-    
+
+    /**
+     * @example '10.1.1.17'
+     */
+    public static function localIpv4()
+    {
+        if (static::numberBetween(0, 1) === 0) {
+            // 10.x.x.x range
+            $ip = long2ip(static::numberBetween(167772160, 184549375));
+        } else {
+            // 192.168.x.x range
+            $ip = long2ip(static::numberBetween(3232235520, 3232301055));
+        }
+
+        return $ip;
+    }
+
+    /**
+     * @example '32:F1:39:2F:D6:18'
+     */
+    public static function macAddress()
+    {
+        for ($i = 0; $i < 6; $i++) {
+            $mac[] = sprintf('%02X', static::numberBetween(0, 0xff));
+        }
+        $mac = implode(':', $mac);
+
+        return $mac;
+    }
+
+    /**
+     * @example 'jdoe@acme.biz'
+     */
+    public function email()
+    {
+        $format = static::randomElement(static::$emailFormats);
+
+        return $this->generator->parse($format);
+    }
+
+    /**
+     * @example 'jdoe@example.com'
+     */
+    final public function safeEmail()
+    {
+        return preg_replace('/\s/u', '', $this->userName() . '@' . static::safeEmailDomain());
+    }
+
+    /**
+     * @example 'jdoe'
+     */
+    public function userName()
+    {
+        $format = static::randomElement(static::$userNameFormats);
+        $username = static::bothify($this->generator->parse($format));
+
+        return static::transliterate($username);
+    }
+
+    private static function transliterate($string)
+    {
+        $transId = 'Any-Latin; Latin-ASCII; NFD; [:Nonspacing Mark:] Remove; NFC; Lower();';
+        if (function_exists('transliterator_transliterate') && $transliterator = \Transliterator::create($transId)) {
+            $transString = $transliterator->transliterate($string);
+        } else {
+            $transString = static::toAscii($string);
+        }
+
+        return preg_replace('/[^A-Za-z0-9_.]/u', '', $transString);
+    }
+
     public static function toAscii($string)
     {
         $transliterationTable = array(
@@ -143,60 +213,6 @@ class Internet extends \Faker\Provider\Base
 
         return str_replace(array_keys($transliterationTable), array_values($transliterationTable), $string);
     }
-    
-    private static function transliterate($string)
-    {
-        $transId = 'Any-Latin; Latin-ASCII; NFD; [:Nonspacing Mark:] Remove; NFC; Lower();';
-        if (function_exists('transliterator_transliterate') && $transliterator = \Transliterator::create($transId)) {
-            $transString = $transliterator->transliterate($string);
-        } else {
-            $transString = static::toAscii($string);
-        }
-
-        return preg_replace('/[^A-Za-z0-9_.]/u', '', $transString);
-    }
-    
-    /**
-     * @example 'jdoe@acme.biz'
-     */
-    public function email()
-    {
-        $format = static::randomElement(static::$emailFormats);
-        
-        return $this->generator->parse($format);
-    }
-
-    /**
-     * @example 'jdoe@example.com'
-     */
-    final public function safeEmail()
-    {
-        return preg_replace('/\s/u', '', $this->userName() . '@' . static::safeEmailDomain());
-    }
-
-    /**
-     * @example 'jdoe@gmail.com'
-     */
-    public function freeEmail()
-    {
-        return preg_replace('/\s/u', '', $this->userName() . '@' . static::freeEmailDomain());
-    }
-
-    /**
-     * @example 'jdoe@dawson.com'
-     */
-    public function companyEmail()
-    {
-        return preg_replace('/\s/u', '', $this->userName() . '@' . $this->domainName());
-    }
-
-    /**
-     * @example 'gmail.com'
-     */
-    public static function freeEmailDomain()
-    {
-        return static::randomElement(static::$freeEmailDomain);
-    }
 
     /**
      * @example 'example.org'
@@ -211,24 +227,29 @@ class Internet extends \Faker\Provider\Base
 
         return static::randomElement($domains);
     }
-    /**
-     * @example 'jdoe'
-     */
-    public function userName()
-    {
-        $format = static::randomElement(static::$userNameFormats);
-        $username = static::bothify($this->generator->parse($format));
 
-        return static::transliterate($username);
+    /**
+     * @example 'jdoe@gmail.com'
+     */
+    public function freeEmail()
+    {
+        return preg_replace('/\s/u', '', $this->userName() . '@' . static::freeEmailDomain());
     }
-    /**
-     * @example 'fY4èHdZv68'
-     */
-    public function password($minLength = 6, $maxLength = 20)
-    {
-        $pattern = str_repeat('*', $this->numberBetween($minLength, $maxLength));
 
-        return $this->asciify($pattern);
+    /**
+     * @example 'gmail.com'
+     */
+    public static function freeEmailDomain()
+    {
+        return static::randomElement(static::$freeEmailDomain);
+    }
+
+    /**
+     * @example 'jdoe@dawson.com'
+     */
+    public function companyEmail()
+    {
+        return preg_replace('/\s/u', '', $this->userName() . '@' . $this->domainName());
     }
 
     /**
@@ -255,6 +276,16 @@ class Internet extends \Faker\Provider\Base
     public function tld()
     {
         return static::randomElement(static::$tld);
+    }
+
+    /**
+     * @example 'fY4èHdZv68'
+     */
+    public function password($minLength = 6, $maxLength = 20)
+    {
+        $pattern = str_repeat('*', $this->numberBetween($minLength, $maxLength));
+
+        return $this->asciify($pattern);
     }
 
     /**
@@ -302,34 +333,5 @@ class Internet extends \Faker\Provider\Base
         }
 
         return join(':', $res);
-    }
-
-    /**
-     * @example '10.1.1.17'
-     */
-    public static function localIpv4()
-    {
-        if (static::numberBetween(0, 1) === 0) {
-            // 10.x.x.x range
-            $ip = long2ip(static::numberBetween(167772160, 184549375));
-        } else {
-            // 192.168.x.x range
-            $ip = long2ip(static::numberBetween(3232235520, 3232301055));
-        }
-
-        return $ip;
-    }
-
-    /**
-     * @example '32:F1:39:2F:D6:18'
-     */
-    public static function macAddress()
-    {
-        for ($i=0; $i<6; $i++) {
-            $mac[] = sprintf('%02X', static::numberBetween(0, 0xff));
-        }
-        $mac = implode(':', $mac);
-
-        return $mac;
     }
 }

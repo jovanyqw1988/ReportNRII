@@ -7,8 +7,8 @@
 
 namespace yii\helpers;
 
-use yii\base\InvalidParamException;
 use yii\base\Arrayable;
+use yii\base\InvalidParamException;
 use yii\web\JsExpression;
 
 /**
@@ -37,6 +37,21 @@ class BaseJson
         'JSON_ERROR_UNSUPPORTED_TYPE' => 'A value of a type that cannot be encoded was given', // PHP 5.5.0
     ];
 
+    /**
+     * Encodes the given value into a JSON string HTML-escaping entities so it is safe to be embedded in HTML code.
+     * The method enhances `json_encode()` by supporting JavaScript expressions.
+     * In particular, the method will not encode a JavaScript expression that is
+     * represented in terms of a [[JsExpression]] object.
+     *
+     * @param mixed $value the data to be encoded
+     * @return string the encoding result
+     * @since 2.0.4
+     * @throws InvalidParamException if there is any encoding error
+     */
+    public static function htmlEncode($value)
+    {
+        return static::encode($value, JSON_UNESCAPED_UNICODE | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+    }
 
     /**
      * Encodes the given value into a JSON string.
@@ -61,69 +76,6 @@ class BaseJson
         static::handleJsonError(json_last_error());
 
         return $expressions === [] ? $json : strtr($json, $expressions);
-    }
-
-    /**
-     * Encodes the given value into a JSON string HTML-escaping entities so it is safe to be embedded in HTML code.
-     * The method enhances `json_encode()` by supporting JavaScript expressions.
-     * In particular, the method will not encode a JavaScript expression that is
-     * represented in terms of a [[JsExpression]] object.
-     *
-     * @param mixed $value the data to be encoded
-     * @return string the encoding result
-     * @since 2.0.4
-     * @throws InvalidParamException if there is any encoding error
-     */
-    public static function htmlEncode($value)
-    {
-        return static::encode($value, JSON_UNESCAPED_UNICODE | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
-    }
-
-    /**
-     * Decodes the given JSON string into a PHP data structure.
-     * @param string $json the JSON string to be decoded
-     * @param boolean $asArray whether to return objects in terms of associative arrays.
-     * @return mixed the PHP data
-     * @throws InvalidParamException if there is any decoding error
-     */
-    public static function decode($json, $asArray = true)
-    {
-        if (is_array($json)) {
-            throw new InvalidParamException('Invalid JSON data.');
-        } elseif ($json === null || $json === '') {
-            return null;
-        }
-        $decode = json_decode((string) $json, $asArray);
-        static::handleJsonError(json_last_error());
-
-        return $decode;
-    }
-
-    /**
-     * Handles [[encode()]] and [[decode()]] errors by throwing exceptions with the respective error message.
-     *
-     * @param integer $lastError error code from [json_last_error()](http://php.net/manual/en/function.json-last-error.php).
-     * @throws \yii\base\InvalidParamException if there is any encoding/decoding error.
-     * @since 2.0.6
-     */
-    protected static function handleJsonError($lastError)
-    {
-        if ($lastError === JSON_ERROR_NONE) {
-            return;
-        }
-
-        $availableErrors = [];
-        foreach (static::$jsonErrorMessages as $const => $message) {
-            if (defined($const)) {
-                $availableErrors[constant($const)] = $message;
-            }
-        }
-
-        if (isset($availableErrors[$lastError])) {
-            throw new InvalidParamException($availableErrors[$lastError], $lastError);
-        }
-
-        throw new InvalidParamException('Unknown JSON encoding/decoding error.');
     }
 
     /**
@@ -169,5 +121,52 @@ class BaseJson
         }
 
         return $data;
+    }
+
+    /**
+     * Handles [[encode()]] and [[decode()]] errors by throwing exceptions with the respective error message.
+     *
+     * @param integer $lastError error code from [json_last_error()](http://php.net/manual/en/function.json-last-error.php).
+     * @throws \yii\base\InvalidParamException if there is any encoding/decoding error.
+     * @since 2.0.6
+     */
+    protected static function handleJsonError($lastError)
+    {
+        if ($lastError === JSON_ERROR_NONE) {
+            return;
+        }
+
+        $availableErrors = [];
+        foreach (static::$jsonErrorMessages as $const => $message) {
+            if (defined($const)) {
+                $availableErrors[constant($const)] = $message;
+            }
+        }
+
+        if (isset($availableErrors[$lastError])) {
+            throw new InvalidParamException($availableErrors[$lastError], $lastError);
+        }
+
+        throw new InvalidParamException('Unknown JSON encoding/decoding error.');
+    }
+
+    /**
+     * Decodes the given JSON string into a PHP data structure.
+     * @param string $json the JSON string to be decoded
+     * @param boolean $asArray whether to return objects in terms of associative arrays.
+     * @return mixed the PHP data
+     * @throws InvalidParamException if there is any decoding error
+     */
+    public static function decode($json, $asArray = true)
+    {
+        if (is_array($json)) {
+            throw new InvalidParamException('Invalid JSON data.');
+        } elseif ($json === null || $json === '') {
+            return null;
+        }
+        $decode = json_decode((string)$json, $asArray);
+        static::handleJsonError(json_last_error());
+
+        return $decode;
     }
 }

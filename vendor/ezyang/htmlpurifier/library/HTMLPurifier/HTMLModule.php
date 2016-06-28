@@ -166,40 +166,6 @@ class HTMLPurifier_HTMLModule
     }
 
     /**
-     * Convenience function that creates a totally blank, non-standalone
-     * element.
-     * @param string $element Name of element to create
-     * @return HTMLPurifier_ElementDef Created element
-     */
-    public function addBlankElement($element)
-    {
-        if (!isset($this->info[$element])) {
-            $this->elements[] = $element;
-            $this->info[$element] = new HTMLPurifier_ElementDef();
-            $this->info[$element]->standalone = false;
-        } else {
-            trigger_error("Definition for $element already exists in module, cannot redefine");
-        }
-        return $this->info[$element];
-    }
-
-    /**
-     * Convenience function that registers an element to a content set
-     * @param string $element Element to register
-     * @param string $type Name content set (warning: case sensitive, usually upper-case
-     *        first letter)
-     */
-    public function addElementToContentSet($element, $type)
-    {
-        if (!isset($this->content_sets[$type])) {
-            $this->content_sets[$type] = '';
-        } else {
-            $this->content_sets[$type] .= ' | ';
-        }
-        $this->content_sets[$type] .= $element;
-    }
-
-    /**
      * Convenience function that transforms single-string contents
      * into separate content model and content model type
      * @param string $contents Allowed children in form of:
@@ -245,6 +211,40 @@ class HTMLPurifier_HTMLModule
             }
         }
         $attr[0] = $attr_includes;
+    }
+
+    /**
+     * Convenience function that registers an element to a content set
+     * @param string $element Element to register
+     * @param string $type Name content set (warning: case sensitive, usually upper-case
+     *        first letter)
+     */
+    public function addElementToContentSet($element, $type)
+    {
+        if (!isset($this->content_sets[$type])) {
+            $this->content_sets[$type] = '';
+        } else {
+            $this->content_sets[$type] .= ' | ';
+        }
+        $this->content_sets[$type] .= $element;
+    }
+
+    /**
+     * Convenience function that creates a totally blank, non-standalone
+     * element.
+     * @param string $element Name of element to create
+     * @return HTMLPurifier_ElementDef Created element
+     */
+    public function addBlankElement($element)
+    {
+        if (!isset($this->info[$element])) {
+            $this->elements[] = $element;
+            $this->info[$element] = new HTMLPurifier_ElementDef();
+            $this->info[$element]->standalone = false;
+        } else {
+            trigger_error("Definition for $element already exists in module, cannot redefine");
+        }
+        return $this->info[$element];
     }
 
     /**

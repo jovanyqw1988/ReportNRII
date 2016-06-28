@@ -49,11 +49,53 @@ class Icon
     }
 
     /**
+     * @param string|null $tag
+     * @param string|null $content
+     * @param array $options
+     * @return string
+     */
+    public function render($tag = null, $content = null, $options = [])
+    {
+        $tag = empty($tag)
+            ? (empty($this->tag) ? static::$defaultTag : $this->tag)
+            : $tag;
+
+        $options = array_merge($this->options, $options);
+
+        return Html::tag($tag, $content, $options);
+    }
+
+    /**
      * @return self
      */
     public function inverse()
     {
         return $this->addCssClass(FA::$cssPrefix . '-inverse');
+    }
+
+    /**
+     * @param string $class
+     * @param bool $condition
+     * @param string|bool $throw
+     * @return \rmrevin\yii\fontawesome\component\Icon
+     * @throws \yii\base\InvalidConfigException
+     * @codeCoverageIgnore
+     */
+    public function addCssClass($class, $condition = true, $throw = false)
+    {
+        if ($condition === false) {
+            if (!empty($throw)) {
+                $message = !is_string($throw)
+                    ? 'Condition is false'
+                    : $throw;
+
+                throw new \yii\base\InvalidConfigException($message);
+            }
+        } else {
+            Html::addCssClass($this->options, $class);
+        }
+
+        return $this;
     }
 
     /**
@@ -210,47 +252,5 @@ class Icon
         $this->tag = $tag;
 
         return $this;
-    }
-
-    /**
-     * @param string $class
-     * @param bool $condition
-     * @param string|bool $throw
-     * @return \rmrevin\yii\fontawesome\component\Icon
-     * @throws \yii\base\InvalidConfigException
-     * @codeCoverageIgnore
-     */
-    public function addCssClass($class, $condition = true, $throw = false)
-    {
-        if ($condition === false) {
-            if (!empty($throw)) {
-                $message = !is_string($throw)
-                    ? 'Condition is false'
-                    : $throw;
-
-                throw new \yii\base\InvalidConfigException($message);
-            }
-        } else {
-            Html::addCssClass($this->options, $class);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param string|null $tag
-     * @param string|null $content
-     * @param array $options
-     * @return string
-     */
-    public function render($tag = null, $content = null, $options = [])
-    {
-        $tag = empty($tag)
-            ? (empty($this->tag) ? static::$defaultTag : $this->tag)
-            : $tag;
-
-        $options = array_merge($this->options, $options);
-
-        return Html::tag($tag, $content, $options);
     }
 }

@@ -82,6 +82,36 @@ class HTMLPurifier_Lexer_DOMLex extends HTMLPurifier_Lexer
     }
 
     /**
+     * Wraps an HTML fragment in the necessary HTML
+     * @param string $html
+     * @param HTMLPurifier_Config $config
+     * @param HTMLPurifier_Context $context
+     * @return string
+     */
+    protected function wrapHTML($html, $config, $context)
+    {
+        $def = $config->getDefinition('HTML');
+        $ret = '';
+
+        if (!empty($def->doctype->dtdPublic) || !empty($def->doctype->dtdSystem)) {
+            $ret .= '<!DOCTYPE html ';
+            if (!empty($def->doctype->dtdPublic)) {
+                $ret .= 'PUBLIC "' . $def->doctype->dtdPublic . '" ';
+            }
+            if (!empty($def->doctype->dtdSystem)) {
+                $ret .= '"' . $def->doctype->dtdSystem . '" ';
+            }
+            $ret .= '>';
+        }
+
+        $ret .= '<html><head>';
+        $ret .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
+        // No protection if $html contains a stray </div>!
+        $ret .= '</head><body>' . $html . '</body></html>';
+        return $ret;
+    }
+
+    /**
      * Iterative function that tokenizes a node, putting it into an accumulator.
      * To iterate is human, to recurse divine - L. Peter Deutsch
      * @param DOMNode $node DOMNode to be tokenized.
@@ -184,16 +214,6 @@ class HTMLPurifier_Lexer_DOMLex extends HTMLPurifier_Lexer
     }
 
     /**
-     * @param DOMNode $node
-     * @param HTMLPurifier_Token[] $tokens
-     */
-    protected function createEndNode($node, &$tokens)
-    {
-        $tokens[] = $this->factory->createEnd($node->tagName);
-    }
-
-
-    /**
      * Converts a DOMNamedNodeMap of DOMAttr objects into an assoc array.
      *
      * @param DOMNamedNodeMap $node_map DOMNamedNodeMap of DOMAttr objects.
@@ -212,6 +232,15 @@ class HTMLPurifier_Lexer_DOMLex extends HTMLPurifier_Lexer
             $array[$attr->name] = $attr->value;
         }
         return $array;
+    }
+
+    /**
+     * @param DOMNode $node
+     * @param HTMLPurifier_Token[] $tokens
+     */
+    protected function createEndNode($node, &$tokens)
+    {
+        $tokens[] = $this->factory->createEnd($node->tagName);
     }
 
     /**
@@ -243,36 +272,6 @@ class HTMLPurifier_Lexer_DOMLex extends HTMLPurifier_Lexer
     public function callbackArmorCommentEntities($matches)
     {
         return '<!--' . str_replace('&', '&amp;', $matches[1]) . $matches[2];
-    }
-
-    /**
-     * Wraps an HTML fragment in the necessary HTML
-     * @param string $html
-     * @param HTMLPurifier_Config $config
-     * @param HTMLPurifier_Context $context
-     * @return string
-     */
-    protected function wrapHTML($html, $config, $context)
-    {
-        $def = $config->getDefinition('HTML');
-        $ret = '';
-
-        if (!empty($def->doctype->dtdPublic) || !empty($def->doctype->dtdSystem)) {
-            $ret .= '<!DOCTYPE html ';
-            if (!empty($def->doctype->dtdPublic)) {
-                $ret .= 'PUBLIC "' . $def->doctype->dtdPublic . '" ';
-            }
-            if (!empty($def->doctype->dtdSystem)) {
-                $ret .= '"' . $def->doctype->dtdSystem . '" ';
-            }
-            $ret .= '>';
-        }
-
-        $ret .= '<html><head>';
-        $ret .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-        // No protection if $html contains a stray </div>!
-        $ret .= '</head><body>' . $html . '</body></html>';
-        return $ret;
     }
 }
 

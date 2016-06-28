@@ -29,6 +29,13 @@ class Message extends BaseMessage
      */
     private $_swiftMessage;
 
+    /**
+     * @inheritdoc
+     */
+    public function getCharset()
+    {
+        return $this->getSwiftMessage()->getCharset();
+    }
 
     /**
      * @return \Swift_Message Swift message instance.
@@ -43,11 +50,12 @@ class Message extends BaseMessage
     }
 
     /**
-     * @inheritdoc
+     * Creates the Swift email message instance.
+     * @return \Swift_Message email message instance.
      */
-    public function getCharset()
+    protected function createSwiftMessage()
     {
-        return $this->getSwiftMessage()->getCharset();
+        return new \Swift_Message();
     }
 
     /**
@@ -179,16 +187,6 @@ class Message extends BaseMessage
     }
 
     /**
-     * @inheritdoc
-     */
-    public function setHtmlBody($html)
-    {
-        $this->setBody($html, 'text/html');
-
-        return $this;
-    }
-
-    /**
      * Sets the message body.
      * If body is already set and its content type matches given one, it will
      * be overridden, if content type miss match the multipart message will be composed.
@@ -232,6 +230,16 @@ class Message extends BaseMessage
                 $message->addPart($body, $contentType, $charset);
             }
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setHtmlBody($html)
+    {
+        $this->setBody($html, 'text/html');
+
+        return $this;
     }
 
     /**
@@ -306,14 +314,5 @@ class Message extends BaseMessage
     public function toString()
     {
         return $this->getSwiftMessage()->toString();
-    }
-
-    /**
-     * Creates the Swift email message instance.
-     * @return \Swift_Message email message instance.
-     */
-    protected function createSwiftMessage()
-    {
-        return new \Swift_Message();
     }
 }

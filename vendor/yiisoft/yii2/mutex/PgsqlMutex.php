@@ -50,16 +50,6 @@ class PgsqlMutex extends DbMutex
     }
 
     /**
-     * Converts a string into two 16 bit integer keys using the SHA1 hash function.
-     * @param string $name
-     * @return array contains two 16 bit integer keys
-     */
-    private function getKeysFromName($name)
-    {
-        return array_values(unpack('n2', sha1($name, true)));
-    }
-
-    /**
      * Acquires lock by given name.
      * @param string $name of the lock to be acquired.
      * @param integer $timeout to wait for lock to become released.
@@ -75,6 +65,16 @@ class PgsqlMutex extends DbMutex
         return (bool) $this->db
             ->createCommand('SELECT pg_try_advisory_lock(:key1, :key2)', [':key1' => $key1, ':key2' => $key2])
             ->queryScalar();
+    }
+
+    /**
+     * Converts a string into two 16 bit integer keys using the SHA1 hash function.
+     * @param string $name
+     * @return array contains two 16 bit integer keys
+     */
+    private function getKeysFromName($name)
+    {
+        return array_values(unpack('n2', sha1($name, true)));
     }
 
     /**

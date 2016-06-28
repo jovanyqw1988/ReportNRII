@@ -45,54 +45,47 @@ class Lorem extends \Faker\Provider\Base
     );
 
     /**
-     * @example 'Lorem'
-     * @return string
-     */
-    public static function word()
-    {
-        return static::randomElement(static::$wordList);
-    }
-
-    /**
-     * Generate an array of random words
+     * Generate an array of paragraphs
      *
-     * @example array('Lorem', 'ipsum', 'dolor')
-     * @param  integer      $nb     how many words to return
-     * @param  bool         $asText if true the sentences are returned as one string
+     * @example array($paragraph1, $paragraph2, $paragraph3)
+     * @param  integer $nb how many paragraphs to return
+     * @param  bool $asText if true the paragraphs are returned as one string, separated by two newlines
      * @return array|string
      */
-    public static function words($nb = 3, $asText = false)
+    public static function paragraphs($nb = 3, $asText = false)
     {
-        $words = array();
+        $paragraphs = array();
         for ($i=0; $i < $nb; $i++) {
-            $words []= static::word();
+            $paragraphs [] = static::paragraph();
         }
 
-        return $asText ? join(' ', $words) : $words;
+        return $asText ? join("\n\n", $paragraphs) : $paragraphs;
     }
 
     /**
-     * Generate a random sentence
+     * Generate a single paragraph
      *
-     * @example 'Lorem ipsum dolor sit amet.'
-     * @param integer $nbWords         around how many words the sentence should contain
-     * @param boolean $variableNbWords set to false if you want exactly $nbWords returned,
-     *                                  otherwise $nbWords may vary by +/-40% with a minimum of 1
+     * @example 'Sapiente sunt omnis. Ut pariatur ad autem ducimus et. Voluptas rem voluptas sint modi dolorem amet.'
+     * @param integer $nbSentences around how many sentences the paragraph should contain
+     * @param boolean $variableNbSentences set to false if you want exactly $nbSentences returned,
+     *                                      otherwise $nbSentences may vary by +/-40% with a minimum of 1
      * @return string
      */
-    public static function sentence($nbWords = 6, $variableNbWords = true)
+    public static function paragraph($nbSentences = 3, $variableNbSentences = true)
     {
-        if ($nbWords <= 0) {
+        if ($nbSentences <= 0) {
             return '';
         }
-        if ($variableNbWords) {
-            $nbWords = self::randomizeNbElements($nbWords);
+        if ($variableNbSentences) {
+            $nbSentences = self::randomizeNbElements($nbSentences);
         }
 
-        $words = static::words($nbWords);
-        $words[0] = ucwords($words[0]);
+        return join(static::sentences($nbSentences), ' ');
+    }
 
-        return join($words, ' ') . '.';
+    protected static function randomizeNbElements($nbElements)
+    {
+        return (int)($nbElements * mt_rand(60, 140) / 100) + 1;
     }
 
     /**
@@ -114,42 +107,54 @@ class Lorem extends \Faker\Provider\Base
     }
 
     /**
-     * Generate a single paragraph
+     * Generate a random sentence
      *
-      * @example 'Sapiente sunt omnis. Ut pariatur ad autem ducimus et. Voluptas rem voluptas sint modi dolorem amet.'
-     * @param integer $nbSentences         around how many sentences the paragraph should contain
-     * @param boolean $variableNbSentences set to false if you want exactly $nbSentences returned,
-     *                                      otherwise $nbSentences may vary by +/-40% with a minimum of 1
+     * @example 'Lorem ipsum dolor sit amet.'
+     * @param integer $nbWords around how many words the sentence should contain
+     * @param boolean $variableNbWords set to false if you want exactly $nbWords returned,
+     *                                  otherwise $nbWords may vary by +/-40% with a minimum of 1
      * @return string
      */
-    public static function paragraph($nbSentences = 3, $variableNbSentences = true)
+    public static function sentence($nbWords = 6, $variableNbWords = true)
     {
-        if ($nbSentences <= 0) {
+        if ($nbWords <= 0) {
             return '';
         }
-        if ($variableNbSentences) {
-            $nbSentences = self::randomizeNbElements($nbSentences);
+        if ($variableNbWords) {
+            $nbWords = self::randomizeNbElements($nbWords);
         }
 
-        return join(static::sentences($nbSentences), ' ');
+        $words = static::words($nbWords);
+        $words[0] = ucwords($words[0]);
+
+        return join($words, ' ') . '.';
     }
 
     /**
-     * Generate an array of paragraphs
+     * Generate an array of random words
      *
-     * @example array($paragraph1, $paragraph2, $paragraph3)
-     * @param  integer      $nb     how many paragraphs to return
-     * @param  bool         $asText if true the paragraphs are returned as one string, separated by two newlines
+     * @example array('Lorem', 'ipsum', 'dolor')
+     * @param  integer $nb how many words to return
+     * @param  bool $asText if true the sentences are returned as one string
      * @return array|string
      */
-    public static function paragraphs($nb = 3, $asText = false)
+    public static function words($nb = 3, $asText = false)
     {
-        $paragraphs = array();
+        $words = array();
         for ($i=0; $i < $nb; $i++) {
-            $paragraphs []= static::paragraph();
+            $words [] = static::word();
         }
 
-        return $asText ? join("\n\n", $paragraphs) : $paragraphs;
+        return $asText ? join(' ', $words) : $words;
+    }
+
+    /**
+     * @example 'Lorem'
+     * @return string
+     */
+    public static function word()
+    {
+        return static::randomElement(static::$wordList);
     }
 
     /**
@@ -206,10 +211,5 @@ class Lorem extends \Faker\Provider\Base
         }
 
         return join($text, '');
-    }
-
-    protected static function randomizeNbElements($nbElements)
-    {
-        return (int) ($nbElements * mt_rand(60, 140) / 100) + 1;
     }
 }

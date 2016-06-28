@@ -8,9 +8,9 @@
 namespace yii\debug\panels;
 
 use Yii;
+use yii\debug\models\search\Db;
 use yii\debug\Panel;
 use yii\log\Logger;
-use yii\debug\models\search\Db;
 
 /**
  * Debugger panel that collects and displays database queries performed.
@@ -44,6 +44,18 @@ class DbPanel extends Panel
      */
     private $_timings;
 
+    /**
+     * Check if given query type can be explained.
+     *
+     * @param string $type query type
+     * @return boolean
+     *
+     * @since 2.0.5
+     */
+    public static function canBeExplained($type)
+    {
+        return $type !== 'SHOW';
+    }
 
     /**
      * @inheritdoc
@@ -90,22 +102,6 @@ class DbPanel extends Panel
     }
 
     /**
-     * @inheritdoc
-     */
-    public function getDetail()
-    {
-        $searchModel = new Db();
-        $dataProvider = $searchModel->search(Yii::$app->request->getQueryParams(), $this->getModels());
-
-        return Yii::$app->view->render('panels/db/detail', [
-            'panel' => $this,
-            'dataProvider' => $dataProvider,
-            'searchModel' => $searchModel,
-            'hasExplain' => $this->hasExplain()
-        ]);
-    }
-
-    /**
      * Calculates given request profile timings.
      *
      * @return array timings [token, category, timestamp, traces, nesting level, elapsed time]
@@ -117,26 +113,6 @@ class DbPanel extends Panel
         }
 
         return $this->_timings;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function save()
-    {
-        return ['messages' => $this->getProfileLogs()];
-    }
-
-    /**
-     * Returns all profile logs of the current request for this panel. It includes categories such as:
-     * 'yii\db\Command::query', 'yii\db\Command::execute'.
-     * @return array
-     */
-    public function getProfileLogs()
-    {
-        $target = $this->module->logTarget;
-
-        return $target->filterMessages($target->messages, Logger::LEVEL_PROFILE, ['yii\db\Command::query', 'yii\db\Command::execute']);
     }
 
     /**
@@ -154,6 +130,22 @@ class DbPanel extends Panel
         }
 
         return $queryTime;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getDetail()
+    {
+        $searchModel = new Db();
+        $dataProvider = $searchModel->search(Yii::$app->request->getQueryParams(), $this->getModels());
+
+        return Yii::$app->view->render('panels/db/detail', [
+            'panel' => $this,
+            'dataProvider' => $dataProvider,
+            'searchModel' => $searchModel,
+            'hasExplain' => $this->hasExplain()
+        ]);
     }
 
     /**
@@ -197,6 +189,58 @@ class DbPanel extends Panel
     }
 
     /**
+     * @return boolean Whether the DB component has support for EXPLAIN queries
+     * @since 2.0.5
+     */
+    protected function hasExplain()
+    {
+        $db = $this->getDb();
+        if (!($db instanceof \yii\db\Connection)) {
+            return false;
+        }
+        switch ($db->getDriverName()) {
+            case 'mysql':
+            case 'sqlite':
+            case 'pgsql':
+            case 'cubrid':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Returns a reference to the DB component associated with the panel
+     *
+     * @return \yii\db\Connection
+     * @since 2.0.5
+     */
+    public function getDb()
+    {
+        return Yii::$app->get($this->db);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function save()
+    {
+        return ['messages' => $this->getProfileLogs()];
+    }
+
+    /**
+     * Returns all profile logs of the current request for this panel. It includes categories such as:
+     * 'yii\db\Command::query', 'yii\db\Command::execute'.
+     * @return array
+     */
+    public function getProfileLogs()
+    {
+        $target = $this->module->logTarget;
+
+        return $target->filterMessages($target->messages, Logger::LEVEL_PROFILE, ['yii\db\Command::query', 'yii\db\Command::execute']);
+    }
+
+    /**
      * Check if given queries count is critical according settings.
      *
      * @param integer $count queries count
@@ -223,50 +267,5 @@ class DbPanel extends Panel
             },
             []
         );
-    }
-
-    /**
-     * @return boolean Whether the DB component has support for EXPLAIN queries
-     * @since 2.0.5
-     */
-    protected function hasExplain()
-    {
-        $db = $this->getDb();
-        if (!($db instanceof \yii\db\Connection)) {
-            return false;
-        }
-        switch ($db->getDriverName()) {
-            case 'mysql':
-            case 'sqlite':
-            case 'pgsql':
-            case 'cubrid':
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    /**
-     * Check if given query type can be explained.
-     *
-     * @param string $type query type
-     * @return boolean
-     *
-     * @since 2.0.5
-     */
-    public static function canBeExplained($type)
-    {
-        return $type !== 'SHOW';
-    }
-
-    /**
-     * Returns a reference to the DB component associated with the panel
-     *
-     * @return \yii\db\Connection
-     * @since 2.0.5
-     */
-    public function getDb()
-    {
-        return Yii::$app->get($this->db);
     }
 }

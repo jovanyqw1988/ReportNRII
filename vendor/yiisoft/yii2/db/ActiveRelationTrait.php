@@ -289,6 +289,95 @@ trait ActiveRelationTrait
     }
 
     /**
+     * @param array $primaryModels either array of AR instances or arrays
+     * @return array
+     */
+    private function findJunctionRows($primaryModels)
+    {
+        if (empty($primaryModels)) {
+            return [];
+        }
+        $this->filterByModels($primaryModels);
+        /* @var $primaryModel ActiveRecord */
+        $primaryModel = reset($primaryModels);
+        if (!$primaryModel instanceof ActiveRecordInterface) {
+            // when primaryModels are array of arrays (asArray case)
+            $primaryModel = $this->modelClass;
+        }
+
+        return $this->asArray()->all($primaryModel::getDb());
+    }
+
+    /**
+     * @param array $models
+     */
+    private function filterByModels($models)
+    {
+        $attributes = array_keys($this->link);
+
+        $attributes = $this->prefixKeyColumns($attributes);
+
+        $values = [];
+        if (count($attributes) === 1) {
+            // single key
+            $attribute = reset($this->link);
+            foreach ($models as $model) {
+                if (($value = $model[$attribute]) !== null) {
+                    if (is_array($value)) {
+                        $values = array_merge($values, $value);
+                    } else {
+                        $values[] = $value;
+                    }
+                }
+            }
+        } else {
+            // composite keys
+
+            // ensure keys of $this->link are prefixed the same way as $attributes
+            $prefixedLink = array_combine(
+                $attributes,
+                array_values($this->link)
+            );
+            foreach ($models as $model) {
+                $v = [];
+                foreach ($prefixedLink as $attribute => $link) {
+                    $v[$attribute] = $model[$link];
+                }
+                $values[] = $v;
+            }
+        }
+        $this->andWhere(['in', $attributes, array_unique($values, SORT_REGULAR)]);
+    }
+
+    /**
+     * @param array $attributes the attributes to prefix
+     * @return array
+     */
+    private function prefixKeyColumns($attributes)
+    {
+        if ($this instanceof ActiveQuery && (!empty($this->join) || !empty($this->joinWith))) {
+            if (empty($this->from)) {
+                /* @var $modelClass ActiveRecord */
+                $modelClass = $this->modelClass;
+                $alias = $modelClass::tableName();
+            } else {
+                foreach ($this->from as $alias => $table) {
+                    if (!is_string($alias)) {
+                        $alias = $table;
+                    }
+                    break;
+                }
+            }
+            if (isset($alias)) {
+                foreach ($attributes as $i => $attribute) {
+                    $attributes[$i] = "$alias.$attribute";
+                }
+            }
+        }
+        return $attributes;
+    }
+
+    /**
      * @param ActiveRecordInterface[] $primaryModels primary models
      * @param ActiveRecordInterface[] $models models
      * @param string $primaryName the primary relation name
@@ -395,97 +484,6 @@ trait ActiveRelationTrait
         return $buckets;
     }
 
-
-    /**
-     * Indexes buckets by column name.
-     *
-     * @param array $buckets
-     * @var string|callable $column the name of the column by which the query results should be indexed by.
-     * This can also be a callable (e.g. anonymous function) that returns the index value based on the given row data.
-     * @return array
-     */
-    private function indexBuckets($buckets, $indexBy)
-    {
-        $result = [];
-        foreach ($buckets as $key => $models) {
-            $result[$key] = [];
-            foreach ($models as $model) {
-                $index = is_string($indexBy) ? $model[$indexBy] : call_user_func($indexBy, $model);
-                $result[$key][$index] = $model;
-            }
-        }
-        return $result;
-    }
-
-    /**
-     * @param array $attributes the attributes to prefix
-     * @return array
-     */
-    private function prefixKeyColumns($attributes)
-    {
-        if ($this instanceof ActiveQuery && (!empty($this->join) || !empty($this->joinWith))) {
-            if (empty($this->from)) {
-                /* @var $modelClass ActiveRecord */
-                $modelClass = $this->modelClass;
-                $alias = $modelClass::tableName();
-            } else {
-                foreach ($this->from as $alias => $table) {
-                    if (!is_string($alias)) {
-                        $alias = $table;
-                    }
-                    break;
-                }
-            }
-            if (isset($alias)) {
-                foreach ($attributes as $i => $attribute) {
-                    $attributes[$i] = "$alias.$attribute";
-                }
-            }
-        }
-        return $attributes;
-    }
-
-    /**
-     * @param array $models
-     */
-    private function filterByModels($models)
-    {
-        $attributes = array_keys($this->link);
-
-        $attributes = $this->prefixKeyColumns($attributes);
-
-        $values = [];
-        if (count($attributes) === 1) {
-            // single key
-            $attribute = reset($this->link);
-            foreach ($models as $model) {
-                if (($value = $model[$attribute]) !== null) {
-                    if (is_array($value)) {
-                        $values = array_merge($values, $value);
-                    } else {
-                        $values[] = $value;
-                    }
-                }
-            }
-        } else {
-            // composite keys
-
-            // ensure keys of $this->link are prefixed the same way as $attributes
-            $prefixedLink = array_combine(
-                $attributes,
-                array_values($this->link)
-            );
-            foreach ($models as $model) {
-                $v = [];
-                foreach ($prefixedLink as $attribute => $link) {
-                    $v[$attribute] = $model[$link];
-                }
-                $values[] = $v;
-            }
-        }
-        $this->andWhere(['in', $attributes, array_unique($values, SORT_REGULAR)]);
-    }
-
     /**
      * @param ActiveRecordInterface|array $model
      * @param array $attributes
@@ -518,22 +516,23 @@ trait ActiveRelationTrait
     }
 
     /**
-     * @param array $primaryModels either array of AR instances or arrays
+     * Indexes buckets by column name.
+     *
+     * @param array $buckets
+     * @var string|callable $column the name of the column by which the query results should be indexed by.
+     * This can also be a callable (e.g. anonymous function) that returns the index value based on the given row data.
      * @return array
      */
-    private function findJunctionRows($primaryModels)
+    private function indexBuckets($buckets, $indexBy)
     {
-        if (empty($primaryModels)) {
-            return [];
+        $result = [];
+        foreach ($buckets as $key => $models) {
+            $result[$key] = [];
+            foreach ($models as $model) {
+                $index = is_string($indexBy) ? $model[$indexBy] : call_user_func($indexBy, $model);
+                $result[$key][$index] = $model;
+            }
         }
-        $this->filterByModels($primaryModels);
-        /* @var $primaryModel ActiveRecord */
-        $primaryModel = reset($primaryModels);
-        if (!$primaryModel instanceof ActiveRecordInterface) {
-            // when primaryModels are array of arrays (asArray case)
-            $primaryModel = $this->modelClass;
-        }
-
-        return $this->asArray()->all($primaryModel::getDb());
+        return $result;
     }
 }

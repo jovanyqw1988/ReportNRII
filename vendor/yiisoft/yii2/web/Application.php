@@ -49,19 +49,7 @@ class Application extends \yii\base\Application
      * @var Controller the currently active controller instance
      */
     public $controller;
-
-
-    /**
-     * @inheritdoc
-     */
-    protected function bootstrap()
-    {
-        $request = $this->getRequest();
-        Yii::setAlias('@webroot', dirname($request->getScriptFile()));
-        Yii::setAlias('@web', $request->getBaseUrl());
-
-        parent::bootstrap();
-    }
+    private $_homeUrl;
 
     /**
      * Handles the specified request.
@@ -96,8 +84,6 @@ class Application extends \yii\base\Application
             throw new NotFoundHttpException(Yii::t('yii', 'Page not found.'), $e->getCode(), $e);
         }
     }
-
-    private $_homeUrl;
 
     /**
      * @return string the homepage URL
@@ -153,5 +139,17 @@ class Application extends \yii\base\Application
             'user' => ['class' => 'yii\web\User'],
             'errorHandler' => ['class' => 'yii\web\ErrorHandler'],
         ]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function bootstrap()
+    {
+        $request = $this->getRequest();
+        Yii::setAlias('@webroot', dirname($request->getScriptFile()));
+        Yii::setAlias('@web', $request->getBaseUrl());
+
+        parent::bootstrap();
     }
 }

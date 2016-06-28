@@ -1,40 +1,106 @@
 <?php
+use yii\bootstrap\ActiveForm;use yii\helpers\Html;use yii\helpers\Url;
 
 /* @var $this yii\web\View */
 /* @var $form yii\bootstrap\ActiveForm */
 /* @var $model \common\models\LoginForm */
 
-use yii\helpers\Html;
-use yii\bootstrap\ActiveForm;
+$this->title = Yii::t('yii', 'Sign In');
 
-$this->title = 'Login';
-$this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="site-login">
-    <h1><?= Html::encode($this->title) ?></h1>
 
-    <p>Please fill out the following fields to login:</p>
+    <div class="login-box">
+        <div class="login-logo">
+            <a href="<?= Url::toRoute(['site/login']) ?>"><b>Report</b> NRII</a>
+        </div>
+        <!-- /.login-logo -->
+        <div class="login-box-body">
+            <p class="login-box-msg">Sign in to start your session</p>
 
-    <div class="row">
-        <div class="col-lg-5">
-            <?php $form = ActiveForm::begin(['id' => 'login-form']); ?>
+            <?php $form = ActiveForm::begin([
+                'id' => 'login-form',
+                'enableClientValidation' => true,
+                'layout' => 'horizontal',
+                'fieldConfig' => [
+                    'template' => "{label}\n{beginWrapper}\n{input}\n{hint}\n{error}\n{endWrapper}",
+                    'horizontalCssClasses' => [
+                        'label' => '',
+                        'offset' => '',
+                        'wrapper' => 'col-sm-12',
+                        'error' => '',
+                        'hint' => '',
+                    ],
+                ]
+            ]);
+            ?>
 
-                <?= $form->field($model, 'username')->textInput(['autofocus' => true]) ?>
+            <?= $form
+                ->field($model, 'username', ['options' => ['class' => 'form-group has-feedback'], 'inputTemplate' => "{input}<span class='glyphicon glyphicon-envelope form-control-feedback'></span>"])
+                ->textInput(['placeholder' => $model->getAttributeLabel('username')])
+                ->label(false)
+            ?>
 
-                <?= $form->field($model, 'password')->passwordInput() ?>
+            <?= $form
+                ->field($model, 'password', ['options' => ['class' => 'form-group has-feedback'], 'inputTemplate' => "{input}<span class='glyphicon glyphicon-lock form-control-feedback'></span>"])
+                ->passwordInput(['placeholder' => $model->getAttributeLabel('password')])
+                ->label(false)
+            ?>
 
-                <?= $form->field($model, 'rememberMe')->checkbox() ?>
-
-                <div style="color:#999;margin:1em 0">
-                    If you forgot your password you can <?= Html::a('reset it', ['site/request-password-reset']) ?>.
+            <div class="row">
+                <div class="col-xs-7">
+                    <?= $form->field($model, 'rememberMe')->checkbox(['class' => 'minimal'])->label("记得我") ?>
                 </div>
-
-                <div class="form-group">
-                    <?= Html::submitButton('Login', ['class' => 'btn btn-primary', 'name' => 'login-button']) ?>
-                    <?= Html::a('大仪账号登陆',['site/login']) ?>
+                <!-- /.col -->
+                <div class="col-xs-5">
+                    <?= Html::submitButton('Sign in', ['class' => 'btn btn-primary btn-block btn-flat', 'name' => 'login-button', 'value' => 'login']) ?>
                 </div>
+                <!-- /.col -->
+            </div>
+
 
             <?php ActiveForm::end(); ?>
+
+            <div class="social-auth-links text-center">
+                <p>- OR -</p>
+                <a href="<?= Url::toRoute(['site/authorization']) ?>"
+                   class="btn btn-block btn-social btn-facebook btn-flat"><i
+                        class="fa fa-facebook"></i><?= Yii::t('yii', "Large Instrument Platform") ?></a>
+            </div>
+            <!-- /.social-auth-links -->
+
+            <a href="#">I forgot my password</a><br>
+            <a href="<?= Url::toRoute(['site/signup']) ?>" class="text-center">Register a new membership</a>
+
         </div>
-    </div>
-</div>
+        <!-- /.login-box-body -->
+    </div><!-- /.login-box -->
+<?php
+$this->registerJs('
+$(document).ready(function(){ 
+    $(".select2").select2();
+    $("[data-mask]").inputmask();
+    $("[datepicker]").each(function () {
+        var format = $(this).attr("format");
+        $(this).datepicker({
+          autoclose: true,
+          format: format
+        });
+    });
+        //iCheck for checkbox and radio inputs
+    $(\'input[type="checkbox"].minimal, input[type="radio"].minimal\').iCheck({
+      checkboxClass: \'icheckbox_minimal-blue\',
+      radioClass: \'iradio_minimal-blue\'
+    });
+    //Red color scheme for iCheck
+    $(\'input[type="checkbox"].minimal-red, input[type="radio"].minimal-red\').iCheck({
+      checkboxClass: \'icheckbox_minimal-red\',
+      radioClass: \'iradio_minimal-red\'
+    });
+    //Flat red color scheme for iCheck
+    $(\'input[type="checkbox"].flat-red, input[type="radio"].flat-red\').iCheck({
+      checkboxClass: \'icheckbox_flat-green\',
+      radioClass: \'iradio_flat-green\'
+    });
+
+});
+', \yii\web\View::POS_END);

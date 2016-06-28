@@ -70,27 +70,6 @@ class RangeValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        $in = false;
-
-        if ($this->allowArray
-            && ($value instanceof \Traversable || is_array($value))
-            && ArrayHelper::isSubset($value, $this->range, $this->strict)
-        ) {
-            $in = true;
-        }
-
-        if (!$in && ArrayHelper::isIn($value, $this->range, $this->strict)) {
-            $in = true;
-        }
-
-        return $this->not !== $in ? null : [$this->message, []];
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function validateAttribute($model, $attribute)
     {
         if ($this->range instanceof \Closure) {
@@ -129,5 +108,26 @@ class RangeValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.range(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        $in = false;
+
+        if ($this->allowArray
+            && ($value instanceof \Traversable || is_array($value))
+            && ArrayHelper::isSubset($value, $this->range, $this->strict)
+        ) {
+            $in = true;
+        }
+
+        if (!$in && ArrayHelper::isIn($value, $this->range, $this->strict)) {
+            $in = true;
+        }
+
+        return $this->not !== $in ? null : [$this->message, []];
     }
 }

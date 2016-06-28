@@ -147,6 +147,40 @@ class Serializer extends Component
     }
 
     /**
+     * Serializes the validation errors in a model.
+     * @param Model $model
+     * @return array the array representation of the errors
+     */
+    protected function serializeModelErrors($model)
+    {
+        $this->response->setStatusCode(422, 'Data Validation Failed.');
+        $result = [];
+        foreach ($model->getFirstErrors() as $name => $message) {
+            $result[] = [
+                'field' => $name,
+                'message' => $message,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Serializes a model object.
+     * @param Arrayable $model
+     * @return array the array representation of the model
+     */
+    protected function serializeModel($model)
+    {
+        if ($this->request->getIsHead()) {
+            return null;
+        } else {
+            list ($fields, $expand) = $this->getRequestedFields();
+            return $model->toArray($fields, $expand);
+        }
+    }
+
+    /**
      * @return array the names of the requested fields. The first element is an array
      * representing the list of default fields requested, while the second element is
      * an array of the extra fields requested in addition to the default fields.
@@ -194,22 +228,22 @@ class Serializer extends Component
     }
 
     /**
-     * Serializes a pagination into an array.
-     * @param Pagination $pagination
-     * @return array the array representation of the pagination
-     * @see addPaginationHeaders()
+     * Serializes a set of models.
+     * @param array $models
+     * @return array the array representation of the models
      */
-    protected function serializePagination($pagination)
+    protected function serializeModels(array $models)
     {
-        return [
-            $this->linksEnvelope => Link::serialize($pagination->getLinks(true)),
-            $this->metaEnvelope => [
-                'totalCount' => $pagination->totalCount,
-                'pageCount' => $pagination->getPageCount(),
-                'currentPage' => $pagination->getPage() + 1,
-                'perPage' => $pagination->getPageSize(),
-            ],
-        ];
+        list ($fields, $expand) = $this->getRequestedFields();
+        foreach ($models as $i => $model) {
+            if ($model instanceof Arrayable) {
+                $models[$i] = $model->toArray($fields, $expand);
+            } elseif (is_array($model)) {
+                $models[$i] = ArrayHelper::toArray($model);
+            }
+        }
+
+        return $models;
     }
 
     /**
@@ -232,55 +266,21 @@ class Serializer extends Component
     }
 
     /**
-     * Serializes a model object.
-     * @param Arrayable $model
-     * @return array the array representation of the model
+     * Serializes a pagination into an array.
+     * @param Pagination $pagination
+     * @return array the array representation of the pagination
+     * @see addPaginationHeaders()
      */
-    protected function serializeModel($model)
+    protected function serializePagination($pagination)
     {
-        if ($this->request->getIsHead()) {
-            return null;
-        } else {
-            list ($fields, $expand) = $this->getRequestedFields();
-            return $model->toArray($fields, $expand);
-        }
-    }
-
-    /**
-     * Serializes the validation errors in a model.
-     * @param Model $model
-     * @return array the array representation of the errors
-     */
-    protected function serializeModelErrors($model)
-    {
-        $this->response->setStatusCode(422, 'Data Validation Failed.');
-        $result = [];
-        foreach ($model->getFirstErrors() as $name => $message) {
-            $result[] = [
-                'field' => $name,
-                'message' => $message,
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * Serializes a set of models.
-     * @param array $models
-     * @return array the array representation of the models
-     */
-    protected function serializeModels(array $models)
-    {
-        list ($fields, $expand) = $this->getRequestedFields();
-        foreach ($models as $i => $model) {
-            if ($model instanceof Arrayable) {
-                $models[$i] = $model->toArray($fields, $expand);
-            } elseif (is_array($model)) {
-                $models[$i] = ArrayHelper::toArray($model);
-            }
-        }
-
-        return $models;
+        return [
+            $this->linksEnvelope => Link::serialize($pagination->getLinks(true)),
+            $this->metaEnvelope => [
+                'totalCount' => $pagination->totalCount,
+                'pageCount' => $pagination->getPageCount(),
+                'currentPage' => $pagination->getPage() + 1,
+                'perPage' => $pagination->getPageSize(),
+            ],
+        ];
     }
 }

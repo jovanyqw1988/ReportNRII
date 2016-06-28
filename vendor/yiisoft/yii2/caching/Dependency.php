@@ -19,6 +19,10 @@ namespace yii\caching;
 abstract class Dependency extends \yii\base\Object
 {
     /**
+     * @var array static storage of cached data for reusable dependencies.
+     */
+    private static $_reusableData = [];
+    /**
      * @var mixed the dependency data that is saved in cache and later is compared with the
      * latest dependency data.
      */
@@ -32,10 +36,12 @@ abstract class Dependency extends \yii\base\Object
     public $reusable = false;
 
     /**
-     * @var array static storage of cached data for reusable dependencies.
+     * Resets all cached data for reusable dependencies.
      */
-    private static $_reusableData = [];
-
+    public static function resetReusableData()
+    {
+        self::$_reusableData = [];
+    }
 
     /**
      * Evaluates the dependency by generating and saving the data related with dependency.
@@ -53,33 +59,6 @@ abstract class Dependency extends \yii\base\Object
         } else {
             $this->data = $this->generateDependencyData($cache);
         }
-    }
-
-    /**
-     * Returns a value indicating whether the dependency has changed.
-     * @param Cache $cache the cache component that is currently evaluating this dependency
-     * @return boolean whether the dependency has changed.
-     */
-    public function getHasChanged($cache)
-    {
-        if ($this->reusable) {
-            $hash = $this->generateReusableHash();
-            if (!array_key_exists($hash, self::$_reusableData)) {
-                self::$_reusableData[$hash] = $this->generateDependencyData($cache);
-            }
-            $data = self::$_reusableData[$hash];
-        } else {
-            $data = $this->generateDependencyData($cache);
-        }
-        return $data !== $this->data;
-    }
-
-    /**
-     * Resets all cached data for reusable dependencies.
-     */
-    public static function resetReusableData()
-    {
-        self::$_reusableData = [];
     }
 
     /**
@@ -103,4 +82,23 @@ abstract class Dependency extends \yii\base\Object
      * @return mixed the data needed to determine if dependency has been changed.
      */
     abstract protected function generateDependencyData($cache);
+
+    /**
+     * Returns a value indicating whether the dependency has changed.
+     * @param Cache $cache the cache component that is currently evaluating this dependency
+     * @return boolean whether the dependency has changed.
+     */
+    public function getHasChanged($cache)
+    {
+        if ($this->reusable) {
+            $hash = $this->generateReusableHash();
+            if (!array_key_exists($hash, self::$_reusableData)) {
+                self::$_reusableData[$hash] = $this->generateDependencyData($cache);
+            }
+            $data = self::$_reusableData[$hash];
+        } else {
+            $data = $this->generateDependencyData($cache);
+        }
+        return $data !== $this->data;
+    }
 }

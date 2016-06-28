@@ -2,28 +2,14 @@
 
 namespace tests\codeception\frontend\unit\models;
 
-use Yii;
-use tests\codeception\frontend\unit\TestCase;
 use frontend\models\ContactForm;
+use tests\codeception\frontend\unit\TestCase;
+use Yii;
 
 class ContactFormTest extends TestCase
 {
 
     use \Codeception\Specify;
-
-    protected function setUp()
-    {
-        parent::setUp();
-        Yii::$app->mailer->fileTransportCallback = function ($mailer, $message) {
-            return 'testing_message.eml';
-        };
-    }
-
-    protected function tearDown()
-    {
-        unlink($this->getMessageFile());
-        parent::tearDown();
-    }
 
     public function testContact()
     {
@@ -55,5 +41,19 @@ class ContactFormTest extends TestCase
     private function getMessageFile()
     {
         return Yii::getAlias(Yii::$app->mailer->fileTransportPath) . '/testing_message.eml';
+    }
+
+    protected function setUp()
+    {
+        parent::setUp();
+        Yii::$app->mailer->fileTransportCallback = function ($mailer, $message) {
+            return 'testing_message.eml';
+        };
+    }
+
+    protected function tearDown()
+    {
+        unlink($this->getMessageFile());
+        parent::tearDown();
     }
 }

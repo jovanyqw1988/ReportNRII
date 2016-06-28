@@ -100,6 +100,22 @@ class Module extends \yii\base\Module implements BootstrapInterface
     }
 
     /**
+     * Returns the list of the core code generator configurations.
+     * @return array the list of the core code generator configurations.
+     */
+    protected function coreGenerators()
+    {
+        return [
+            'model' => ['class' => 'yii\gii\generators\model\Generator'],
+            'crud' => ['class' => 'yii\gii\generators\crud\Generator'],
+            'controller' => ['class' => 'yii\gii\generators\controller\Generator'],
+            'form' => ['class' => 'yii\gii\generators\form\Generator'],
+            'module' => ['class' => 'yii\gii\generators\module\Generator'],
+            'extension' => ['class' => 'yii\gii\generators\extension\Generator'],
+        ];
+    }
+
+    /**
      * @inheritdoc
      */
     public function beforeAction($action)
@@ -126,16 +142,6 @@ class Module extends \yii\base\Module implements BootstrapInterface
     }
 
     /**
-     * Resets potentially incompatible global settings done in app config.
-     */
-    protected function resetGlobalSettings()
-    {
-        if (Yii::$app instanceof \yii\web\Application) {
-            Yii::$app->assetManager->bundles = [];
-        }
-    }
-
-    /**
      * @return boolean whether the module can be accessed by the current user
      */
     protected function checkAccess()
@@ -152,18 +158,12 @@ class Module extends \yii\base\Module implements BootstrapInterface
     }
 
     /**
-     * Returns the list of the core code generator configurations.
-     * @return array the list of the core code generator configurations.
+     * Resets potentially incompatible global settings done in app config.
      */
-    protected function coreGenerators()
+    protected function resetGlobalSettings()
     {
-        return [
-            'model' => ['class' => 'yii\gii\generators\model\Generator'],
-            'crud' => ['class' => 'yii\gii\generators\crud\Generator'],
-            'controller' => ['class' => 'yii\gii\generators\controller\Generator'],
-            'form' => ['class' => 'yii\gii\generators\form\Generator'],
-            'module' => ['class' => 'yii\gii\generators\module\Generator'],
-            'extension' => ['class' => 'yii\gii\generators\extension\Generator'],
-        ];
+        if (Yii::$app instanceof \yii\web\Application) {
+            Yii::$app->assetManager->bundles = [];
+        }
     }
 }

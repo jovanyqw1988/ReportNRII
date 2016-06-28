@@ -8,9 +8,9 @@
 namespace yii\debug\controllers;
 
 use Yii;
+use yii\debug\models\search\Debug;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
-use yii\debug\models\search\Debug;
 use yii\web\Response;
 
 /**
@@ -33,7 +33,7 @@ class DefaultController extends Controller
      * @var array the summary data (e.g. URL, time)
      */
     public $summary;
-
+    private $_manifest;
 
     /**
      * @inheritdoc
@@ -71,52 +71,6 @@ class DefaultController extends Controller
             'manifest' => $this->getManifest(),
         ]);
     }
-
-    public function actionView($tag = null, $panel = null)
-    {
-        if ($tag === null) {
-            $tags = array_keys($this->getManifest());
-            $tag = reset($tags);
-        }
-        $this->loadData($tag);
-        if (isset($this->module->panels[$panel])) {
-            $activePanel = $this->module->panels[$panel];
-        } else {
-            $activePanel = $this->module->panels['request'];
-        }
-
-        return $this->render('view', [
-            'tag' => $tag,
-            'summary' => $this->summary,
-            'manifest' => $this->getManifest(),
-            'panels' => $this->module->panels,
-            'activePanel' => $activePanel,
-        ]);
-    }
-
-    public function actionToolbar($tag)
-    {
-        $this->loadData($tag, 5);
-
-        return $this->renderPartial('toolbar', [
-            'tag' => $tag,
-            'panels' => $this->module->panels,
-            'position' => 'bottom',
-        ]);
-    }
-
-    public function actionDownloadMail($file)
-    {
-        $filePath = Yii::getAlias($this->module->panels['mail']->mailPath) . '/' . basename($file);
-
-        if ((mb_strpos($file, '\\') !== false || mb_strpos($file, '/') !== false) || !is_file($filePath)) {
-            throw new NotFoundHttpException('Mail file not found');
-        }
-
-        return Yii::$app->response->sendFile($filePath);
-    }
-
-    private $_manifest;
 
     protected function getManifest($forceReload = false)
     {
@@ -169,5 +123,49 @@ class DefaultController extends Controller
         }
 
         throw new NotFoundHttpException("Unable to find debug data tagged with '$tag'.");
+    }
+
+    public function actionView($tag = null, $panel = null)
+    {
+        if ($tag === null) {
+            $tags = array_keys($this->getManifest());
+            $tag = reset($tags);
+        }
+        $this->loadData($tag);
+        if (isset($this->module->panels[$panel])) {
+            $activePanel = $this->module->panels[$panel];
+        } else {
+            $activePanel = $this->module->panels['request'];
+        }
+
+        return $this->render('view', [
+            'tag' => $tag,
+            'summary' => $this->summary,
+            'manifest' => $this->getManifest(),
+            'panels' => $this->module->panels,
+            'activePanel' => $activePanel,
+        ]);
+    }
+
+    public function actionToolbar($tag)
+    {
+        $this->loadData($tag, 5);
+
+        return $this->renderPartial('toolbar', [
+            'tag' => $tag,
+            'panels' => $this->module->panels,
+            'position' => 'bottom',
+        ]);
+    }
+
+    public function actionDownloadMail($file)
+    {
+        $filePath = Yii::getAlias($this->module->panels['mail']->mailPath) . '/' . basename($file);
+
+        if ((mb_strpos($file, '\\') !== false || mb_strpos($file, '/') !== false) || !is_file($filePath)) {
+            throw new NotFoundHttpException('Mail file not found');
+        }
+
+        return Yii::$app->response->sendFile($filePath);
     }
 }

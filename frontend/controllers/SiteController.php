@@ -1,17 +1,7 @@
 <?php
 namespace frontend\controllers;
 
-use Yii;
-use yii\base\InvalidParamException;
-use yii\web\BadRequestHttpException;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
-use common\models\LoginForm;
-use frontend\models\PasswordResetRequestForm;
-use frontend\models\ResetPasswordForm;
-use frontend\models\SignupForm;
-use frontend\models\ContactForm;
+use frontend\models\LoginForm;use Yii;use yii\base\InvalidParamException;use yii\filters\VerbFilter;use yii\web\BadRequestHttpException;use yii\web\Controller;
 
 /**
  * Site controller
@@ -24,22 +14,6 @@ class SiteController extends Controller
     public function behaviors()
     {
         return [
-            'access' => [
-                'class' => AccessControl::className(),
-                'only' => ['logout', 'signup'],
-                'rules' => [
-                    [
-                        'actions' => ['signup'],
-                        'allow' => true,
-                        'roles' => ['?'],
-                    ],
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
@@ -72,39 +46,45 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
+        if (empty(Yii::$app->user->id)) {
+            $this->redirect(["login"]);
+        }
+
         return $this->render('index');
     }
 
     /**
-     * Logs in a user.
+     * Logs in a frontend.
      *
+     * @param int $status
      * @return mixed
      */
     public function actionLogin()
     {
+
         if (!Yii::$app->user->isGuest) {
             return $this->goHome();
         }
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
+            return $this->goHome();
         } else {
+            $this->layout = "main-login";
             return $this->render('login', [
-                'model' => $model,
+                'model' => $model
             ]);
         }
     }
 
     /**
-     * Logs out the current user.
+     * Logs out the current frontend.
      *
      * @return mixed
      */
     public function actionLogout()
     {
         Yii::$app->user->logout();
-
         return $this->goHome();
     }
 
@@ -142,7 +122,7 @@ class SiteController extends Controller
     }
 
     /**
-     * Signs user up.
+     * Signs frontend up.
      *
      * @return mixed
      */
@@ -156,9 +136,16 @@ class SiteController extends Controller
                 }
             }
         }
-
+        $this->layout = "main-login";
         return $this->render('signup', [
             'model' => $model,
+        ]);
+    }
+
+    public function actionAuthorization()
+    {
+        $this->layout = "main-login";
+        return $this->render('authorization', [
         ]);
     }
 

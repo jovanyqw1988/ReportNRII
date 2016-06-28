@@ -1,7 +1,5 @@
 <?php
 
-use yii\helpers\Inflector;
-
 $favourites = ($favourites) ?: [];
 
 // Note: requires `$controllers` variable during rendering...

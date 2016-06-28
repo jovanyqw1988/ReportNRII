@@ -75,29 +75,6 @@ trait ArrayableTrait
     }
 
     /**
-     * Returns the list of fields that can be expanded further and returned by [[toArray()]].
-     *
-     * This method is similar to [[fields()]] except that the list of fields returned
-     * by this method are not returned by default by [[toArray()]]. Only when field names
-     * to be expanded are explicitly specified when calling [[toArray()]], will their values
-     * be exported.
-     *
-     * The default implementation returns an empty array.
-     *
-     * You may override this method to return a list of expandable fields based on some context information
-     * (e.g. the current application user).
-     *
-     * @return array the list of expandable field names or field definitions. Please refer
-     * to [[fields()]] on the format of the return value.
-     * @see toArray()
-     * @see fields()
-     */
-    public function extraFields()
-    {
-        return [];
-    }
-
-    /**
      * Converts the model into an array.
      *
      * This method will first identify which fields to be included in the resulting array by calling [[resolveFields()]].
@@ -163,5 +140,28 @@ trait ArrayableTrait
         }
 
         return $result;
+    }
+
+    /**
+     * Returns the list of fields that can be expanded further and returned by [[toArray()]].
+     *
+     * This method is similar to [[fields()]] except that the list of fields returned
+     * by this method are not returned by default by [[toArray()]]. Only when field names
+     * to be expanded are explicitly specified when calling [[toArray()]], will their values
+     * be exported.
+     *
+     * The default implementation returns an empty array.
+     *
+     * You may override this method to return a list of expandable fields based on some context information
+     * (e.g. the current application user).
+     *
+     * @return array the list of expandable field names or field definitions. Please refer
+     * to [[fields()]] on the format of the return value.
+     * @see toArray()
+     * @see fields()
+     */
+    public function extraFields()
+    {
+        return [];
     }
 }

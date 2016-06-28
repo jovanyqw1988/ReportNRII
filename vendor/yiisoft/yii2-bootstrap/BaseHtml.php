@@ -40,6 +40,26 @@ class BaseHtml extends \yii\helpers\Html
     }
 
     /**
+     * Generates a Bootstrap static form control for the given model attribute.
+     * @param \yii\base\Model $model the model object.
+     * @param string $attribute the attribute name or expression. See [[getAttributeName()]] for the format
+     * about attribute expression.
+     * @param array $options the tag options in terms of name-value pairs. See [[staticControl()]] for details.
+     * @return string generated HTML
+     * @see staticControl()
+     */
+    public static function activeStaticControl($model, $attribute, $options = [])
+    {
+        if (isset($options['value'])) {
+            $value = $options['value'];
+            unset($options['value']);
+        } else {
+            $value = static::getAttributeValue($model, $attribute);
+        }
+        return static::staticControl($value, $options);
+    }
+
+    /**
      * Renders Bootstrap static form control.
      *
      * By default value will be HTML-encoded using [[encode()]], you may control this behavior
@@ -64,25 +84,5 @@ class BaseHtml extends \yii\helpers\Html
             $encode = true;
         }
         return static::tag('p', $encode ? static::encode($value) : $value, $options);
-    }
-
-    /**
-     * Generates a Bootstrap static form control for the given model attribute.
-     * @param \yii\base\Model $model the model object.
-     * @param string $attribute the attribute name or expression. See [[getAttributeName()]] for the format
-     * about attribute expression.
-     * @param array $options the tag options in terms of name-value pairs. See [[staticControl()]] for details.
-     * @return string generated HTML
-     * @see staticControl()
-     */
-    public static function activeStaticControl($model, $attribute, $options = [])
-    {
-        if (isset($options['value'])) {
-            $value = $options['value'];
-            unset($options['value']);
-        } else {
-            $value = static::getAttributeValue($model, $attribute);
-        }
-        return static::staticControl($value, $options);
     }
 }

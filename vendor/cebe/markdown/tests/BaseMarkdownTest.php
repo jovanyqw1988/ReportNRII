@@ -18,13 +18,6 @@ abstract class BaseMarkdownTest extends \PHPUnit_Framework_TestCase
 {
 	protected $outputFileExtension = '.html';
 
-	abstract public function getDataPaths();
-
-	/**
-	 * @return Parser
-	 */
-	abstract public function createMarkdown();
-
 	/**
 	 * @dataProvider dataFiles
 	 */
@@ -37,6 +30,21 @@ abstract class BaseMarkdownTest extends \PHPUnit_Framework_TestCase
 		$m = $this->createMarkdown();
 		$this->assertEquals($html, $m->parse($markdown));
 	}
+
+	public function getTestData($path, $file)
+	{
+		return [
+			file_get_contents($this->getDataPaths()[$path] . '/' . $file . '.md'),
+			file_get_contents($this->getDataPaths()[$path] . '/' . $file . $this->outputFileExtension),
+		];
+	}
+
+	abstract public function getDataPaths();
+
+	/**
+	 * @return Parser
+	 */
+	abstract public function createMarkdown();
 
 	public function testUtf8()
 	{
@@ -81,14 +89,6 @@ abstract class BaseMarkdownTest extends \PHPUnit_Framework_TestCase
 	{
 		$this->assertSame($exptected, $this->createMarkdown()->parseParagraph($input));
 		$this->assertSame($pexpect === null ? "<p>$exptected</p>\n" : "<p>$pexpect</p>\n", $this->createMarkdown()->parse($input));
-	}
-
-	public function getTestData($path, $file)
-	{
-		return [
-			file_get_contents($this->getDataPaths()[$path] . '/' . $file . '.md'),
-			file_get_contents($this->getDataPaths()[$path] . '/' . $file . $this->outputFileExtension),
-		];
 	}
 
 	public function dataFiles()

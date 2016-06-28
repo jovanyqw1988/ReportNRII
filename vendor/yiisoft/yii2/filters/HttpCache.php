@@ -8,8 +8,8 @@
 namespace yii\filters;
 
 use Yii;
-use yii\base\ActionFilter;
 use yii\base\Action;
+use yii\base\ActionFilter;
 
 /**
  * HttpCache implements client-side caching by utilizing the `Last-Modified` and `ETag` HTTP headers.
@@ -153,23 +153,14 @@ class HttpCache extends ActionFilter
     }
 
     /**
-     * Validates if the HTTP cache contains valid content.
-     * @param integer $lastModified the calculated Last-Modified value in terms of a UNIX timestamp.
-     * If null, the Last-Modified header will not be validated.
-     * @param string $etag the calculated ETag value. If null, the ETag header will not be validated.
-     * @return boolean whether the HTTP cache is still valid.
+     * Generates an ETag from the given seed string.
+     * @param string $seed Seed for the ETag
+     * @return string the generated ETag
      */
-    protected function validateCache($lastModified, $etag)
+    protected function generateEtag($seed)
     {
-        if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
-            // HTTP_IF_NONE_MATCH takes precedence over HTTP_IF_MODIFIED_SINCE
-            // http://tools.ietf.org/html/rfc7232#section-3.3
-            return $etag !== null && in_array($etag, Yii::$app->request->getETags(), true);
-        } elseif (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-            return $lastModified !== null && @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModified;
-        } else {
-            return $etag === null && $lastModified === null;
-        }
+        $etag = '"' . rtrim(base64_encode(sha1($seed, true)), '=') . '"';
+        return $this->weakEtag ? 'W/' . $etag : $etag;
     }
 
     /**
@@ -197,13 +188,22 @@ class HttpCache extends ActionFilter
     }
 
     /**
-     * Generates an ETag from the given seed string.
-     * @param string $seed Seed for the ETag
-     * @return string the generated ETag
+     * Validates if the HTTP cache contains valid content.
+     * @param integer $lastModified the calculated Last-Modified value in terms of a UNIX timestamp.
+     * If null, the Last-Modified header will not be validated.
+     * @param string $etag the calculated ETag value. If null, the ETag header will not be validated.
+     * @return boolean whether the HTTP cache is still valid.
      */
-    protected function generateEtag($seed)
+    protected function validateCache($lastModified, $etag)
     {
-        $etag =  '"' . rtrim(base64_encode(sha1($seed, true)), '=') . '"';
-        return $this->weakEtag ? 'W/' . $etag : $etag;
+        if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
+            // HTTP_IF_NONE_MATCH takes precedence over HTTP_IF_MODIFIED_SINCE
+            // http://tools.ietf.org/html/rfc7232#section-3.3
+            return $etag !== null && in_array($etag, Yii::$app->request->getETags(), true);
+        } elseif (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+            return $lastModified !== null && @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModified;
+        } else {
+            return $etag === null && $lastModified === null;
+        }
     }
 }

@@ -129,21 +129,6 @@ class NavBar extends Widget
     }
 
     /**
-     * Renders the widget.
-     */
-    public function run()
-    {
-        $tag = ArrayHelper::remove($this->containerOptions, 'tag', 'div');
-        echo Html::endTag($tag);
-        if ($this->renderInnerContainer) {
-            echo Html::endTag('div');
-        }
-        $tag = ArrayHelper::remove($this->options, 'tag', 'nav');
-        echo Html::endTag($tag);
-        BootstrapPluginAsset::register($this->getView());
-    }
-
-    /**
      * Renders collapsible toggle button.
      * @return string the rendering toggle button.
      */
@@ -157,5 +142,20 @@ class NavBar extends Widget
             'data-toggle' => 'collapse',
             'data-target' => "#{$this->containerOptions['id']}",
         ]);
+    }
+
+    /**
+     * Renders the widget.
+     */
+    public function run()
+    {
+        $tag = ArrayHelper::remove($this->containerOptions, 'tag', 'div');
+        echo Html::endTag($tag);
+        if ($this->renderInnerContainer) {
+            echo Html::endTag('div');
+        }
+        $tag = ArrayHelper::remove($this->options, 'tag', 'nav');
+        echo Html::endTag($tag);
+        BootstrapPluginAsset::register($this->getView());
     }
 }

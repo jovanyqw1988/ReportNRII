@@ -250,6 +250,14 @@ class IpValidator extends Validator
     }
 
     /**
+     * @return array The IPv4 or IPv6 ranges that are allowed or forbidden.
+     */
+    public function getRanges()
+    {
+        return $this->_ranges;
+    }
+
+    /**
      * Set the IPv4 or IPv6 ranges that are allowed or forbidden.
      *
      * The following preparation tasks are performed:
@@ -287,25 +295,45 @@ class IpValidator extends Validator
     }
 
     /**
-     * @return array The IPv4 or IPv6 ranges that are allowed or forbidden.
+     * Prepares array to fill in [[ranges]]:
+     *  - Recursively substitutes aliases, described in [[networks]] with their values
+     *  - Removes duplicates
+     *
+     *
+     * @param $ranges
+     * @return array
+     * @see networks
      */
-    public function getRanges()
+    private function prepareRanges($ranges)
     {
-        return $this->_ranges;
+        $result = [];
+        foreach ($ranges as $string) {
+            list($isRangeNegated, $range) = $this->parseNegatedRange($string);
+            if (isset($this->networks[$range])) {
+                $replacements = $this->prepareRanges($this->networks[$range]);
+                foreach ($replacements as &$replacement) {
+                    list($isReplacementNegated, $replacement) = $this->parseNegatedRange($replacement);
+                    $result[] = ($isRangeNegated && !$isReplacementNegated ? static::NEGATION_CHAR : '') . $replacement;
+                }
+            } else {
+                $result[] = $string;
+            }
+        }
+        return array_unique($result);
     }
 
     /**
-     * @inheritdoc
+     * Parses IP address/range for the negation with [[NEGATION_CHAR]].
+     *
+     * @param $string
+     * @return array `[0 => boolean, 1 => string]`
+     *  - boolean: whether the string is negated
+     *  - string: the string without negation (when the negation were present)
      */
-    protected function validateValue($value)
+    private function parseNegatedRange($string)
     {
-        $result = $this->validateSubnet($value);
-        if (is_array($result)) {
-            $result[1] = array_merge(['ip' => is_array($value) ? 'array()' : $value], $result[1]);
-            return $result;
-        } else {
-            return null;
-        }
+        $isNegated = strpos($string, static::NEGATION_CHAR) === 0;
+        return [$isNegated, $isNegated ? substr($string, strlen(static::NEGATION_CHAR)) : $string];
     }
 
     /**
@@ -411,6 +439,37 @@ class IpValidator extends Validator
     }
 
     /**
+     * Used to get the Regexp pattern for initial IP address parsing
+     * @return string
+     */
+    private function getIpParsePattern()
+    {
+        return '/^(' . preg_quote(static::NEGATION_CHAR) . '?)(.+?)(\/(\d+))?$/';
+    }
+
+    /**
+     * Gets the IP version
+     *
+     * @param string $ip
+     * @return integer
+     */
+    private function getIpVersion($ip)
+    {
+        return strpos($ip, ':') === false ? 4 : 6;
+    }
+
+    /**
+     * Validates IPv6 address
+     *
+     * @param string $value
+     * @return boolean
+     */
+    protected function validateIPv6($value)
+    {
+        return preg_match($this->ipv6Pattern, $value) !== 0;
+    }
+
+    /**
      * Expands an IPv6 address to it's full notation. For example `2001:db8::1` will be
      * expanded to `2001:0db8:0000:0000:0000:0000:0000:0001`
      *
@@ -421,6 +480,17 @@ class IpValidator extends Validator
     {
         $hex = unpack('H*hex', inet_pton($ip));
         return substr(preg_replace('/([a-f0-9]{4})/i', '$1:', $hex['hex']), 0, -1);
+    }
+
+    /**
+     * Validates IPv4 address
+     *
+     * @param string $value
+     * @return boolean
+     */
+    protected function validateIPv4($value)
+    {
+        return preg_match($this->ipv4Pattern, $value) !== 0;
     }
 
     /**
@@ -445,88 +515,6 @@ class IpValidator extends Validator
         }
 
         return false;
-    }
-
-    /**
-     * Parses IP address/range for the negation with [[NEGATION_CHAR]].
-     *
-     * @param $string
-     * @return array `[0 => boolean, 1 => string]`
-     *  - boolean: whether the string is negated
-     *  - string: the string without negation (when the negation were present)
-     */
-    private function parseNegatedRange ($string) {
-        $isNegated = strpos($string, static::NEGATION_CHAR) === 0;
-        return [$isNegated, $isNegated ? substr($string, strlen(static::NEGATION_CHAR)) : $string];
-    }
-
-    /**
-     * Prepares array to fill in [[ranges]]:
-     *  - Recursively substitutes aliases, described in [[networks]] with their values
-     *  - Removes duplicates
-     *
-     *
-     * @param $ranges
-     * @return array
-     * @see networks
-     */
-    private function prepareRanges($ranges) {
-        $result = [];
-        foreach ($ranges as $string) {
-            list($isRangeNegated, $range) = $this->parseNegatedRange($string);
-            if (isset($this->networks[$range])) {
-                $replacements = $this->prepareRanges($this->networks[$range]);
-                foreach ($replacements as &$replacement) {
-                    list($isReplacementNegated, $replacement) = $this->parseNegatedRange($replacement);
-                    $result[] = ($isRangeNegated && !$isReplacementNegated ? static::NEGATION_CHAR : '') . $replacement;
-                }
-            } else {
-                $result[] = $string;
-            }
-        }
-        return array_unique($result);
-    }
-
-    /**
-     * Validates IPv4 address
-     *
-     * @param string $value
-     * @return boolean
-     */
-    protected function validateIPv4($value)
-    {
-        return preg_match($this->ipv4Pattern, $value) !== 0;
-    }
-
-    /**
-     * Validates IPv6 address
-     *
-     * @param string $value
-     * @return boolean
-     */
-    protected function validateIPv6($value)
-    {
-        return preg_match($this->ipv6Pattern, $value) !== 0;
-    }
-
-    /**
-     * Gets the IP version
-     *
-     * @param string $ip
-     * @return integer
-     */
-    private function getIpVersion($ip)
-    {
-        return strpos($ip, ':') === false ? 4 : 6;
-    }
-
-    /**
-     * Used to get the Regexp pattern for initial IP address parsing
-     * @return string
-     */
-    private function getIpParsePattern()
-    {
-        return '/^(' . preg_quote(static::NEGATION_CHAR) . '?)(.+?)(\/(\d+))?$/';
     }
 
     /**
@@ -616,5 +604,19 @@ class IpValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.ip(value, messages, ' . Json::htmlEncode($options) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        $result = $this->validateSubnet($value);
+        if (is_array($result)) {
+            $result[1] = array_merge(['ip' => is_array($value) ? 'array()' : $value], $result[1]);
+            return $result;
+        } else {
+            return null;
+        }
     }
 }

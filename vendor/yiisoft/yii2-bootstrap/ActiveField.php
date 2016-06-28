@@ -156,6 +156,53 @@ class ActiveField extends \yii\widgets\ActiveField
     }
 
     /**
+     * @param array $instanceConfig the configuration passed to this instance's constructor
+     * @return array the layout specific default configuration for this instance
+     */
+    protected function createLayoutConfig($instanceConfig)
+    {
+        $config = [
+            'hintOptions' => [
+                'tag' => 'p',
+                'class' => 'help-block',
+            ],
+            'errorOptions' => [
+                'tag' => 'p',
+                'class' => 'help-block help-block-error',
+            ],
+            'inputOptions' => [
+                'class' => 'form-control',
+            ],
+        ];
+
+        $layout = $instanceConfig['form']->layout;
+
+        if ($layout === 'horizontal') {
+            $config['template'] = "{label}\n{beginWrapper}\n{input}\n{error}\n{endWrapper}\n{hint}";
+            $cssClasses = [
+                'offset' => 'col-sm-offset-3',
+                'label' => 'col-sm-3',
+                'wrapper' => 'col-sm-6',
+                'error' => '',
+                'hint' => 'col-sm-3',
+            ];
+            if (isset($instanceConfig['horizontalCssClasses'])) {
+                $cssClasses = ArrayHelper::merge($cssClasses, $instanceConfig['horizontalCssClasses']);
+            }
+            $config['horizontalCssClasses'] = $cssClasses;
+            $config['wrapperOptions'] = ['class' => $cssClasses['wrapper']];
+            $config['labelOptions'] = ['class' => 'control-label ' . $cssClasses['label']];
+            $config['errorOptions'] = ['class' => 'help-block help-block-error ' . $cssClasses['error']];
+            $config['hintOptions'] = ['class' => 'help-block ' . $cssClasses['hint']];
+        } elseif ($layout === 'inline') {
+            $config['labelOptions'] = ['class' => 'sr-only'];
+            $config['enableError'] = false;
+        }
+
+        return $config;
+    }
+
+    /**
      * @inheritdoc
      */
     public function render($content = null)
@@ -185,6 +232,32 @@ class ActiveField extends \yii\widgets\ActiveField
             }
         }
         return parent::render($content);
+    }
+
+    /**
+     * @param string|null $label the label or null to use model label
+     * @param array $options the tag options
+     */
+    protected function renderLabelParts($label = null, $options = [])
+    {
+        $options = array_merge($this->labelOptions, $options);
+        if ($label === null) {
+            if (isset($options['label'])) {
+                $label = $options['label'];
+                unset($options['label']);
+            } else {
+                $attribute = Html::getAttributeName($this->attribute);
+                $label = Html::encode($this->model->getAttributeLabel($attribute));
+            }
+        }
+        if (!isset($options['for'])) {
+            $options['for'] = Html::getInputId($this->model, $this->attribute);
+        }
+        $this->parts['{beginLabel}'] = Html::beginTag('label', $options);
+        $this->parts['{endLabel}'] = Html::endTag('label');
+        if (!isset($this->parts['{labelTitle}'])) {
+            $this->parts['{labelTitle}'] = $label;
+        }
     }
 
     /**
@@ -338,78 +411,5 @@ class ActiveField extends \yii\widgets\ActiveField
     {
         $this->inline = (bool) $value;
         return $this;
-    }
-
-    /**
-     * @param array $instanceConfig the configuration passed to this instance's constructor
-     * @return array the layout specific default configuration for this instance
-     */
-    protected function createLayoutConfig($instanceConfig)
-    {
-        $config = [
-            'hintOptions' => [
-                'tag' => 'p',
-                'class' => 'help-block',
-            ],
-            'errorOptions' => [
-                'tag' => 'p',
-                'class' => 'help-block help-block-error',
-            ],
-            'inputOptions' => [
-                'class' => 'form-control',
-            ],
-        ];
-
-        $layout = $instanceConfig['form']->layout;
-
-        if ($layout === 'horizontal') {
-            $config['template'] = "{label}\n{beginWrapper}\n{input}\n{error}\n{endWrapper}\n{hint}";
-            $cssClasses = [
-                'offset' => 'col-sm-offset-3',
-                'label' => 'col-sm-3',
-                'wrapper' => 'col-sm-6',
-                'error' => '',
-                'hint' => 'col-sm-3',
-            ];
-            if (isset($instanceConfig['horizontalCssClasses'])) {
-                $cssClasses = ArrayHelper::merge($cssClasses, $instanceConfig['horizontalCssClasses']);
-            }
-            $config['horizontalCssClasses'] = $cssClasses;
-            $config['wrapperOptions'] = ['class' => $cssClasses['wrapper']];
-            $config['labelOptions'] = ['class' => 'control-label ' . $cssClasses['label']];
-            $config['errorOptions'] = ['class' => 'help-block help-block-error ' . $cssClasses['error']];
-            $config['hintOptions'] = ['class' => 'help-block ' . $cssClasses['hint']];
-        } elseif ($layout === 'inline') {
-            $config['labelOptions'] = ['class' => 'sr-only'];
-            $config['enableError'] = false;
-        }
-
-        return $config;
-    }
-
-    /**
-     * @param string|null $label the label or null to use model label
-     * @param array $options the tag options
-     */
-    protected function renderLabelParts($label = null, $options = [])
-    {
-        $options = array_merge($this->labelOptions, $options);
-        if ($label === null) {
-            if (isset($options['label'])) {
-                $label = $options['label'];
-                unset($options['label']);
-            } else {
-                $attribute = Html::getAttributeName($this->attribute);
-                $label = Html::encode($this->model->getAttributeLabel($attribute));
-            }
-        }
-        if (!isset($options['for'])) {
-            $options['for'] = Html::getInputId($this->model, $this->attribute);
-        }
-        $this->parts['{beginLabel}'] = Html::beginTag('label', $options);
-        $this->parts['{endLabel}'] = Html::endTag('label');
-        if (!isset($this->parts['{labelTitle}'])) {
-            $this->parts['{labelTitle}'] = $label;
-        }
     }
 }

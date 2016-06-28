@@ -54,12 +54,26 @@ class CaptchaValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
+    public function clientValidateAttribute($object, $attribute, $view)
     {
         $captcha = $this->createCaptchaAction();
-        $valid = !is_array($value) && $captcha->validate($value, $this->caseSensitive);
+        $code = $captcha->getVerifyCode(false);
+        $hash = $captcha->generateValidationHash($this->caseSensitive ? $code : strtolower($code));
+        $options = [
+            'hash' => $hash,
+            'hashKey' => 'yiiCaptcha/' . $captcha->getUniqueId(),
+            'caseSensitive' => $this->caseSensitive,
+            'message' => Yii::$app->getI18n()->format($this->message, [
+                'attribute' => $object->getAttributeLabel($attribute),
+            ], Yii::$app->language),
+        ];
+        if ($this->skipOnEmpty) {
+            $options['skipOnEmpty'] = 1;
+        }
 
-        return $valid ? null : [$this->message, []];
+        ValidationAsset::register($view);
+
+        return 'yii.validation.captcha(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
     }
 
     /**
@@ -84,25 +98,11 @@ class CaptchaValidator extends Validator
     /**
      * @inheritdoc
      */
-    public function clientValidateAttribute($object, $attribute, $view)
+    protected function validateValue($value)
     {
         $captcha = $this->createCaptchaAction();
-        $code = $captcha->getVerifyCode(false);
-        $hash = $captcha->generateValidationHash($this->caseSensitive ? $code : strtolower($code));
-        $options = [
-            'hash' => $hash,
-            'hashKey' => 'yiiCaptcha/' . $captcha->getUniqueId(),
-            'caseSensitive' => $this->caseSensitive,
-            'message' => Yii::$app->getI18n()->format($this->message, [
-                'attribute' => $object->getAttributeLabel($attribute),
-            ], Yii::$app->language),
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
+        $valid = !is_array($value) && $captcha->validate($value, $this->caseSensitive);
 
-        ValidationAsset::register($view);
-
-        return 'yii.validation.captcha(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+        return $valid ? null : [$this->message, []];
     }
 }

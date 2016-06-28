@@ -15,25 +15,6 @@ class FA extends FontAwesome
 {
 
     /**
-     * Get all icon constants for dropdown list in example
-     * @param bool $html whether to render icon as array value prefix
-     * @return array
-     */
-    public static function getConstants($html = false)
-    {
-        $result = [];
-        foreach ((new \ReflectionClass(get_class()))->getConstants() as $constant) {
-            $key = static::$cssPrefix . ' ' . static::$cssPrefix . '-' . $constant;
-
-            $result[$key] = ($html)
-                ? static::icon($constant) . '&nbsp;&nbsp;' . $constant
-                : $constant;
-        }
-
-        return $result;
-    }
-
-    /**
      * How I saved from: http://fortawesome.github.io/Font-Awesome/cheatsheet/
      *
      * $.each($('.col-md-4.col-sm-6.col-lg-3').text().split(' '), function (i, item) {
@@ -718,4 +699,23 @@ class FA extends FontAwesome
     const _YOUTUBE = 'youtube';
     const _YOUTUBE_PLAY = 'youtube-play';
     const _YOUTUBE_SQUARE = 'youtube-square';
+
+    /**
+     * Get all icon constants for dropdown list in example
+     * @param bool $html whether to render icon as array value prefix
+     * @return array
+     */
+    public static function getConstants($html = false)
+    {
+        $result = [];
+        foreach ((new \ReflectionClass(get_class()))->getConstants() as $constant) {
+            $key = static::$cssPrefix . ' ' . static::$cssPrefix . '-' . $constant;
+
+            $result[$key] = ($html)
+                ? static::icon($constant) . '&nbsp;&nbsp;' . $constant
+                : $constant;
+        }
+
+        return $result;
+    }
 }

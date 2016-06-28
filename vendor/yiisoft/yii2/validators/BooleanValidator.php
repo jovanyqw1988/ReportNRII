@@ -50,24 +50,6 @@ class BooleanValidator extends Validator
     /**
      * @inheritdoc
      */
-    protected function validateValue($value)
-    {
-        $valid = !$this->strict && ($value == $this->trueValue || $value == $this->falseValue)
-                 || $this->strict && ($value === $this->trueValue || $value === $this->falseValue);
-
-        if (!$valid) {
-            return [$this->message, [
-                'true' => $this->trueValue === true ? 'true' : $this->trueValue,
-                'false' => $this->falseValue === false ? 'false' : $this->falseValue,
-            ]];
-        }
-
-        return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function clientValidateAttribute($model, $attribute, $view)
     {
         $options = [
@@ -89,5 +71,23 @@ class BooleanValidator extends Validator
         ValidationAsset::register($view);
 
         return 'yii.validation.boolean(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function validateValue($value)
+    {
+        $valid = !$this->strict && ($value == $this->trueValue || $value == $this->falseValue)
+            || $this->strict && ($value === $this->trueValue || $value === $this->falseValue);
+
+        if (!$valid) {
+            return [$this->message, [
+                'true' => $this->trueValue === true ? 'true' : $this->trueValue,
+                'false' => $this->falseValue === false ? 'false' : $this->falseValue,
+            ]];
+        }
+
+        return null;
     }
 }

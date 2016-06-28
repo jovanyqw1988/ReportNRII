@@ -8,6 +8,16 @@ namespace Faker\Provider;
  */
 class Barcode extends \Faker\Provider\Base
 {
+    /**
+     * Get a random EAN13 barcode.
+     * @return string
+     * @example '4006381333931'
+     */
+    public function ean13()
+    {
+        return $this->ean(13);
+    }
+
     private function ean($length = 13)
     {
         $code = $this->numerify(str_repeat('#', $length - 1));
@@ -26,6 +36,30 @@ class Barcode extends \Faker\Provider\Base
             $sums += $digit * $sequence[$n % 2];
         }
         return (10 - $sums % 10) % 10;
+    }
+
+    /**
+     * Get a random EAN8 barcode.
+     * @return string
+     * @example '73513537'
+     */
+    public function ean8()
+    {
+        return $this->ean(8);
+    }
+
+    /**
+     * Get a random ISBN-10 code
+     * @link http://en.wikipedia.org/wiki/International_Standard_Book_Number
+     *
+     * @return string
+     * @example '4881416324'
+     */
+    public function isbn10()
+    {
+        $code = $this->numerify(str_repeat('#', 9));
+
+        return $code . static::isbnChecksum($code);
     }
 
     /**
@@ -58,40 +92,6 @@ class Barcode extends \Faker\Provider\Base
 
         // 10 is replaced by X
         return ($result < 10)?$result:'X';
-    }
-
-    /**
-     * Get a random EAN13 barcode.
-     * @return string
-     * @example '4006381333931'
-     */
-    public function ean13()
-    {
-        return $this->ean(13);
-    }
-
-    /**
-     * Get a random EAN8 barcode.
-     * @return string
-     * @example '73513537'
-     */
-    public function ean8()
-    {
-        return $this->ean(8);
-    }
-
-    /**
-     * Get a random ISBN-10 code
-     * @link http://en.wikipedia.org/wiki/International_Standard_Book_Number
-     *
-     * @return string
-     * @example '4881416324'
-     */
-    public function isbn10()
-    {
-        $code = $this->numerify(str_repeat('#', 9));
-
-        return $code . static::isbnChecksum($code);
     }
 
     /**

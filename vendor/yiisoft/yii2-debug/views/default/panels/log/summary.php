@@ -2,8 +2,8 @@
 /* @var $panel yii\debug\panels\LogPanel */
 /* @var $data array */
 
-use yii\log\Target;
 use yii\log\Logger;
+use yii\log\Target;
 
 ?>
 

@@ -2,8 +2,8 @@
 
 namespace Faker\ORM\Mandango;
 
-use Mandango\Mandango;
 use Faker\Provider\Base;
+use Mandango\Mandango;
 
 /**
  * Service class for populating a table through a Mandango ActiveRecord class.
@@ -28,14 +28,14 @@ class EntityPopulator
         return $this->class;
     }
 
-    public function setColumnFormatters($columnFormatters)
-    {
-        $this->columnFormatters = $columnFormatters;
-    }
-
     public function getColumnFormatters()
     {
         return $this->columnFormatters;
+    }
+
+    public function setColumnFormatters($columnFormatters)
+    {
+        $this->columnFormatters = $columnFormatters;
     }
 
     public function mergeColumnFormattersWith($columnFormatters)

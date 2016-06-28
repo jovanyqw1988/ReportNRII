@@ -42,29 +42,19 @@ class EntityPopulator
         return $this->class->getName();
     }
 
-    public function setColumnFormatters($columnFormatters)
-    {
-        $this->columnFormatters = $columnFormatters;
-    }
-
     public function getColumnFormatters()
     {
         return $this->columnFormatters;
     }
 
+    public function setColumnFormatters($columnFormatters)
+    {
+        $this->columnFormatters = $columnFormatters;
+    }
+
     public function mergeColumnFormattersWith($columnFormatters)
     {
         $this->columnFormatters = array_merge($this->columnFormatters, $columnFormatters);
-    }
-
-    public function setModifiers(array $modifiers)
-    {
-        $this->modifiers = $modifiers;
-    }
-
-    public function getModifiers()
-    {
-        return $this->modifiers;
     }
 
     public function mergeModifiersWith(array $modifiers)
@@ -171,6 +161,16 @@ class EntityPopulator
         foreach ($this->getModifiers() as $modifier) {
             $modifier($obj, $insertedEntities);
         }
+    }
+
+    public function getModifiers()
+    {
+        return $this->modifiers;
+    }
+
+    public function setModifiers(array $modifiers)
+    {
+        $this->modifiers = $modifiers;
     }
 
     private function generateId($obj, $column, EntityManagerInterface $manager)

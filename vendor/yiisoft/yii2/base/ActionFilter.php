@@ -79,35 +79,14 @@ class ActionFilter extends Behavior
     }
 
     /**
-     * @param ActionEvent $event
+     * Returns a value indicating whether the filter is active for the given action.
+     * @param Action $action the action being filtered
+     * @return boolean whether the filter is active for the given action.
      */
-    public function afterFilter($event)
+    protected function isActive($action)
     {
-        $event->result = $this->afterAction($event->action, $event->result);
-        $this->owner->off(Controller::EVENT_AFTER_ACTION, [$this, 'afterFilter']);
-    }
-
-    /**
-     * This method is invoked right before an action is to be executed (after all possible filters.)
-     * You may override this method to do last-minute preparation for the action.
-     * @param Action $action the action to be executed.
-     * @return boolean whether the action should continue to be executed.
-     */
-    public function beforeAction($action)
-    {
-        return true;
-    }
-
-    /**
-     * This method is invoked right after an action is executed.
-     * You may override this method to do some postprocessing for the action.
-     * @param Action $action the action just executed.
-     * @param mixed $result the action execution result
-     * @return mixed the processed action result.
-     */
-    public function afterAction($action, $result)
-    {
-        return $result;
+        $id = $this->getActionId($action);
+        return !in_array($id, $this->except, true) && (empty($this->only) || in_array($id, $this->only, true));
     }
 
     /**
@@ -131,13 +110,34 @@ class ActionFilter extends Behavior
     }
 
     /**
-     * Returns a value indicating whether the filter is active for the given action.
-     * @param Action $action the action being filtered
-     * @return boolean whether the filter is active for the given action.
+     * This method is invoked right before an action is to be executed (after all possible filters.)
+     * You may override this method to do last-minute preparation for the action.
+     * @param Action $action the action to be executed.
+     * @return boolean whether the action should continue to be executed.
      */
-    protected function isActive($action)
+    public function beforeAction($action)
     {
-        $id = $this->getActionId($action);
-        return !in_array($id, $this->except, true) && (empty($this->only) || in_array($id, $this->only, true));
+        return true;
+    }
+
+    /**
+     * @param ActionEvent $event
+     */
+    public function afterFilter($event)
+    {
+        $event->result = $this->afterAction($event->action, $event->result);
+        $this->owner->off(Controller::EVENT_AFTER_ACTION, [$this, 'afterFilter']);
+    }
+
+    /**
+     * This method is invoked right after an action is executed.
+     * You may override this method to do some postprocessing for the action.
+     * @param Action $action the action just executed.
+     * @param mixed $result the action execution result
+     * @return mixed the processed action result.
+     */
+    public function afterAction($action, $result)
+    {
+        return $result;
     }
 }

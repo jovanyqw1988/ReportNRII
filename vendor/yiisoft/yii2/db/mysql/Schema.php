@@ -7,9 +7,9 @@
 
 namespace yii\db\mysql;
 
+use yii\db\ColumnSchema;
 use yii\db\Expression;
 use yii\db\TableSchema;
-use yii\db\ColumnSchema;
 
 /**
  * Schema is the class for retrieving metadata from a MySQL database (version 4.1.x and 5.x).
@@ -52,18 +52,6 @@ class Schema extends \yii\db\Schema
         'enum' => self::TYPE_STRING,
     ];
 
-
-    /**
-     * Quotes a table name for use in a query.
-     * A simple table name has no schema prefix.
-     * @param string $name table name
-     * @return string the properly quoted table name
-     */
-    public function quoteSimpleTableName($name)
-    {
-        return strpos($name, '`') !== false ? $name : "`$name`";
-    }
-
     /**
      * Quotes a column name for use in a query.
      * A simple column name has no prefix.
@@ -82,6 +70,63 @@ class Schema extends \yii\db\Schema
     public function createQueryBuilder()
     {
         return new QueryBuilder($this->db);
+    }
+
+    /**
+     * Returns all unique indexes for the given table.
+     * Each array element is of the following structure:
+     *
+     * ```php
+     * [
+     *     'IndexName1' => ['col1' [, ...]],
+     *     'IndexName2' => ['col2' [, ...]],
+     * ]
+     * ```
+     *
+     * @param TableSchema $table the table metadata
+     * @return array all unique indexes for the given table.
+     */
+    public function findUniqueIndexes($table)
+    {
+        $sql = $this->getCreateTableSql($table);
+        $uniqueIndexes = [];
+
+        $regexp = '/UNIQUE KEY\s+([^\(\s]+)\s*\(([^\(\)]+)\)/mi';
+        if (preg_match_all($regexp, $sql, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $indexName = str_replace('`', '', $match[1]);
+                $indexColumns = array_map('trim', explode(',', str_replace('`', '', $match[2])));
+                $uniqueIndexes[$indexName] = $indexColumns;
+            }
+        }
+
+        return $uniqueIndexes;
+    }
+
+    /**
+     * Gets the CREATE TABLE sql string.
+     * @param TableSchema $table the table metadata
+     * @return string $sql the result of 'SHOW CREATE TABLE'
+     */
+    protected function getCreateTableSql($table)
+    {
+        $row = $this->db->createCommand('SHOW CREATE TABLE ' . $this->quoteTableName($table->fullName))->queryOne();
+        if (isset($row['Create Table'])) {
+            $sql = $row['Create Table'];
+        } else {
+            $row = array_values($row);
+            $sql = $row[1];
+        }
+
+        return $sql;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function createColumnSchemaBuilder($type, $length = null)
+    {
+        return new ColumnSchemaBuilder($type, $length, $this->db);
     }
 
     /**
@@ -118,6 +163,43 @@ class Schema extends \yii\db\Schema
         } else {
             $table->fullName = $table->name = $parts[0];
         }
+    }
+
+    /**
+     * Collects the metadata of table columns.
+     * @param TableSchema $table the table metadata
+     * @return boolean whether the table exists in the database
+     * @throws \Exception if DB query fails
+     */
+    protected function findColumns($table)
+    {
+        $sql = 'SHOW FULL COLUMNS FROM ' . $this->quoteTableName($table->fullName);
+        try {
+            $columns = $this->db->createCommand($sql)->queryAll();
+        } catch (\Exception $e) {
+            $previous = $e->getPrevious();
+            if ($previous instanceof \PDOException && strpos($previous->getMessage(), 'SQLSTATE[42S02') !== false) {
+                // table does not exist
+                // https://dev.mysql.com/doc/refman/5.5/en/error-messages-server.html#error_er_bad_table_error
+                return false;
+            }
+            throw $e;
+        }
+        foreach ($columns as $info) {
+            if ($this->db->slavePdo->getAttribute(\PDO::ATTR_CASE) !== \PDO::CASE_LOWER) {
+                $info = array_change_key_case($info, CASE_LOWER);
+            }
+            $column = $this->loadColumnSchema($info);
+            $table->columns[$column->name] = $column;
+            if ($column->isPrimaryKey) {
+                $table->primaryKey[] = $column->name;
+                if ($column->autoIncrement) {
+                    $table->sequenceName = '';
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -186,61 +268,6 @@ class Schema extends \yii\db\Schema
     }
 
     /**
-     * Collects the metadata of table columns.
-     * @param TableSchema $table the table metadata
-     * @return boolean whether the table exists in the database
-     * @throws \Exception if DB query fails
-     */
-    protected function findColumns($table)
-    {
-        $sql = 'SHOW FULL COLUMNS FROM ' . $this->quoteTableName($table->fullName);
-        try {
-            $columns = $this->db->createCommand($sql)->queryAll();
-        } catch (\Exception $e) {
-            $previous = $e->getPrevious();
-            if ($previous instanceof \PDOException && strpos($previous->getMessage(), 'SQLSTATE[42S02') !== false) {
-                // table does not exist
-                // https://dev.mysql.com/doc/refman/5.5/en/error-messages-server.html#error_er_bad_table_error
-                return false;
-            }
-            throw $e;
-        }
-        foreach ($columns as $info) {
-            if ($this->db->slavePdo->getAttribute(\PDO::ATTR_CASE) !== \PDO::CASE_LOWER) {
-                $info = array_change_key_case($info, CASE_LOWER);
-            }
-            $column = $this->loadColumnSchema($info);
-            $table->columns[$column->name] = $column;
-            if ($column->isPrimaryKey) {
-                $table->primaryKey[] = $column->name;
-                if ($column->autoIncrement) {
-                    $table->sequenceName = '';
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Gets the CREATE TABLE sql string.
-     * @param TableSchema $table the table metadata
-     * @return string $sql the result of 'SHOW CREATE TABLE'
-     */
-    protected function getCreateTableSql($table)
-    {
-        $row = $this->db->createCommand('SHOW CREATE TABLE ' . $this->quoteTableName($table->fullName))->queryOne();
-        if (isset($row['Create Table'])) {
-            $sql = $row['Create Table'];
-        } else {
-            $row = array_values($row);
-            $sql = $row[1];
-        }
-
-        return $sql;
-    }
-
-    /**
      * Collects the foreign key column details for the given table.
      * @param TableSchema $table the table metadata
      */
@@ -303,37 +330,6 @@ SQL;
     }
 
     /**
-     * Returns all unique indexes for the given table.
-     * Each array element is of the following structure:
-     *
-     * ```php
-     * [
-     *     'IndexName1' => ['col1' [, ...]],
-     *     'IndexName2' => ['col2' [, ...]],
-     * ]
-     * ```
-     *
-     * @param TableSchema $table the table metadata
-     * @return array all unique indexes for the given table.
-     */
-    public function findUniqueIndexes($table)
-    {
-        $sql = $this->getCreateTableSql($table);
-        $uniqueIndexes = [];
-
-        $regexp = '/UNIQUE KEY\s+([^\(\s]+)\s*\(([^\(\)]+)\)/mi';
-        if (preg_match_all($regexp, $sql, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $indexName = str_replace('`', '', $match[1]);
-                $indexColumns = array_map('trim', explode(',', str_replace('`', '', $match[2])));
-                $uniqueIndexes[$indexName] = $indexColumns;
-            }
-        }
-
-        return $uniqueIndexes;
-    }
-
-    /**
      * Returns all table names in the database.
      * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
      * @return array all table names in the database. The names have NO schema name prefix.
@@ -349,10 +345,13 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * Quotes a table name for use in a query.
+     * A simple table name has no schema prefix.
+     * @param string $name table name
+     * @return string the properly quoted table name
      */
-    public function createColumnSchemaBuilder($type, $length = null)
+    public function quoteSimpleTableName($name)
     {
-        return new ColumnSchemaBuilder($type, $length, $this->db);
+        return strpos($name, '`') !== false ? $name : "`$name`";
     }
 }

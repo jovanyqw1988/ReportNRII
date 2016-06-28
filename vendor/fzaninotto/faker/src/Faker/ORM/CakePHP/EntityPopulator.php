@@ -3,7 +3,6 @@
 namespace Faker\ORM\CakePHP;
 
 use Cake\ORM\TableRegistry;
-use Faker\Guesser\Name as NameGuesser;
 
 class EntityPopulator
 {
@@ -71,6 +70,15 @@ class EntityPopulator
         return $formatters;
     }
 
+    protected function getTable($class)
+    {
+        $options = [];
+        if (!empty($this->connectionName)) {
+            $options['connection'] = $this->connectionName;
+        }
+        return TableRegistry::get($class, $options);
+    }
+
     public function guessModifiers($populator)
     {
         $modifiers = [];
@@ -136,14 +144,5 @@ class EntityPopulator
     public function setConnection($name)
     {
         $this->connectionName = $name;
-    }
-
-    protected function getTable($class)
-    {
-        $options = [];
-        if (!empty($this->connectionName)) {
-            $options['connection'] = $this->connectionName;
-        }
-        return TableRegistry::get($class, $options);
     }
 }

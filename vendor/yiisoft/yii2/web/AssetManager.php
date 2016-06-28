@@ -197,7 +197,11 @@ class AssetManager extends Component
     public $hashCallback;
 
     private $_dummyBundles = [];
-
+    private $_converter;
+    /**
+     * @var array published assets
+     */
+    private $_published = [];
 
     /**
      * Initializes the component.
@@ -247,6 +251,25 @@ class AssetManager extends Component
     }
 
     /**
+     * Loads dummy bundle by name
+     *
+     * @param string $name
+     * @return AssetBundle
+     */
+    protected function loadDummyBundle($name)
+    {
+        if (!isset($this->_dummyBundles[$name])) {
+            $this->_dummyBundles[$name] = $this->loadBundle($name, [
+                'sourcePath' => null,
+                'js' => [],
+                'css' => [],
+                'depends' => [],
+            ]);
+        }
+        return $this->_dummyBundles[$name];
+    }
+
+    /**
      * Loads asset bundle class by name
      *
      * @param string $name bundle name
@@ -266,25 +289,6 @@ class AssetManager extends Component
             $bundle->publish($this);
         }
         return $bundle;
-    }
-
-    /**
-     * Loads dummy bundle by name
-     *
-     * @param string $name
-     * @return AssetBundle
-     */
-    protected function loadDummyBundle($name)
-    {
-        if (!isset($this->_dummyBundles[$name])) {
-            $this->_dummyBundles[$name] = $this->loadBundle($name, [
-                'sourcePath' => null,
-                'js' => [],
-                'css' => [],
-                'depends' => [],
-            ]);
-        }
-        return $this->_dummyBundles[$name];
     }
 
     /**
@@ -323,21 +327,6 @@ class AssetManager extends Component
     }
 
     /**
-     * Returns the actual file path for the specified asset.
-     * @param AssetBundle $bundle the asset bundle which the asset file belongs to
-     * @param string $asset the asset path. This should be one of the assets listed in [[js]] or [[css]].
-     * @return string|boolean the actual file path, or false if the asset is specified as an absolute URL
-     */
-    public function getAssetPath($bundle, $asset)
-    {
-        if (($actualAsset = $this->resolveAsset($bundle, $asset)) !== false) {
-            return Url::isRelative($actualAsset) ? $this->basePath . '/' . $actualAsset : false;
-        } else {
-            return Url::isRelative($asset) ? $bundle->basePath . '/' . $asset : false;
-        }
-    }
-
-    /**
      * @param AssetBundle $bundle
      * @param string $asset
      * @return string|boolean
@@ -362,7 +351,20 @@ class AssetManager extends Component
         return false;
     }
 
-    private $_converter;
+    /**
+     * Returns the actual file path for the specified asset.
+     * @param AssetBundle $bundle the asset bundle which the asset file belongs to
+     * @param string $asset the asset path. This should be one of the assets listed in [[js]] or [[css]].
+     * @return string|boolean the actual file path, or false if the asset is specified as an absolute URL
+     */
+    public function getAssetPath($bundle, $asset)
+    {
+        if (($actualAsset = $this->resolveAsset($bundle, $asset)) !== false) {
+            return Url::isRelative($actualAsset) ? $this->basePath . '/' . $actualAsset : false;
+        } else {
+            return Url::isRelative($asset) ? $bundle->basePath . '/' . $asset : false;
+        }
+    }
 
     /**
      * Returns the asset converter.
@@ -392,11 +394,6 @@ class AssetManager extends Component
     {
         $this->_converter = $value;
     }
-
-    /**
-     * @var array published assets
-     */
-    private $_published = [];
 
     /**
      * Publishes a file or a directory.
@@ -488,6 +485,21 @@ class AssetManager extends Component
         }
 
         return [$dstFile, $this->baseUrl . "/$dir/$fileName"];
+    }
+
+    /**
+     * Generate a CRC32 hash for the directory path. Collisions are higher
+     * than MD5 but generates a much smaller hash string.
+     * @param string $path string to be hashed.
+     * @return string hashed string.
+     */
+    protected function hash($path)
+    {
+        if (is_callable($this->hashCallback)) {
+            return call_user_func($this->hashCallback, $path);
+        }
+        $path = (is_file($path) ? dirname($path) : $path) . filemtime($path);
+        return sprintf('%x', crc32($path . Yii::getVersion()));
     }
 
     /**
@@ -585,20 +597,5 @@ class AssetManager extends Component
         } else {
             return false;
         }
-    }
-
-    /**
-     * Generate a CRC32 hash for the directory path. Collisions are higher
-     * than MD5 but generates a much smaller hash string.
-     * @param string $path string to be hashed.
-     * @return string hashed string.
-     */
-    protected function hash($path)
-    {
-        if (is_callable($this->hashCallback)) {
-            return call_user_func($this->hashCallback, $path);
-        }
-        $path = (is_file($path) ? dirname($path) : $path) . filemtime($path);
-        return sprintf('%x', crc32($path . Yii::getVersion()));
     }
 }

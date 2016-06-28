@@ -90,6 +90,22 @@ class ArrayDataProvider extends BaseDataProvider
     }
 
     /**
+     * Sorts the data models according to the given sort definition
+     * @param array $models the models to be sorted
+     * @param Sort $sort the sort definition
+     * @return array the sorted data models
+     */
+    protected function sortModels($models, $sort)
+    {
+        $orders = $sort->getOrders();
+        if (!empty($orders)) {
+            ArrayHelper::multisort($models, array_keys($orders), array_values($orders));
+        }
+
+        return $models;
+    }
+
+    /**
      * @inheritdoc
      */
     protected function prepareKeys($models)
@@ -116,21 +132,5 @@ class ArrayDataProvider extends BaseDataProvider
     protected function prepareTotalCount()
     {
         return count($this->allModels);
-    }
-
-    /**
-     * Sorts the data models according to the given sort definition
-     * @param array $models the models to be sorted
-     * @param Sort $sort the sort definition
-     * @return array the sorted data models
-     */
-    protected function sortModels($models, $sort)
-    {
-        $orders = $sort->getOrders();
-        if (!empty($orders)) {
-            ArrayHelper::multisort($models, array_keys($orders), array_values($orders));
-        }
-
-        return $models;
     }
 }

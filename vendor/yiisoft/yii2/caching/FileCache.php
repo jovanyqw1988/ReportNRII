@@ -99,6 +99,27 @@ class FileCache extends Cache
     }
 
     /**
+     * Returns the cache file path given the cache key.
+     * @param string $key cache key
+     * @return string the cache file path
+     */
+    protected function getCacheFile($key)
+    {
+        if ($this->directoryLevel > 0) {
+            $base = $this->cachePath;
+            for ($i = 0; $i < $this->directoryLevel; ++$i) {
+                if (($prefix = substr($key, $i + $i, 2)) !== false) {
+                    $base .= DIRECTORY_SEPARATOR . $prefix;
+                }
+            }
+
+            return $base . DIRECTORY_SEPARATOR . $key . $this->cacheFileSuffix;
+        } else {
+            return $this->cachePath . DIRECTORY_SEPARATOR . $key . $this->cacheFileSuffix;
+        }
+    }
+
+    /**
      * Retrieves a value from cache with a specified key.
      * This is the implementation of the method declared in the parent class.
      * @param string $key a unique key identifying the cached value
@@ -120,6 +141,25 @@ class FileCache extends Cache
         }
 
         return false;
+    }
+
+    /**
+     * Stores a value identified by a key into cache if the cache does not contain this key.
+     * This is the implementation of the method declared in the parent class.
+     *
+     * @param string $key the key identifying the value to be cached
+     * @param string $value the value to be cached
+     * @param integer $duration the number of seconds in which the cached value will expire. 0 means never expire.
+     * @return boolean true if the value is successfully stored into cache, false otherwise
+     */
+    protected function addValue($key, $value, $duration)
+    {
+        $cacheFile = $this->getCacheFile($key);
+        if (@filemtime($cacheFile) > time()) {
+            return false;
+        }
+
+        return $this->setValue($key, $value, $duration);
     }
 
     /**
@@ -152,71 +192,6 @@ class FileCache extends Cache
             Yii::warning("Unable to write cache file '{$cacheFile}': {$error['message']}", __METHOD__);
             return false;
         }
-    }
-
-    /**
-     * Stores a value identified by a key into cache if the cache does not contain this key.
-     * This is the implementation of the method declared in the parent class.
-     *
-     * @param string $key the key identifying the value to be cached
-     * @param string $value the value to be cached
-     * @param integer $duration the number of seconds in which the cached value will expire. 0 means never expire.
-     * @return boolean true if the value is successfully stored into cache, false otherwise
-     */
-    protected function addValue($key, $value, $duration)
-    {
-        $cacheFile = $this->getCacheFile($key);
-        if (@filemtime($cacheFile) > time()) {
-            return false;
-        }
-
-        return $this->setValue($key, $value, $duration);
-    }
-
-    /**
-     * Deletes a value with the specified key from cache
-     * This is the implementation of the method declared in the parent class.
-     * @param string $key the key of the value to be deleted
-     * @return boolean if no error happens during deletion
-     */
-    protected function deleteValue($key)
-    {
-        $cacheFile = $this->getCacheFile($key);
-
-        return @unlink($cacheFile);
-    }
-
-    /**
-     * Returns the cache file path given the cache key.
-     * @param string $key cache key
-     * @return string the cache file path
-     */
-    protected function getCacheFile($key)
-    {
-        if ($this->directoryLevel > 0) {
-            $base = $this->cachePath;
-            for ($i = 0; $i < $this->directoryLevel; ++$i) {
-                if (($prefix = substr($key, $i + $i, 2)) !== false) {
-                    $base .= DIRECTORY_SEPARATOR . $prefix;
-                }
-            }
-
-            return $base . DIRECTORY_SEPARATOR . $key . $this->cacheFileSuffix;
-        } else {
-            return $this->cachePath . DIRECTORY_SEPARATOR . $key . $this->cacheFileSuffix;
-        }
-    }
-
-    /**
-     * Deletes all values from cache.
-     * This is the implementation of the method declared in the parent class.
-     * @return boolean whether the flush operation was successful.
-     */
-    protected function flushValues()
-    {
-        $this->gc(true, false);
-
-        return true;
     }
 
     /**
@@ -265,5 +240,30 @@ class FileCache extends Cache
             }
             closedir($handle);
         }
+    }
+
+    /**
+     * Deletes a value with the specified key from cache
+     * This is the implementation of the method declared in the parent class.
+     * @param string $key the key of the value to be deleted
+     * @return boolean if no error happens during deletion
+     */
+    protected function deleteValue($key)
+    {
+        $cacheFile = $this->getCacheFile($key);
+
+        return @unlink($cacheFile);
+    }
+
+    /**
+     * Deletes all values from cache.
+     * This is the implementation of the method declared in the parent class.
+     * @return boolean whether the flush operation was successful.
+     */
+    protected function flushValues()
+    {
+        $this->gc(true, false);
+
+        return true;
     }
 }

@@ -9,12 +9,12 @@ namespace yii\widgets;
 
 use Yii;
 use yii\base\InvalidCallException;
-use yii\base\Widget;
 use yii\base\Model;
+use yii\base\Widget;
 use yii\helpers\ArrayHelper;
-use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\helpers\Url;
 
 /**
  * ActiveForm is a widget that builds an interactive HTML form for one or multiple data models.
@@ -168,6 +168,96 @@ class ActiveForm extends Widget
      */
     private $_fields = [];
 
+    /**
+     * Validates one or several models and returns an error message array indexed by the attribute IDs.
+     * This is a helper method that simplifies the way of writing AJAX validation code.
+     *
+     * For example, you may use the following code in a controller action to respond
+     * to an AJAX validation request:
+     *
+     * ```php
+     * $model = new Post;
+     * $model->load($_POST);
+     * if (Yii::$app->request->isAjax) {
+     *     Yii::$app->response->format = Response::FORMAT_JSON;
+     *     return ActiveForm::validate($model);
+     * }
+     * // ... respond to non-AJAX request ...
+     * ```
+     *
+     * To validate multiple models, simply pass each model as a parameter to this method, like
+     * the following:
+     *
+     * ```php
+     * ActiveForm::validate($model1, $model2, ...);
+     * ```
+     *
+     * @param Model $model the model to be validated
+     * @param mixed $attributes list of attributes that should be validated.
+     * If this parameter is empty, it means any attribute listed in the applicable
+     * validation rules should be validated.
+     *
+     * When this method is used to validate multiple models, this parameter will be interpreted
+     * as a model.
+     *
+     * @return array the error message array indexed by the attribute IDs.
+     */
+    public static function validate($model, $attributes = null)
+    {
+        $result = [];
+        if ($attributes instanceof Model) {
+            // validating multiple models
+            $models = func_get_args();
+            $attributes = null;
+        } else {
+            $models = [$model];
+        }
+        /* @var $model Model */
+        foreach ($models as $model) {
+            $model->validate($attributes);
+            foreach ($model->getErrors() as $attribute => $errors) {
+                $result[Html::getInputId($model, $attribute)] = $errors;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Validates an array of model instances and returns an error message array indexed by the attribute IDs.
+     * This is a helper method that simplifies the way of writing AJAX validation code for tabular input.
+     *
+     * For example, you may use the following code in a controller action to respond
+     * to an AJAX validation request:
+     *
+     * ```php
+     * // ... load $models ...
+     * if (Yii::$app->request->isAjax) {
+     *     Yii::$app->response->format = Response::FORMAT_JSON;
+     *     return ActiveForm::validateMultiple($models);
+     * }
+     * // ... respond to non-AJAX request ...
+     * ```
+     *
+     * @param array $models an array of models to be validated.
+     * @param mixed $attributes list of attributes that should be validated.
+     * If this parameter is empty, it means any attribute listed in the applicable
+     * validation rules should be validated.
+     * @return array the error message array indexed by the attribute IDs.
+     */
+    public static function validateMultiple($models, $attributes = null)
+    {
+        $result = [];
+        /* @var $model Model */
+        foreach ($models as $i => $model) {
+            $model->validate($attributes);
+            foreach ($model->getErrors() as $attribute => $errors) {
+                $result[Html::getInputId($model, "[$i]" . $attribute)] = $errors;
+            }
+        }
+
+        return $result;
+    }
 
     /**
      * Initializes the widget.
@@ -266,6 +356,25 @@ class ActiveForm extends Widget
     }
 
     /**
+     * Begins a form field.
+     * This method will create a new form field and returns its opening tag.
+     * You should call [[endField()]] afterwards.
+     * @param Model $model the data model
+     * @param string $attribute the attribute name or expression. See [[Html::getAttributeName()]] for the format
+     * about attribute expression.
+     * @param array $options the additional configurations for the field object
+     * @return string the opening tag
+     * @see endField()
+     * @see field()
+     */
+    public function beginField($model, $attribute, $options = [])
+    {
+        $field = $this->field($model, $attribute, $options);
+        $this->_fields[] = $field;
+        return $field->begin();
+    }
+
+    /**
      * Generates a form field.
      * A form field is associated with a model and an attribute. It contains a label, an input and an error message
      * and use them to interact with end users to collect their inputs for the attribute.
@@ -294,25 +403,6 @@ class ActiveForm extends Widget
     }
 
     /**
-     * Begins a form field.
-     * This method will create a new form field and returns its opening tag.
-     * You should call [[endField()]] afterwards.
-     * @param Model $model the data model
-     * @param string $attribute the attribute name or expression. See [[Html::getAttributeName()]] for the format
-     * about attribute expression.
-     * @param array $options the additional configurations for the field object
-     * @return string the opening tag
-     * @see endField()
-     * @see field()
-     */
-    public function beginField($model, $attribute, $options = [])
-    {
-        $field = $this->field($model, $attribute, $options);
-        $this->_fields[] = $field;
-        return $field->begin();
-    }
-
-    /**
      * Ends a form field.
      * This method will return the closing tag of an active form field started by [[beginField()]].
      * @return string the closing tag of the form field
@@ -326,96 +416,5 @@ class ActiveForm extends Widget
         } else {
             throw new InvalidCallException('Mismatching endField() call.');
         }
-    }
-
-    /**
-     * Validates one or several models and returns an error message array indexed by the attribute IDs.
-     * This is a helper method that simplifies the way of writing AJAX validation code.
-     *
-     * For example, you may use the following code in a controller action to respond
-     * to an AJAX validation request:
-     *
-     * ```php
-     * $model = new Post;
-     * $model->load($_POST);
-     * if (Yii::$app->request->isAjax) {
-     *     Yii::$app->response->format = Response::FORMAT_JSON;
-     *     return ActiveForm::validate($model);
-     * }
-     * // ... respond to non-AJAX request ...
-     * ```
-     *
-     * To validate multiple models, simply pass each model as a parameter to this method, like
-     * the following:
-     *
-     * ```php
-     * ActiveForm::validate($model1, $model2, ...);
-     * ```
-     *
-     * @param Model $model the model to be validated
-     * @param mixed $attributes list of attributes that should be validated.
-     * If this parameter is empty, it means any attribute listed in the applicable
-     * validation rules should be validated.
-     *
-     * When this method is used to validate multiple models, this parameter will be interpreted
-     * as a model.
-     *
-     * @return array the error message array indexed by the attribute IDs.
-     */
-    public static function validate($model, $attributes = null)
-    {
-        $result = [];
-        if ($attributes instanceof Model) {
-            // validating multiple models
-            $models = func_get_args();
-            $attributes = null;
-        } else {
-            $models = [$model];
-        }
-        /* @var $model Model */
-        foreach ($models as $model) {
-            $model->validate($attributes);
-            foreach ($model->getErrors() as $attribute => $errors) {
-                $result[Html::getInputId($model, $attribute)] = $errors;
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * Validates an array of model instances and returns an error message array indexed by the attribute IDs.
-     * This is a helper method that simplifies the way of writing AJAX validation code for tabular input.
-     *
-     * For example, you may use the following code in a controller action to respond
-     * to an AJAX validation request:
-     *
-     * ```php
-     * // ... load $models ...
-     * if (Yii::$app->request->isAjax) {
-     *     Yii::$app->response->format = Response::FORMAT_JSON;
-     *     return ActiveForm::validateMultiple($models);
-     * }
-     * // ... respond to non-AJAX request ...
-     * ```
-     *
-     * @param array $models an array of models to be validated.
-     * @param mixed $attributes list of attributes that should be validated.
-     * If this parameter is empty, it means any attribute listed in the applicable
-     * validation rules should be validated.
-     * @return array the error message array indexed by the attribute IDs.
-     */
-    public static function validateMultiple($models, $attributes = null)
-    {
-        $result = [];
-        /* @var $model Model */
-        foreach ($models as $i => $model) {
-            $model->validate($attributes);
-            foreach ($model->getErrors() as $attribute => $errors) {
-                $result[Html::getInputId($model, "[$i]" . $attribute)] = $errors;
-            }
-        }
-
-        return $result;
     }
 }

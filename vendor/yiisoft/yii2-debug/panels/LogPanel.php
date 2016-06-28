@@ -8,9 +8,9 @@
 namespace yii\debug\panels;
 
 use Yii;
+use yii\debug\models\search\Log;
 use yii\debug\Panel;
 use yii\log\Logger;
-use yii\debug\models\search\Log;
 
 /**
  * Debugger panel that collects and displays logs.
@@ -58,22 +58,6 @@ class LogPanel extends Panel
     }
 
     /**
-     * @inheritdoc
-     */
-    public function save()
-    {
-        $target = $this->module->logTarget;
-        $messages = $target->filterMessages($target->messages, Logger::LEVEL_ERROR | Logger::LEVEL_INFO | Logger::LEVEL_WARNING | Logger::LEVEL_TRACE);
-        foreach($messages as &$message) {
-            // exceptions may not be serializable if in the call stack somewhere is a Closure
-            if ($message[0] instanceof \Exception) {
-                $message[0] = (string) $message[0];
-            }
-        }
-        return ['messages' => $messages];
-    }
-
-    /**
      * Returns an array of models that represents logs of the current request.
      * Can be used with data providers, such as \yii\data\ArrayDataProvider.
      *
@@ -97,5 +81,21 @@ class LogPanel extends Panel
         }
 
         return $this->_models;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function save()
+    {
+        $target = $this->module->logTarget;
+        $messages = $target->filterMessages($target->messages, Logger::LEVEL_ERROR | Logger::LEVEL_INFO | Logger::LEVEL_WARNING | Logger::LEVEL_TRACE);
+        foreach ($messages as &$message) {
+            // exceptions may not be serializable if in the call stack somewhere is a Closure
+            if ($message[0] instanceof \Exception) {
+                $message[0] = (string)$message[0];
+            }
+        }
+        return ['messages' => $messages];
     }
 }

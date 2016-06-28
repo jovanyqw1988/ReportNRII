@@ -10,10 +10,10 @@ namespace yii\filters\auth;
 use Yii;
 use yii\base\Action;
 use yii\base\ActionFilter;
-use yii\web\UnauthorizedHttpException;
-use yii\web\User;
 use yii\web\Request;
 use yii\web\Response;
+use yii\web\UnauthorizedHttpException;
+use yii\web\User;
 
 /**
  * AuthMethod is a base class implementing the [[AuthInterface]] interface.
@@ -76,6 +76,20 @@ abstract class AuthMethod extends ActionFilter implements AuthInterface
     }
 
     /**
+     * Checks, whether authentication is optional for the given action.
+     *
+     * @param Action $action
+     * @return boolean
+     * @see optional
+     * @since 2.0.7
+     */
+    protected function isOptional($action)
+    {
+        $id = $this->getActionId($action);
+        return in_array($id, $this->optional, true);
+    }
+
+    /**
      * @inheritdoc
      */
     public function challenge($response)
@@ -88,19 +102,5 @@ abstract class AuthMethod extends ActionFilter implements AuthInterface
     public function handleFailure($response)
     {
         throw new UnauthorizedHttpException('You are requesting with an invalid credential.');
-    }
-
-    /**
-     * Checks, whether authentication is optional for the given action.
-     *
-     * @param Action $action
-     * @return boolean
-     * @see optional
-     * @since 2.0.7
-     */
-    protected function isOptional($action)
-    {
-        $id = $this->getActionId($action);
-        return in_array($id, $this->optional, true);
     }
 }
